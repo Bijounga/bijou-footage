@@ -1,0 +1,42 @@
+name: Release
+
+# Runs when a version tag (v0.4.1, v0.5.0, ...) is pushed: builds the
+# installer on GitHub's machines and publishes it as a GitHub Release with
+# the same name. Installed copies of the app auto-update from that Release
+# (electron/main/updater.js).
+#
+# Windows only for now. For Mac, add macos-latest to the matrix (and a
+# "mac" section to package.json's build config) once the app runs there —
+# and keep max-parallel: 1, so the two jobs never race to create the same
+# Release (that broke a BijouDocs release once).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx electron-vite build
+
+      - run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
