@@ -69,8 +69,9 @@ jobs:
           npx electron-builder --mac zip --arm64 --publish never -c.extraMetadata.version=0.0.2 -c.directories.output=dist-b
           rm -rf "/Applications/Bijou Footage.app"
           ditto -x -k dist-a/*.zip /Applications/
-          (cd dist-b && python3 -m http.server 8765 > /dev/null 2>&1 &)
+          (cd dist-b && python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/bf/feed.log" 2>&1 &)
           sleep 2
+          curl -fsS http://127.0.0.1:8765/latest-mac.yml
           BIJOU_UPDATE_FEED=http://127.0.0.1:8765 BIJOU_FOOTAGE_DATA="$RUNNER_TEMP/bf/data-u" \
             "/Applications/Bijou Footage.app/Contents/MacOS/Bijou Footage" --remote-debugging-port=9223 \
             > "$RUNNER_TEMP/bf/update-app.log" 2>&1 &
