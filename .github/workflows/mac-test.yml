@@ -69,6 +69,9 @@ jobs:
           npx electron-builder --mac zip --arm64 --publish never -c.extraMetadata.version=0.0.2 -c.directories.output=dist-b
           rm -rf "/Applications/Bijou Footage.app"
           ditto -x -k dist-a/*.zip /Applications/
+          # GitHub turns spaces in uploaded file names into dashes, and
+          # latest-mac.yml names the files that way — the feed does the same.
+          for f in dist-b/*.zip; do cp "$f" "dist-b/$(basename "$f" | tr ' ' '-')"; done
           node scripts/serve-dir.mjs dist-b 8765 > "$RUNNER_TEMP/bf/feed.log" 2>&1 &
           sleep 2
           curl -fsS http://127.0.0.1:8765/latest-mac.yml
