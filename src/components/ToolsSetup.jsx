@@ -144,8 +144,9 @@ function ToolRow({ name, what, ok, okText, p, busy, action, onInstall, extra, re
 // Shown when ffmpeg is missing: without it recordings can't be read.
 export function ToolsBanner() {
   const tools = useStore((s) => s.tools)
+  const modal = useStore((s) => s.modal) // not over Settings etc.
   const [hidden, setHidden] = useState(false)
-  if (hidden || !tools || !tools.checked || (tools.ffmpeg && tools.ffprobe)) return null
+  if (hidden || modal || !tools || !tools.checked || (tools.ffmpeg && tools.ffprobe)) return null
   return (
     <div className="cache-reminder tools-banner">
       <span className="cr-icon">⚠</span>

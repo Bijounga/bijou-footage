@@ -1372,3 +1372,9 @@ body.mac.frameless .app.notes-hidden .clip-header { padding-right: 12px; }
 .tool-error { margin: 6px 0 0 16px; color: var(--danger); }
 .tool-error a { color: var(--cyan); }
 .tools-banner { bottom: 70px; }
+
+/* Narrow side panel: the tabs keep their size and the zoom / export / hide
+   controls drop to a second row instead of piling on top of them. */
+.np-head { flex-wrap: wrap; row-gap: 6px; }
+.np-title { min-width: max-content; }
+.np-tabs button { white-space: nowrap; }

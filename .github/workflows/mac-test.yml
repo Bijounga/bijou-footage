@@ -44,6 +44,14 @@ jobs:
       - name: Smoke test
         run: node scripts/mac-smoke.mjs "$RUNNER_TEMP/bf/out" "$RUNNER_TEMP/bf/work"
 
+      - name: Build the release files (universal .dmg + .zip)
+        run: |
+          npx electron-builder --mac --universal --publish never
+          codesign --verify --deep --strict --verbose=2 "dist/mac-universal/Bijou Footage.app"
+          lipo -archs "dist/mac-universal/Bijou Footage.app/Contents/MacOS/Bijou Footage"
+          hdiutil verify dist/*.dmg
+          ls -la dist/*.dmg dist/*.zip
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:

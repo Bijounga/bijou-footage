@@ -5,10 +5,9 @@ name: Release
 # the same name. Installed copies of the app auto-update from that Release
 # (electron/main/updater.js).
 #
-# Windows only for now. For Mac, add macos-latest to the matrix (and a
-# "mac" section to package.json's build config) once the app runs there —
-# and keep max-parallel: 1, so the two jobs never race to create the same
-# Release (that broke a BijouDocs release once).
+# Windows (NSIS installer) and macOS (universal .dmg + .zip, ad-hoc signed —
+# scripts/adhoc-sign.cjs). max-parallel: 1 so the two jobs never race to
+# create the same Release (that broke a BijouDocs release once).
 on:
   push:
     tags:
@@ -23,7 +22,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
