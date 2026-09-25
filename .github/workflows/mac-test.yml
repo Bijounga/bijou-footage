@@ -52,10 +52,34 @@ jobs:
           hdiutil verify dist/*.dmg
           ls -la dist/*.dmg dist/*.zip
 
+      - name: Disk image gets ejected when the app starts
+        run: |
+          pkill -f 'Bijou Footage.app/Contents/MacOS' || true
+          hdiutil attach dist/*.dmg
+          ls -d /Volumes/Bijou\ Footage*
+          "dist/mac-universal/Bijou Footage.app/Contents/MacOS/Bijou Footage" > "$RUNNER_TEMP/bf/dmg-app.log" 2>&1 &
+          for i in $(seq 30); do sleep 1; ls -d /Volumes/Bijou\ Footage* > /dev/null 2>&1 || break; done
+          pkill -f 'Bijou Footage.app/Contents/MacOS' || true
+          if ls -d /Volumes/Bijou\ Footage* 2> /dev/null; then echo "still mounted"; exit 1; fi
+          echo "ejected"
+
+      - name: Self-update in /Applications (0.0.1 -> 0.0.2 from a local feed)
+        run: |
+          npx electron-builder --mac zip --arm64 --publish never -c.extraMetadata.version=0.0.1 -c.directories.output=dist-a
+          npx electron-builder --mac zip --arm64 --publish never -c.extraMetadata.version=0.0.2 -c.directories.output=dist-b
+          rm -rf "/Applications/Bijou Footage.app"
+          ditto -x -k dist-a/*.zip /Applications/
+          (cd dist-b && python3 -m http.server 8765 > /dev/null 2>&1 &)
+          sleep 2
+          BIJOU_UPDATE_FEED=http://127.0.0.1:8765 BIJOU_FOOTAGE_DATA="$RUNNER_TEMP/bf/data-u" \
+            "/Applications/Bijou Footage.app/Contents/MacOS/Bijou Footage" --remote-debugging-port=9223 \
+            > "$RUNNER_TEMP/bf/update-app.log" 2>&1 &
+          node scripts/mac-update-test.mjs 0.0.2 "$RUNNER_TEMP/bf/out"
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mac-smoke
           path: |
             ${{ runner.temp }}/bf/out
-            ${{ runner.temp }}/bf/app.log
+            ${{ runner.temp }}/bf/*.log

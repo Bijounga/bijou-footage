@@ -13,6 +13,7 @@ import * as projects from './projects.js'
 import * as bijou from './bijou.js'
 import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
 import { initUpdater } from './updater.js'
+import * as macUpdate from './macUpdate.js'
 
 const isDev = !app.isPackaged
 const isMac = process.platform === 'darwin'
@@ -427,6 +428,7 @@ else {
     initUpdater(send)
     if (isMac) macMenu()
     createWindow()
+    if (isMac && app.isPackaged) macUpdate.tidyOnLaunch() // eject the install disk image, drop old downloads
   })
   app.on('window-all-closed', () => app.quit())
   app.on('will-quit', () => {
