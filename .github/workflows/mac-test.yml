@@ -9,7 +9,7 @@ name: Mac test
 on:
   workflow_dispatch:
   push:
-    branches: [mac-port]
+    branches: [main, mac-port]
 
 jobs:
   mac:

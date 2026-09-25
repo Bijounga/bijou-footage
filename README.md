@@ -3,7 +3,11 @@
 Review and rough-cut long OBS recordings, then send the cut to Premiere.
 It's a companion to [BijouDocs](https://github.com/Bijounga/bijoudocs).
 
-**[Download the latest Windows installer](https://github.com/Bijounga/bijou-footage/releases/latest)**. Once installed, it keeps itself up to date.
+**[Download it](https://github.com/Bijounga/bijou-footage/releases/latest)**: `Bijou-Footage-Setup-….exe` for Windows, `Bijou-Footage-…-universal.dmg` for a Mac (Apple Silicon and Intel). Once installed, it keeps itself up to date.
+
+On a Mac, drag it into Applications. The first time you open it, macOS says it's from an unidentified developer (the app isn't signed with a paid Apple certificate): right-click it and choose **Open**, or allow it in System Settings → Privacy & Security. The app ejects its disk image by itself, and its updates never use one, so nothing is left behind in Finder.
+
+After installing, **Settings → Tools** sets up what it needs: ffmpeg, transcription (Whisper) and AI summaries (a local model). Each is one click.
 
 ## What it does
 - **Review:** plays multi-hour, multi-track OBS recordings instantly, with no
@@ -36,8 +40,10 @@ git push origin main --tags
 GitHub Actions (`.github/workflows/release.yml`) builds the installer and
 publishes it as a Release. Installed copies pick it up automatically: they
 check when the app opens and every 4 hours, then offer "Restart to update".
-Mac: the workflow is ready to add a `macos-latest` build once the app runs
-there.
+The same Release has the Mac build. `.github/workflows/mac-test.yml` runs the
+real app on one of GitHub's Macs (installing every tool, playing, editing,
+transcribing, summarizing, a full self-update, and checking that no disk image
+is left mounted).
 
 Needs `ffmpeg`/`ffprobe` (found automatically in `C:\ffmpeg\bin` or on PATH;
 override in Settings). They're only used to read file info and build
