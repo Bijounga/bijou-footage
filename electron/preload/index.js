@@ -7,7 +7,12 @@ function on(channel, cb) {
 }
 
 contextBridge.exposeInMainWorld('footage', {
+  platform: process.platform,
   appVersion: () => ipcRenderer.invoke('app:version'),
+  setupStatus: () => ipcRenderer.invoke('setup:status'),
+  setupInstall: (what, opts) => ipcRenderer.invoke('setup:install', what, opts),
+  setupCancel: () => ipcRenderer.invoke('setup:cancel'),
+  onSetupEvent: (cb) => on('setup:event', cb),
   onUpdateStatus: (cb) => on('update:status', cb),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
   installUpdate: () => ipcRenderer.invoke('update:install'),

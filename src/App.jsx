@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { useStore } from './state/store.js'
 import { player } from './lib/player.js'
 import { bus } from './lib/hooks.js'
-import { comboFromEvent, buildKeymap } from './lib/keybinds.js'
+import { comboFromEvent, buildKeymap, IS_MAC, macText } from './lib/keybinds.js'
 import Library from './components/Library.jsx'
 import PlayerView from './components/PlayerView.jsx'
 import Timeline from './components/Timeline.jsx'
@@ -13,6 +13,7 @@ import AddFootageModal from './components/AddFootage.jsx'
 import ColorMenu from './components/ColorMenu.jsx'
 import CacheReminder from './components/CacheReminder.jsx'
 import { UpdateBanner } from './components/Updates.jsx'
+import { ToolsBanner } from './components/ToolsSetup.jsx'
 import { startSkipSilence } from './lib/skipSilence.js'
 import EditWorkspace from './components/EditWorkspace.jsx'
 import { editKeymap } from './lib/editKeys.js'
@@ -131,6 +132,21 @@ export default function App() {
   const workspace = useStore((s) => s.settings.workspace || 'review')
   // No title bar: the app's top strips become the window's drag handle.
   useEffect(() => { document.body.classList.toggle('frameless', frameless) }, [frameless])
+  // Mac: tooltips and key hints are written with "Ctrl+"; show ⌘ / ⌥ / ⇧
+  // instead, rewritten the moment something is hovered or rendered.
+  useEffect(() => {
+    if (!IS_MAC) return
+    document.body.classList.add('mac')
+    const fix = (e) => {
+      const el = e.target.closest && e.target.closest('[title]')
+      if (el && /Ctrl|Alt\+|Shift\+/.test(el.title)) el.title = macText(el.title)
+    }
+    const kbds = () => document.querySelectorAll('kbd').forEach((k) => { if (/^(Ctrl|Alt)$/.test(k.textContent)) k.textContent = macText(k.textContent) })
+    const mo = new MutationObserver(kbds)
+    mo.observe(document.body, { childList: true, subtree: true })
+    window.addEventListener('mouseover', fix, true)
+    return () => { mo.disconnect(); window.removeEventListener('mouseover', fix, true) }
+  }, [])
 
   useEffect(() => {
     useStore.getState().init()
@@ -151,6 +167,7 @@ export default function App() {
         {modal === 'help' && <KeybindsModal />}
         <CacheReminder />
         <UpdateBanner />
+        <ToolsBanner />
         {toast && <div className={'toast ' + toast.kind} key={toast.id}>{toast.text}</div>}
       </>
     )
@@ -172,6 +189,7 @@ export default function App() {
       <ColorMenu />
       <CacheReminder />
       <UpdateBanner />
+      <ToolsBanner />
       {modal === 'settings' && <SettingsModal />}
       {modal === 'help' && <KeybindsModal />}
       {toast && <div className={'toast ' + toast.kind} key={toast.id}>{toast.text}</div>}

@@ -432,7 +432,7 @@ function TranscriptPanel() {
 
       <div className="tx-status">
         {!tx.installed ? (
-          <span className="dim small">The transcriber isn't installed (~/.bijou-footage/whisper).</span>
+          <span className="dim small">Transcription isn't set up yet. <button className="link-btn" onClick={() => useStore.getState().openModal('settings')}>Set it up in Settings → Tools</button></span>
         ) : running ? (
           <>
             <div className="tx-prog">
@@ -559,7 +559,7 @@ export function useSummarizer() {
   async function summarize({ from, to, title, lines }) {
     const id = 'sum' + Date.now()
     if (!(await api.llmInstalled())) {
-      setSummary({ id, from, to, status: 'error', error: "The summarizer isn't installed (~/.bijou-footage/llm)." })
+      setSummary({ id, from, to, status: 'error', error: "AI summaries aren't set up yet — Settings → Tools." })
       return
     }
     setSummary({ id, from, to, status: 'loading', text: '' })

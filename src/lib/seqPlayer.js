@@ -650,4 +650,4 @@ class SequencePlayer {
 }
 
 export const seqPlayer = new SequencePlayer()
-if (import.meta.env.DEV) window.__seq = seqPlayer
+if (typeof window !== 'undefined') window.__seq = seqPlayer // like __player: for scripts/cdp.mjs and the smoke test

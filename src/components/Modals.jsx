@@ -5,6 +5,7 @@ import { LABEL } from '../lib/beats.js'
 import { useBeatColor } from './NotesPanel.jsx'
 import { BUILT_IN_THEMES } from '../lib/themes.js'
 import { UpdatesSection } from './Updates.jsx'
+import { ToolsSection } from './ToolsSetup.jsx'
 
 function Modal({ title, onClose, children, wide }) {
   return (
@@ -255,6 +256,7 @@ export function SettingsModal() {
     <Modal title="Settings" onClose={closeModal}>
       <div className="settings">
         <UpdatesSection />
+        <ToolsSection />
         <section>
           <h3>Theme</h3>
           <div className="theme-grid">

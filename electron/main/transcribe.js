@@ -1,22 +1,22 @@
-// Local transcription (faster-whisper large-v3-turbo on the GPU), one audio
-// track at a time. The Python side lives in resources/whisper_worker.py and
-// runs from its own venv in ~/.bijou-footage/whisper (not %APPDATA%: that
-// gets redirected for some launchers, and the model is 1.6 GB we only want
-// once). The worker stays alive between jobs so the model loads once, and
+// Local transcription (faster-whisper large-v3-turbo — on the GPU with an
+// NVIDIA card, else the CPU, e.g. on a Mac), one audio track at a time. The
+// Python side lives in resources/whisper_worker.py and runs from its own
+// venv in ~/.bijou-footage/whisper (paths.js), set up by Settings → Tools
+// (setup.js). The worker stays alive between jobs so the model loads once, and
 // quits after IDLE_MS with nothing to do so the VRAM is given back.
 //
 // Transcripts: <userData>/transcripts/<clip hash>-t<track>.json
 //   {v, model, lang, segments: [[start, end, text, [[ws, we, word], ...]], ...]}
 // They're never evicted — they took GPU time to make.
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 import { spawn } from 'child_process'
 import { app } from 'electron'
 import { hashFor, audioFiles, status as prepStatus } from './waveform.js'
+import { WHISPER_HOME, VENV_PYTHON } from './paths.js'
+import { whisperInstalled } from './setup.js'
 
-export const WHISPER_HOME = path.join(os.homedir(), '.bijou-footage', 'whisper')
-const PYTHON = path.join(WHISPER_HOME, 'venv', 'Scripts', 'python.exe')
+const PYTHON = VENV_PYTHON
 const MODELS = path.join(WHISPER_HOME, 'models')
 const IDLE_MS = 5 * 60 * 1000
 
@@ -50,7 +50,7 @@ function workerScript() {
 const fileFor = (clip, track) => path.join(dir, hashFor(clip) + '-t' + track + '.json')
 
 export function installed() {
-  return fs.existsSync(PYTHON)
+  return whisperInstalled()
 }
 
 // Which tracks of each clip have a transcript: {key: [track, ...]}

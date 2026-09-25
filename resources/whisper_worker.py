@@ -1,7 +1,8 @@
 # Transcription worker for Bijou Footage. Runs in its own Python venv
 # (~/.bijou-footage/whisper/venv), started by electron/main/transcribe.js.
 #
-# Keeps the model loaded on the GPU and takes jobs as JSON lines on stdin:
+# Keeps the model loaded (GPU, or CPU without an NVIDIA card) and takes jobs
+# as JSON lines on stdin:
 #   {"id", "src", "stream", "duration", "out", "ffmpeg", "lang"}
 # Reports JSON lines on stdout: ready / progress / done / error.
 #
@@ -25,7 +26,9 @@ def say(**msg):
 
 def add_cuda_dlls():
     # pip's nvidia-cublas-cu12 / nvidia-cudnn-cu12 put their DLLs here;
-    # ctranslate2 needs them on the DLL search path.
+    # ctranslate2 needs them on the DLL search path (Windows only).
+    if not hasattr(os, "add_dll_directory"):
+        return
     import site
     for sp in site.getsitepackages():
         for d in glob.glob(os.path.join(sp, "nvidia", "*", "bin")):
@@ -35,8 +38,13 @@ def add_cuda_dlls():
 
 def load_model():
     add_cuda_dlls()
+    import ctranslate2
     from faster_whisper import WhisperModel, BatchedInferencePipeline
-    model = WhisperModel(MODEL, device="cuda", compute_type="float16", download_root=MODELS_DIR)
+    # An NVIDIA card: the GPU. Otherwise (a Mac, other PCs) the CPU, 8-bit.
+    if ctranslate2.get_cuda_device_count() > 0:
+        model = WhisperModel(MODEL, device="cuda", compute_type="float16", download_root=MODELS_DIR)
+    else:
+        model = WhisperModel(MODEL, device="cpu", compute_type="int8", download_root=MODELS_DIR)
     return BatchedInferencePipeline(model=model)
 
 

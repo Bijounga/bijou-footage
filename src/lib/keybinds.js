@@ -57,17 +57,25 @@ export function comboFromEvent(e) {
 }
 
 const PRETTY = { Left: '←', Right: '→', Up: '↑', Down: '↓', Space: 'Space' }
+// On a Mac, "Ctrl" in a binding is ⌘ (comboFromEvent counts either), and
+// the modifiers show as the Mac symbols.
+export const IS_MAC = typeof window !== 'undefined' && window.footage && window.footage.platform === 'darwin'
+const MAC_MODS = { Ctrl: '⌘', Alt: '⌥', Shift: '⇧' }
 export function prettyCombo(combo) {
   if (!combo) return ''
-  return combo
-    .split('+')
-    .map((p, i, a) => (i === a.length - 1 ? PRETTY[p] || p : p))
-    .join(' + ')
+  const parts = combo.split('+').map((p, i, a) => (i === a.length - 1 ? PRETTY[p] || p : IS_MAC ? MAC_MODS[p] || p : p))
+  return IS_MAC ? parts.join('') : parts.join(' + ')
+}
+// Shortcut text written into tooltips / hints ("Ctrl+Shift+\") → Mac symbols.
+export function macText(s) {
+  if (!IS_MAC || !s) return s
+  return s.replace(/Ctrl\+/g, '⌘').replace(/Alt\+/g, '⌥').replace(/Shift\+/g, '⇧').replace(/\bCtrl\b/g, '⌘').replace(/\bAlt\b/g, '⌥')
 }
 
 // Short form for the little key hints on buttons ("⇧M").
 export function shortCombo(combo) {
   if (!combo) return ''
+  if (IS_MAC) return combo.replace('Ctrl+', '⌘').replace('Alt+', '⌥').replace('Shift+', '⇧').replace(/(Left|Right|Up|Down)$/, (m) => PRETTY[m])
   return combo.replace('Ctrl+', 'Ctrl ').replace('Alt+', 'Alt ').replace('Shift+', '⇧').replace(/(Left|Right|Up|Down)$/, (m) => PRETTY[m])
 }
 

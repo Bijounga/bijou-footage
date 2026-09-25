@@ -261,7 +261,7 @@ export const useStore = create(
       player.setBaseRate(get().settings.watchSpeed || 1)
       const tools = await api.toolsStatus(get().settings.ffmpegDir || null)
       set((s) => {
-        s.tools = tools
+        s.tools = { ...tools, checked: true }
       })
       api.setCachePolicy(get().settings.cacheLimitGB || 20, get().settings.cacheMode || 'remind')
       await get().loadProjectsFromDisk()
@@ -1425,7 +1425,7 @@ export const useStore = create(
     updateSettings(patch) {
       set((s) => { Object.assign(s.settings, patch) })
       get().scheduleSave()
-      if ('ffmpegDir' in patch) api.toolsStatus(patch.ffmpegDir || null).then((t) => set((s) => { s.tools = t }))
+      if ('ffmpegDir' in patch) api.toolsStatus(patch.ffmpegDir || null).then((t) => set((s) => { s.tools = { ...t, checked: true } }))
       if ('autoMuteEmpty' in patch || 'masterVol' in patch) get().pushMixer()
       if (patch.autoPrepare === true) get().prepareAll()
       if (patch.autoPrepare === false) api.clearWaveformQueue()

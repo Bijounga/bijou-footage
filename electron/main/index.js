@@ -1,9 +1,10 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, shell, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, protocol, shell, screen, Menu } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import { Readable } from 'stream'
-import { locateFfmpeg } from './ffmpeg.js'
+import { locateFfmpeg, forgetFfmpeg } from './ffmpeg.js'
+import * as setup from './setup.js'
 import { initLibrary, scanFolders } from './library.js'
 import * as waveform from './waveform.js'
 import * as transcribe from './transcribe.js'
@@ -14,6 +15,7 @@ import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
 import { initUpdater } from './updater.js'
 
 const isDev = !app.isPackaged
+const isMac = process.platform === 'darwin'
 
 // App data (notes, projects, settings, transcripts, waveform + audio caches)
 // lives in ~/.bijou-footage/app, next to the Whisper install — not in
@@ -167,12 +169,30 @@ function saveWindowState(w) {
   } catch { /* not important */ }
 }
 
+// A Mac always shows the app's menu bar, and text boxes only get ⌘C / ⌘V /
+// ⌘Z / ⌘A through its Edit menu. The page sees each key first: the app's own
+// shortcuts (⌘Z undoing an edit, ⌘A selecting clips…) take it and stop it
+// there; in a text box the menu does the usual text editing. No View menu:
+// its ⌘R (reload) and ⌘+/− (page zoom) would only get in the way.
+function macMenu() {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      { role: 'appMenu' },
+      { label: 'Edit', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
+      { role: 'windowMenu' },
+      { role: 'help', submenu: [{ label: 'Bijou Footage on GitHub', click: () => shell.openExternal('https://github.com/Bijounga/bijou-footage') }] }
+    ])
+  )
+}
+
 function createWindow() {
   const saved = loadReviews()
   const winState = loadWindowState()
   frameless = !!(saved && saved.settings && saved.settings.hideTitleBar)
   win = new BrowserWindow({
-    ...(frameless ? { titleBarStyle: 'hidden', titleBarOverlay: { color: '#17181e', symbolColor: '#ece9e2', height: OVERLAY_H } } : {}),
+    // No title bar: Windows draws its buttons over the app (overlay); a Mac
+    // keeps its traffic lights, inset into the app's top-left corner.
+    ...(frameless ? (isMac ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 13 } } : { titleBarStyle: 'hidden', titleBarOverlay: { color: '#17181e', symbolColor: '#ece9e2', height: OVERLAY_H } }) : {}),
     width: winState ? winState.bounds.width : 1500,
     height: winState ? winState.bounds.height : 920,
     ...(winState ? { x: winState.bounds.x, y: winState.bounds.y } : {}),
@@ -191,7 +211,8 @@ function createWindow() {
     }
   })
   // No menu bar at all: with autoHideMenuBar, pressing Alt pops it up, which
-  // fires on every Alt+wheel timeline zoom.
+  // fires on every Alt+wheel timeline zoom. (A Mac's menu bar is the app's,
+  // not the window's — see macMenu.)
   win.removeMenu()
   const thisWin = win
   win.on('ready-to-show', () => {
@@ -250,6 +271,24 @@ function registerIpc() {
     transcribe.setFfmpeg(t.ffmpeg)
     return { ffmpeg: t.ffmpeg, ffprobe: t.ffprobe }
   })
+
+  // Settings → Tools: install ffmpeg / the transcriber / AI summaries.
+  ipcMain.handle('setup:status', () => setup.status({ ffmpeg: tools(), llm }))
+  ipcMain.handle('setup:install', async (_e, what, opts) => {
+    // Nothing of the old copy may be running while it's replaced.
+    if (what === 'whisper') transcribe.shutdown()
+    if (what === 'llm') llm.shutdown()
+    const ok = await setup.install(what, opts, (ev) => send('setup:event', ev))
+    if (what === 'ffmpeg') {
+      forgetFfmpeg()
+      const t = tools()
+      waveform.setFfmpeg(t.ffmpeg)
+      transcribe.setFfmpeg(t.ffmpeg)
+    }
+    if (what === 'whisper') send('transcript:event', { type: 'state', ...transcribe.queueState() })
+    return ok
+  })
+  ipcMain.handle('setup:cancel', () => setup.cancel())
 
   ipcMain.handle('library:scan', (_e, folders, files) => {
     const t = tools()
@@ -344,7 +383,7 @@ function registerIpc() {
   ipcMain.handle('bijou:customThemes', () => bijou.customThemes())
   ipcMain.handle('window:frameless', () => frameless)
   ipcMain.handle('window:overlayColors', (_e, colors) => {
-    if (frameless && win && win.setTitleBarOverlay) win.setTitleBarOverlay({ ...colors, height: OVERLAY_H })
+    if (frameless && !isMac && win && win.setTitleBarOverlay) win.setTitleBarOverlay({ ...colors, height: OVERLAY_H })
   })
   ipcMain.handle('window:toggleFullscreen', () => {
     if (win) win.setFullScreen(!win.isFullScreen())
@@ -386,6 +425,7 @@ else {
     rotateBackup()
     registerIpc()
     initUpdater(send)
+    if (isMac) macMenu()
     createWindow()
   })
   app.on('window-all-closed', () => app.quit())

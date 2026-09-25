@@ -1,0 +1,53 @@
+name: Mac test
+
+# Builds the Mac app on one of GitHub's Macs and runs it for real
+# (scripts/mac-smoke.mjs): installs ffmpeg / transcription / AI summaries
+# through the app's own Settings → Tools (tiny models, to keep it quick),
+# reads + plays a generated recording in Review and Edit, transcribes
+# speech made by macOS `say`, and summarizes it. Screenshots and results
+# are attached to the run. Nothing is published.
+on:
+  workflow_dispatch:
+  push:
+    branches: [mac-port]
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx electron-vite build
+
+      - name: Package (Apple Silicon)
+        run: npx electron-builder --mac dir --arm64 --publish never
+
+      - name: Check the app's signature
+        run: codesign --verify --deep --strict --verbose=2 "dist/mac-arm64/Bijou Footage.app"
+
+      - name: Start the app
+        run: |
+          mkdir -p "$RUNNER_TEMP/bf"
+          BIJOU_FOOTAGE_DATA="$RUNNER_TEMP/bf/data" BIJOU_FOOTAGE_TOOLS="$RUNNER_TEMP/bf/tools" \
+          BIJOU_WHISPER_MODEL=tiny BIJOU_SETUP_TEST=1 \
+            "dist/mac-arm64/Bijou Footage.app/Contents/MacOS/Bijou Footage" --remote-debugging-port=9223 \
+            > "$RUNNER_TEMP/bf/app.log" 2>&1 &
+
+      - name: Smoke test
+        run: node scripts/mac-smoke.mjs "$RUNNER_TEMP/bf/out" "$RUNNER_TEMP/bf/work"
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-smoke
+          path: |
+            ${{ runner.temp }}/bf/out
+            ${{ runner.temp }}/bf/app.log

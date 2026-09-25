@@ -1,19 +1,31 @@
-// Local summaries of transcript selections: llama.cpp's llama-server (CUDA
-// build) running Qwen3-14B on the GPU, from ~/.bijou-footage/llm (outside
-// %APPDATA% for the same reason as Whisper — see transcribe.js).
+// Local summaries of transcript selections: llama.cpp's llama-server
+// running a Qwen3 model on the GPU (CUDA / Vulkan on a PC, Metal on a Mac),
+// from ~/.bijou-footage/llm — installed by Settings → Tools (setup.js),
+// which also picks the model size for the machine (llm/config.json).
 //
 // The server is started on the first request and kept warm; it exits after
 // IDLE_MS unused so its ~14 GB of graphics memory is given back. Summaries
 // stream: each piece of text is sent to the window as it's generated.
 import fs from 'fs'
-import os from 'os'
 import net from 'net'
 import path from 'path'
 import { spawn } from 'child_process'
+import { LLM_HOME, EXE } from './paths.js'
 
-export const LLM_HOME = path.join(os.homedir(), '.bijou-footage', 'llm')
-const SERVER = path.join(LLM_HOME, 'bin', 'llama-server.exe')
-const MODEL = path.join(LLM_HOME, 'models', 'Qwen3-14B-Q4_K_M.gguf')
+const SERVER = path.join(LLM_HOME, 'bin', 'llama-server' + EXE)
+// The model setup chose (config.json); else whichever one is there.
+export function modelFile() {
+  try {
+    const { model } = JSON.parse(fs.readFileSync(path.join(LLM_HOME, 'config.json'), 'utf8'))
+    if (model && fs.existsSync(path.join(LLM_HOME, 'models', model))) return model
+  } catch { /* none chosen */ }
+  try {
+    const all = fs.readdirSync(path.join(LLM_HOME, 'models')).filter((f) => f.endsWith('.gguf'))
+    return all.sort().pop() || null
+  } catch {
+    return null
+  }
+}
 // Tokens the model sees at once. 16k with a q8 KV cache keeps the whole
 // thing around 11 GB of graphics memory, so it still fits with Premiere /
 // After Effects open; longer selections are summarized in parts.
@@ -31,7 +43,7 @@ export function initLlm(onEvent) {
 }
 
 export function installed() {
-  return fs.existsSync(SERVER) && fs.existsSync(MODEL)
+  return fs.existsSync(SERVER) && !!modelFile()
 }
 
 export function shutdown() {
@@ -57,7 +69,7 @@ async function ensureServer() {
   // No -ngl: --fit puts as many layers on the GPU as there's room for (the
   // rest run on the CPU) instead of overflowing graphics memory, which
   // Windows would page to system RAM and make everything crawl.
-  const proc = spawn(SERVER, ['-m', MODEL, '-c', String(CTX), '-fa', 'on', '-ctk', 'q8_0', '-ctv', 'q8_0', '--fit', 'on', '--host', '127.0.0.1', '--port', String(port), '--jinja'], {
+  const proc = spawn(SERVER, ['-m', path.join(LLM_HOME, 'models', modelFile()), '-c', String(CTX), '-fa', 'on', '-ctk', 'q8_0', '-ctv', 'q8_0', '--fit', 'on', '--host', '127.0.0.1', '--port', String(port), '--jinja'], {
     cwd: path.dirname(SERVER),
     windowsHide: true
   })

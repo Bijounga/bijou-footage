@@ -5,8 +5,10 @@
 import fs from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
+import { FFMPEG_HOME } from './paths.js'
 
-const COMMON_DIRS = ['C:\\ffmpeg\\bin', 'C:\\Program Files\\ffmpeg\\bin', '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin']
+// The copy Settings → Tools installs (setup.js) comes first.
+const COMMON_DIRS = [path.join(FFMPEG_HOME, 'bin'), 'C:\\ffmpeg\\bin', 'C:\\Program Files\\ffmpeg\\bin', '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin']
 
 let cached = null
 
@@ -19,6 +21,11 @@ function findOnPath(name) {
   } catch {
     return null
   }
+}
+
+// Look again (after setup installed a copy).
+export function forgetFfmpeg() {
+  cached = null
 }
 
 // `overrideDir` comes from the user's settings (a folder containing both).
