@@ -71,11 +71,12 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.video",
-      "identity": "-"
+      "identity": null
     },
     "dmg": {
       "title": "Bijou Footage"
-    }
+    },
+    "afterSign": "scripts/adhoc-sign.cjs"
   },
   "repository": {
     "type": "git",
