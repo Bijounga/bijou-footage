@@ -1378,3 +1378,27 @@ body.mac.frameless .app.notes-hidden .clip-header { padding-right: 12px; }
 .np-head { flex-wrap: wrap; row-gap: 6px; }
 .np-title { min-width: max-content; }
 .np-tabs button { white-space: nowrap; }
+
+/* ---- the name at the top: version + updates ---- */
+.brand { position: relative; }
+.brand-btn { background: none; border: 0; padding: 2px 6px; margin-left: -6px; border-radius: 6px; font: inherit; color: inherit; cursor: pointer; }
+.brand-btn:hover { background: var(--panel-2); }
+body.frameless .brand-btn { -webkit-app-region: no-drag; }
+.brand-menu { position: absolute; top: calc(100% + 6px); left: -6px; width: 250px; padding: 12px; z-index: 60; font-weight: 400; font-size: 12.5px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55); -webkit-app-region: no-drag; }
+.brand-menu-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.brand-menu-head b { font-size: 14px; }
+.brand-menu-status { display: flex; align-items: center; gap: 6px; color: var(--ink-dim); }
+.brand-menu-status.ok { color: var(--green); }
+.brand-menu-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.brand-spin { width: 10px; height: 10px; border: 2px solid var(--line); border-top-color: var(--cyan); border-radius: 50%; animation: brand-spin 0.8s linear infinite; }
+@keyframes brand-spin { to { transform: rotate(360deg); } }
+
+/* ---- a project's folders ---- */
+.proj-folders { padding: 0 10px 8px; display: flex; flex-direction: column; gap: 3px; }
+.proj-folder { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 6px; background: var(--panel-2); font-size: 12px; }
+.proj-folder-icon { font-size: 11px; }
+.proj-folder-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-folder .row-btn { opacity: 0.5; }
+.proj-folder:hover .row-btn { opacity: 1; }
+.proj-folder-btns { display: flex; gap: 6px; margin-top: 3px; }
+.proj-folder-btns .btn { flex: 1; }

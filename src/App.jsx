@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { useStore } from './state/store.js'
 import { player } from './lib/player.js'
+import { seqPlayer } from './lib/seqPlayer.js'
 import { bus } from './lib/hooks.js'
 import { comboFromEvent, buildKeymap, IS_MAC, macText } from './lib/keybinds.js'
 import Library from './components/Library.jsx'
@@ -152,9 +153,20 @@ export default function App() {
     useStore.getState().init()
     window.addEventListener('keydown', onGlobalKeys, true)
     window.addEventListener('keydown', onKeyDown)
+    // Coming back to the app (e.g. after recording in OBS): look for new
+    // recordings — at most every 30 s, and not while something's playing.
+    let lastScan = Date.now()
+    const onFocus = () => {
+      const st = useStore.getState()
+      if (!st.loaded || st.scanning || Date.now() - lastScan < 30000 || player.playing || seqPlayer.playing) return
+      lastScan = Date.now()
+      st.rescan()
+    }
+    window.addEventListener('focus', onFocus)
     return () => {
       window.removeEventListener('keydown', onGlobalKeys, true)
       window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('focus', onFocus)
     }
   }, [])
 

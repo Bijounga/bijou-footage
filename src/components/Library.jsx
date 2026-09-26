@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useTrackColors } from '../state/store.js'
 import { fmtDuration, fmtDay, fmtClock, fmtHours } from '../lib/time.js'
 import { WorkspaceSwitch } from './EditWorkspace.jsx'
+import { Brand } from './Updates.jsx'
+import { bus } from '../lib/hooks.js'
 
 const OBS_NAME = /^\d{4}-\d{2}-\d{2}[ _]\d{2}-\d{2}-\d{2}/
 
@@ -36,6 +38,7 @@ export function ProjectPicker({ clipCount }) {
   const [open, setOpen] = useState(false)
   const [naming, setNaming] = useState(null) // 'new' | 'rename'
   const ref = useOutsideClose(open, setOpen)
+  useEffect(() => bus.on('newProject', () => setNaming('new')), [])
 
   function commit(value) {
     const name = value.trim()
@@ -101,6 +104,46 @@ export function ProjectPicker({ clipCount }) {
   )
 }
 
+// The folders a project takes its recordings from, with ＋ Add folder.
+export function ProjectFolders({ project }) {
+  const addProjectFolders = useStore((s) => s.addProjectFolders)
+  const removeProjectFolder = useStore((s) => s.removeProjectFolder)
+  const openModal = useStore((s) => s.openModal)
+  const showToast = useStore((s) => s.showToast)
+  const [busy, setBusy] = useState(false)
+  const folders = project.folders || []
+  async function add() {
+    setBusy(true)
+    try {
+      const n = await addProjectFolders(project.id)
+      if (n) showToast(`Added ${n} recording${n === 1 ? '' : 's'} to “${project.name}”`)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="proj-folders">
+      {folders.map((f) => (
+        <div key={f} className="proj-folder" title={f + '\nEvery recording in here (and its subfolders) is in this project — new ones too.'}>
+          <span className="proj-folder-icon">📁</span>
+          <span className="proj-folder-name">{f.split(/[\\/]/).filter(Boolean).pop() || f}</span>
+          <button
+            className="row-btn"
+            title="Remove this folder from the project (its recordings leave the project; notes are kept)"
+            onClick={() => { if (window.confirm(`Remove “${f}” from ${project.name}? Its recordings leave the project; their notes are kept.`)) removeProjectFolder(project.id, f) }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <div className="proj-folder-btns">
+        <button className="btn small accent" disabled={busy} onClick={add} title="Everything in the folder (and its subfolders) joins the project — and new recordings there join by themselves">{busy ? 'Scanning…' : '＋ Add folder'}</button>
+        <button className="btn small ghost" onClick={() => openModal('addFootage')} title="Pick single recordings">Pick recordings…</button>
+      </div>
+    </div>
+  )
+}
+
 // Hover "+" on a row in All footage: add that recording to a project.
 function AddToProjectMenu({ clipKey }) {
   const projects = useStore((s) => s.projects)
@@ -147,6 +190,9 @@ export default function Library() {
   const reviews = useStore((s) => s.reviews)
   const currentKey = useStore((s) => s.currentKey)
   const folders = useStore((s) => s.settings.folders)
+  const projects = useStore((s) => s.projects)
+  // Recordings can come from the library's folders or from projects' folders.
+  const hasSources = folders.length > 0 || projects.some((p) => (p.folders || []).length || p.clipKeys.length)
   const scanning = useStore((s) => s.scanning)
   const filter = useStore((s) => s.libraryFilter)
   const setFilter = useStore((s) => s.setLibraryFilter)
@@ -197,9 +243,7 @@ export default function Library() {
   return (
     <aside className="library">
       <div className="lib-top">
-        <div className="brand">
-          <span className="brand-mark">▶</span> Bijou Footage
-        </div>
+        <Brand />
         <button className="icon-btn" title="Settings" onClick={() => openModal('settings')}>⚙</button>
         <button className="icon-btn" title="Keyboard shortcuts — change any key (?)" onClick={() => openModal('help')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
@@ -211,7 +255,7 @@ export default function Library() {
       </div>
 
       <WorkspaceSwitch />
-      {folders.length > 0 && <ProjectPicker clipCount={clips.length} />}
+      <ProjectPicker clipCount={clips.length} />
 
       {scopeCount > 0 && (
         <div className="lib-stats">
@@ -221,13 +265,9 @@ export default function Library() {
         </div>
       )}
 
-      {project && (
-        <div className="lib-project-actions">
-          <button className="btn small accent block" onClick={() => openModal('addFootage')}>＋ Add footage</button>
-        </div>
-      )}
+      {project && <ProjectFolders project={project} />}
 
-      {folders.length > 0 && scopeCount > 0 && (
+      {scopeCount > 0 && (
         <div className="lib-filters">
           <input
             className="lib-search"
@@ -245,23 +285,23 @@ export default function Library() {
       )}
 
       <div className="lib-list">
-        {folders.length === 0 && (
+        {!project && !hasSources && (
           <div className="lib-empty">
-            <p>Point Bijou Footage at the folder OBS records into.</p>
-            <button className="btn primary" onClick={addFolders}>Add recordings folder…</button>
-            <p className="dim small">Your files are never moved, copied or re-encoded — they play straight from where they are.</p>
+            <p>Start with a project — one video you're making, e.g. <i>Allumeria</i>.</p>
+            <button className="btn primary" onClick={() => bus.emit('newProject')}>＋ New project</button>
+            <p className="dim small">Then add the folders its recordings are in. Your files are never moved, copied or re-encoded — they play straight from where they are.</p>
+            <button className="link-btn" onClick={addFolders} title="A folder for All footage, not tied to a project">or add a folder of recordings without a project</button>
           </div>
         )}
-        {project && scopeCount === 0 && (
+        {project && scopeCount === 0 && !scanning && (
           <div className="lib-empty">
             <p>No footage in <b>{project.name}</b> yet.</p>
-            <button className="btn primary" onClick={() => openModal('addFootage')}>Add footage…</button>
-            <p className="dim small">Pick the recordings you want to review for this video. Your notes stay on each recording, so it can be in more than one project.</p>
+            <p className="dim small">Add the folder its recordings are in (<b>＋ Add folder</b> above) — everything in it joins the project, and new recordings there join by themselves. Or pick recordings one by one.</p>
           </div>
         )}
-        {folders.length > 0 && scanning && clips.length === 0 && <div className="lib-empty dim">Scanning…</div>}
-        {folders.length > 0 && !scanning && scopeCount > 0 && visibleCount === 0 && <div className="lib-empty dim">Nothing matches that filter.</div>}
-        {!project && folders.length > 0 && !scanning && clips.length === 0 && <div className="lib-empty dim">No videos found in your folders.</div>}
+        {hasSources && scanning && scopeCount === 0 && <div className="lib-empty dim">Scanning…</div>}
+        {!scanning && scopeCount > 0 && visibleCount === 0 && <div className="lib-empty dim">Nothing matches that filter.</div>}
+        {!project && hasSources && !scanning && clips.length === 0 && <div className="lib-empty dim">No videos found in your folders.</div>}
         {groups.map((g) => (
           <div key={g.day} className="lib-group">
             <div className="lib-day" title={`${fmtDuration(g.dur)} recorded this day (${g.rows.length} recording${g.rows.length === 1 ? '' : 's'})`}>

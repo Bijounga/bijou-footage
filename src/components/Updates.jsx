@@ -82,3 +82,58 @@ export function UpdatesSection() {
     </section>
   )
 }
+
+// The "▶ Bijou Footage" name at the top of the sidebar: click it for the
+// version, and it checks for an update right then.
+export function Brand() {
+  const s = useUpdateStatus()
+  const [open, setOpen] = useState(false)
+  const [version, setVersion] = useState('')
+  const ref = React.useRef(null)
+  useEffect(() => { window.footage.appVersion().then(setVersion) }, [])
+  useEffect(() => {
+    if (!open) return
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [open])
+  function toggle() {
+    if (!open && s.state !== 'downloading' && s.state !== 'ready') window.footage.checkForUpdates()
+    setOpen(!open)
+  }
+  const text =
+    s.state === 'downloading' ? `Downloading ${s.version || 'the update'}…${s.percent != null ? ' ' + s.percent + '%' : ''}` :
+    s.state === 'ready' ? `Version ${s.version} is ready.` :
+    s.state === 'available-manual' ? `Version ${s.version} is out.` :
+    LABEL[s.state] || 'Checking…'
+  return (
+    <div className="brand" ref={ref}>
+      <button className="brand-btn" onClick={toggle} title="Version and updates">
+        <span className="brand-mark">▶</span> Bijou Footage
+      </button>
+      {open && (
+        <div className="brand-menu">
+          <div className="brand-menu-head">
+            <b>Bijou Footage</b>
+            <span className="dim">Version {version}</span>
+          </div>
+          <div className={'brand-menu-status small' + (s.state === 'error' ? ' upd-error' : s.state === 'up-to-date' ? ' ok' : '')} title={s.message || ''}>
+            {s.state === 'checking' && <span className="brand-spin" />}
+            {text}
+          </div>
+          {s.state === 'downloading' && s.percent != null && <div className="tool-bar"><span style={{ width: Math.max(1, s.percent) + '%' }} /></div>}
+          <div className="brand-menu-actions">
+            {s.state === 'ready' ? (
+              <button className="btn small primary" onClick={() => window.footage.installUpdate()}>Restart to update</button>
+            ) : s.state === 'available-manual' ? (
+              <button className="btn small primary" onClick={() => window.footage.openReleases()}>Download</button>
+            ) : (
+              <button className="btn small" disabled={s.state === 'checking' || s.state === 'downloading'} onClick={() => window.footage.checkForUpdates()}>Check again</button>
+            )}
+            <button className="link-btn" onClick={() => window.footage.openReleases()}>What's new</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

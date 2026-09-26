@@ -5,7 +5,8 @@ import { bus, onTick } from '../lib/hooks.js'
 import { fmtTime, fmtDuration, fmtDay, fmtShortDay } from '../lib/time.js'
 import { parseTimecode } from './PlayerView.jsx'
 import * as EM from '../lib/editModel.js'
-import { ProjectPicker, clipTitle } from './Library.jsx'
+import { ProjectPicker, ProjectFolders, clipTitle } from './Library.jsx'
+import { Brand } from './Updates.jsx'
 import EditTimeline from './EditTimeline.jsx'
 import EditPanel from './EditPanel.jsx'
 import { ToolsMenu, RemoveSilenceDialog, CutAroundDialog, ExportSectionDialog } from './EditTools.jsx'
@@ -108,8 +109,12 @@ function Bin() {
     <div className="es-block es-bin">
       <div className="es-head">
         <span>Recordings</span>
-        <span className="dim small">drag onto the timeline, or ＋</span>
+        {list.length > 0 && <span className="dim small">drag onto the timeline, or ＋</span>}
+        {list.length > 0 && (
+          <button className="link-btn" title="Add a folder of recordings to this project" onClick={() => useStore.getState().addProjectFolders(project.id)}>＋ Folder</button>
+        )}
       </div>
+      {!list.length && <ProjectFolders project={project} />}
       <div className="es-bin-list">
         {list.map((c, i) => (
           <div
@@ -148,9 +153,7 @@ function EditSidebar() {
   return (
     <aside className="library edit-side">
       <div className="lib-top">
-        <div className="brand">
-          <span className="brand-mark">▶</span> Bijou Footage
-        </div>
+        <Brand />
         <button className="icon-btn" title="Settings" onClick={() => openModal('settings')}>⚙</button>
         <button className="icon-btn" title="Keyboard shortcuts" onClick={() => openModal('help')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">

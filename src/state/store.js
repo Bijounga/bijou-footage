@@ -112,10 +112,27 @@ export function emptyReview() {
   return { notes: [], lastPos: 0, started: false, done: false, lastOpened: 0 }
 }
 
-// A project is a hand-picked list of recordings (by clip key). Notes live on
-// the recordings, so a recording in two projects shows the same notes.
+// A project is a list of recordings (by clip key): picked by hand, and/or
+// everything in the folders added to it (folders — new recordings there
+// join by themselves; one removed by hand goes on excluded so it stays
+// out). Notes live on the recordings, so a recording in two projects shows
+// the same notes.
 function newProject(name) {
-  return { id: newId().replace(/^n/, 'p'), name: name || 'New project', clipKeys: [], createdAt: Date.now(), bijouScriptId: null }
+  return { id: newId().replace(/^n/, 'p'), name: name || 'New project', clipKeys: [], folders: [], excluded: [], createdAt: Date.now(), bijouScriptId: null }
+}
+// Is this recording (clip key = its path; lower-case on Windows) inside folder?
+const IS_WIN = typeof window !== 'undefined' && window.footage && window.footage.platform === 'win32'
+function inFolder(key, folder) {
+  const sep = IS_WIN ? '\\' : '/'
+  let f = folder.replace(/[\\/]+$/, '') + sep
+  if (IS_WIN) f = f.toLowerCase()
+  return key.startsWith(f)
+}
+// Every folder to scan: the library's own, plus each project's.
+function allFolders(st) {
+  const out = [...st.settings.folders]
+  for (const p of st.projects) for (const f of p.folders || []) if (!out.includes(f)) out.push(f)
+  return out
 }
 
 // ---- saving projects & sections to the projects folder ----
@@ -123,7 +140,7 @@ function newProject(name) {
 // a moment after the last change; removed projects go to the Recycle Bin.
 const savedProjects = new Map() // id -> {json, folder}
 const savedSections = new Map() // id -> json
-const projectJson = (p, pad) => JSON.stringify([p.name, p.clipKeys, p.bijouScriptId || null, p.createdAt, pad || null])
+const projectJson = (p, pad) => JSON.stringify([p.name, p.clipKeys, p.folders || [], p.excluded || [], p.bijouScriptId || null, p.createdAt, pad || null])
 const sectionJson = (x) => JSON.stringify([x.name, x.order, x.clips, x.markers || []])
 function markProjectsSaved(list) {
   const pads = useStore.getState().pads
@@ -304,7 +321,7 @@ export const useStore = create(
 
     // ---- library ----
     async rescan() {
-      const folders = get().settings.folders
+      const folders = allFolders(get())
       const files = get().settings.files || []
       if (!folders.length && !files.length) {
         set((s) => { s.clips = [] })
@@ -316,6 +333,7 @@ export const useStore = create(
         s.clips = clips
         s.scanning = false
       })
+      get().syncProjectFolders()
       if (get().settings.autoPrepare) get().prepareAll()
       await get().refreshTxDone()
       get().autoTranscribe()
@@ -372,9 +390,7 @@ export const useStore = create(
       })
       get().scheduleSave()
       await get().rescan()
-      const norm = (p) => p.toLowerCase().replace(/[\\/]+$/, '') + '\\'
-      const roots = picked.map(norm)
-      return get().clips.filter((c) => roots.some((r) => c.key.startsWith(r))).map((c) => c.key)
+      return get().clips.filter((c) => picked.some((f) => inFolder(c.key, f))).map((c) => c.key)
     },
     async addFiles() {
       const picked = await api.pickFiles()
@@ -385,7 +401,7 @@ export const useStore = create(
       })
       get().scheduleSave()
       await get().rescan()
-      const keys = new Set(picked.map((p) => p.toLowerCase()))
+      const keys = new Set(picked.map((p) => (IS_WIN ? p.toLowerCase() : p)))
       return get().clips.filter((c) => keys.has(c.key)).map((c) => c.key)
     },
     removeFile(p) {
@@ -859,15 +875,71 @@ export const useStore = create(
         const p = s.projects.find((x) => x.id === id)
         if (!p) return
         for (const k of keys) if (!p.clipKeys.includes(k)) p.clipKeys.push(k)
+        if (p.excluded) p.excluded = p.excluded.filter((k) => !keys.includes(k))
       })
       get().scheduleSave()
     },
     removeFromProject(id, key) {
       set((s) => {
         const p = s.projects.find((x) => x.id === id)
-        if (p) p.clipKeys = p.clipKeys.filter((k) => k !== key)
+        if (!p) return
+        p.clipKeys = p.clipKeys.filter((k) => k !== key)
+        // From one of its folders: keep it out when the folder is rescanned.
+        if ((p.folders || []).some((f) => inFolder(key, f))) {
+          if (!p.excluded) p.excluded = []
+          if (!p.excluded.includes(key)) p.excluded.push(key)
+        }
       })
       get().scheduleSave()
+    },
+    // Each project gets every recording in its folders (except ones removed
+    // by hand). Runs after every scan, so new recordings join by themselves.
+    syncProjectFolders() {
+      const { projects, clips } = get()
+      const adds = []
+      for (const p of projects) {
+        if (!p.folders || !p.folders.length) continue
+        const have = new Set(p.clipKeys)
+        const out = new Set(p.excluded || [])
+        const keys = clips.filter((c) => !have.has(c.key) && !out.has(c.key) && p.folders.some((f) => inFolder(c.key, f))).map((c) => c.key)
+        if (keys.length) adds.push([p.id, keys])
+      }
+      if (!adds.length) return
+      set((s) => {
+        for (const [id, keys] of adds) {
+          const p = s.projects.find((x) => x.id === id)
+          if (p) p.clipKeys.push(...keys)
+        }
+      })
+      get().scheduleSave()
+    },
+    // Pick folders for a project; returns how many recordings they brought.
+    async addProjectFolders(id) {
+      const picked = await api.pickFolders()
+      if (!picked.length) return 0
+      const before = (get().projects.find((x) => x.id === id) || { clipKeys: [] }).clipKeys.length
+      set((s) => {
+        const p = s.projects.find((x) => x.id === id)
+        if (!p) return
+        if (!p.folders) p.folders = []
+        for (const f of picked) if (!p.folders.includes(f)) p.folders.push(f)
+      })
+      get().scheduleSave()
+      await get().rescan()
+      const p = get().projects.find((x) => x.id === id)
+      return p ? p.clipKeys.length - before : 0
+    },
+    // Takes the folder's recordings out of the project too (notes are kept).
+    removeProjectFolder(id, folder) {
+      set((s) => {
+        const p = s.projects.find((x) => x.id === id)
+        if (!p) return
+        p.folders = (p.folders || []).filter((f) => f !== folder)
+        p.clipKeys = p.clipKeys.filter((k) => !inFolder(k, folder) || p.folders.some((f) => inFolder(k, f)))
+        p.excluded = (p.excluded || []).filter((k) => !inFolder(k, folder))
+      })
+      get().scheduleSave()
+      get().rescan()
     },
     setProjectScript(id, scriptId) {
       set((s) => {
