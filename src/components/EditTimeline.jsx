@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useTrackColors } from '../state/store.js'
 import { seqPlayer } from '../lib/seqPlayer.js'
 import { bus, onTick } from '../lib/hooks.js'
@@ -8,6 +8,8 @@ import * as EM from '../lib/editModel.js'
 import { clipTitle } from './Library.jsx'
 import { parseWaveform, TrackHead } from './Timeline.jsx'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
+import { makeWheelAxis, onFrame, isPinch } from '../lib/wheel.js'
+import ZoomBar from './ZoomBar.jsx'
 import { setWave, speechSegments } from '../lib/speech.js'
 
 // Waveform peaks per recording (the same .bwf files Review draws), loaded
@@ -321,6 +323,7 @@ const VClip = React.memo(function VClip({ it, x, pps, sel, c, notes, tool, beatC
 
 const HEAD_W = 214
 const RULER_H = 30
+const MAX_PPS = 400 // closest zoom: pixels per second
 const V_H = 58
 const A_H = 44
 const SNAP_PX = 8
@@ -401,30 +404,56 @@ export default function EditTimeline({ section }) {
 
   const tToX = (t) => (t - view.start) * view.pps
   const xToT = (x) => view.start + x / view.pps
+  // Zoom limits: out to where the whole section fits (no further — it would
+  // just shrink into the corner), in to MAX_PPS.
+  const fitPps = () => Math.max(0.0005, (widthRef.current - 40) / Math.max(10, totalRef.current))
   const zoomAt = (factor, x) => {
     const v = viewRef.current
     const t = v.start + x / v.pps
-    const pps = Math.max(0.0005, Math.min(400, v.pps * factor))
-    setView({ start: Math.max(0, t - x / pps), pps })
+    const lo = Math.min(fitPps(), MAX_PPS)
+    const pps = Math.max(lo, Math.min(MAX_PPS, v.pps * factor))
+    const maxStart = Math.max(0, totalRef.current - (widthRef.current * 0.6) / pps)
+    setView({ start: Math.max(0, Math.min(maxStart, t - x / pps)), pps })
   }
+  // The zoom bar: 0 = fit … 1 = MAX_PPS, on a log scale; zooms around the
+  // playhead when it's on screen, else the middle.
+  const zoomGet = useCallback(() => {
+    const lo = fitPps()
+    if (lo >= MAX_PPS) return 1
+    return Math.max(0, Math.min(1, Math.log(viewRef.current.pps / lo) / Math.log(MAX_PPS / lo)))
+  }, [])
+  const zoomSet = useCallback((z) => {
+    const v = viewRef.current
+    const lo = fitPps()
+    const pps = lo * Math.pow(MAX_PPS / lo, z)
+    const px = (seqPlayer.getTime() - v.start) * v.pps
+    zoomAt(pps / v.pps, px >= 0 && px <= widthRef.current ? px : widthRef.current / 2)
+  }, [])
   useEffect(() => bus.on('editZoom', (dir) => (dir === 0 ? fit() : zoomAt(dir > 0 ? 1.6 : 1 / 1.6, (seqPlayer.getTime() - viewRef.current.start) * viewRef.current.pps))), [width, total])
 
   // Wheel: pan · Alt+wheel: zoom at the cursor (same as Review).
+  // Trackpad: a sideways swipe pans (lib/wheel.js keeps a swipe on one
+  // axis), a pinch zooms smoothly; events are gathered into one update per
+  // frame.
   useEffect(() => {
     const el = bodyRef.current
+    const panAmount = makeWheelAxis()
+    const pan = onFrame((dPx) => {
+      const v = viewRef.current
+      const d = dPx / v.pps
+      // Not past the end: the cut's end stays at least 40% into the view.
+      const maxStart = Math.max(0, totalRef.current - (el.clientWidth * 0.6) / v.pps)
+      let start = Math.max(0, v.start + d)
+      if (d > 0) start = Math.min(start, Math.max(maxStart, v.start))
+      if (start !== v.start) setView({ ...v, start })
+    })
+    const pinch = onFrame((d, x) => zoomAt(Math.exp(-d * 0.01), x))
     const onWheel = (e) => {
       e.preventDefault()
       const rect = el.getBoundingClientRect()
-      if (e.altKey || e.ctrlKey) zoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX - rect.left)
-      else {
-        const v = viewRef.current
-        const d = (e.deltaY || e.deltaX) / v.pps
-        // Not past the end: the cut's end stays at least 40% into the view.
-        const maxStart = Math.max(0, totalRef.current - (el.clientWidth * 0.6) / v.pps)
-        let start = Math.max(0, v.start + d)
-        if (d > 0) start = Math.min(start, Math.max(maxStart, v.start))
-        if (start !== v.start) setView({ ...v, start })
-      }
+      if (isPinch(e)) pinch(e.deltaY, e.clientX - rect.left)
+      else if (e.altKey || e.ctrlKey) zoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX - rect.left)
+      else pan(panAmount(e))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -825,7 +854,7 @@ export default function EditTimeline({ section }) {
     <div className="et">
       <div className="et-heads">
         <div className="et-head-ruler" style={{ height: RULER_H }}>
-          <button className="icon-btn small" onClick={fit} title="Fit the whole section (\)">⇔</button>
+          <ZoomBar get={zoomGet} set={zoomSet} onFit={fit} onStep={(dir) => bus.emit('editZoom', dir)} fitTitle="Fit the whole section (\)" />
         </div>
         <div className="et-head v" style={{ height: V_H }}>V1</div>
         {Array.from({ length: nTracks }, (_, i) => {

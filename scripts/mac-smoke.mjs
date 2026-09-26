@@ -190,6 +190,30 @@ await step('Edit: a section with a cut plays across it', true, async () => {
   return r
 })
 
+await step('Edit: trackpad pinch zooms, sideways swipe pans', true, async () => {
+  const r = await js(`
+    const w = (ms) => new Promise((r) => setTimeout(r, ms))
+    const body = document.querySelector('.et-body')
+    const b = body.getBoundingClientRect()
+    const ticks = () => [...document.querySelectorAll('.et-tick')].map((t) => t.innerText + '@' + Math.round(parseFloat(t.style.left))).join(' ')
+    const ev = (o) => body.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: b.left + 150, clientY: b.top + 60, ...o }))
+    const t0 = ticks()
+    for (let i = 0; i < 30; i++) { ev({ ctrlKey: true, deltaY: -4 }); await w(16) } // pinch out
+    await w(300)
+    const t1 = ticks()
+    for (let i = 0; i < 40; i++) { ev({ deltaX: 10, deltaY: i % 3 ? -2 : 3 }); await w(10) } // swipe, a little vertical noise
+    await w(300)
+    const t2 = ticks()
+    const range = document.querySelector('.et-head-ruler .zoom-range')
+    const zoomedIn = Number(range.value)
+    for (let i = 0; i < 120; i++) { ev({ ctrlKey: true, deltaY: 8 }); await w(8) } // a big pinch in (zoom out)
+    await w(400)
+    return { zoomed: t0 !== t1, panned: t1 !== t2, zoomedIn, afterPinchOut: Number(range.value), t0, t1, t2 }
+  `)
+  if (!r.zoomed || !r.panned || !(r.zoomedIn > 0) || r.afterPinchOut !== 0) throw new Error(JSON.stringify(r))
+  return { zoomed: r.zoomed, panned: r.panned, sliderAfterZoomIn: r.zoomedIn, sliderAfterPinchOut: r.afterPinchOut }
+})
+
 await step('install transcription (tiny model)', false, async () => {
   const log = await install('whisper')
   return { log, status: await js('return (await window.footage.setupStatus()).whisper') }

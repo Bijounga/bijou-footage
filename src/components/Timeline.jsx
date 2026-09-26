@@ -6,6 +6,8 @@ import { fmtTime } from '../lib/time.js'
 import { LABEL, noteHex } from '../lib/beats.js'
 import { setWave, speechSegments } from '../lib/speech.js'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
+import { makeWheelAxis, onFrame, isPinch } from '../lib/wheel.js'
+import ZoomBar from './ZoomBar.jsx'
 
 const RULER_H = 40 // tall on purpose: the ruler is the main click-and-drag scrub area
 const MARKER_BAND = 20 // top of the ruler where the note/marker shields sit (clicks there pick a note)
@@ -310,6 +312,22 @@ export default function Timeline() {
     const rel = (a - v.start) / (v.end - v.start)
     clampView(a - rel * span, a - rel * span + span)
   }
+  // The zoom bar: 0 = whole recording … 1 = MIN_SPAN on screen, log scale.
+  const zoomGet = useCallback(() => {
+    const d = latest.current.duration || 0
+    if (d <= MIN_SPAN) return 0
+    const span = view.current.end - view.current.start
+    return Math.max(0, Math.min(1, Math.log(d / span) / Math.log(d / MIN_SPAN)))
+  }, [])
+  const zoomSet = useCallback((z) => {
+    const d = latest.current.duration || 0
+    if (d <= MIN_SPAN) return
+    const v = view.current
+    const span = d / Math.pow(d / MIN_SPAN, z)
+    const t = player.getTime()
+    zoomAt(span / (v.end - v.start), t >= v.start && t <= v.end ? t : (v.start + v.end) / 2)
+    follow.current = true
+  }, [])
   // Snapping (the magnet next to the speed): a time within SNAP_PX on screen
   // of a note/marker (or the playhead, when moving a note) lands exactly on
   // it. `pxPerSec` is the timeline's zoom, so the 8px feel holds at any zoom level.
@@ -694,10 +712,26 @@ export default function Timeline() {
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
+    const panAmount = makeWheelAxis()
+    // Trackpad pinch (Mac): zoom smoothly at the fingers, one step per frame.
+    const pinch = onFrame((d, x) => {
+      const body = bodyRef.current.getBoundingClientRect()
+      const inBody = x >= 0 && x <= body.width
+      zoomAt(Math.exp(d * 0.012), inBody ? xToT(x) : null)
+    })
+    const pan = onFrame((d) => {
+      const v = view.current
+      const dt = (d / size.current.w) * (v.end - v.start)
+      clampView(v.start + dt, v.end + dt)
+    })
     const onWheel = (e) => {
       if (!latest.current.duration) return
       e.preventDefault()
-      const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+      if (isPinch(e)) {
+        pinch(e.deltaY, e.clientX - bodyRef.current.getBoundingClientRect().left)
+        return
+      }
+      const d = panAmount(e)
       if (e.ctrlKey) {
         setScroll(scrollRef.current + d)
         return
@@ -710,9 +744,7 @@ export default function Timeline() {
         zoomAt(Math.exp(d * 0.0018), anchor)
         return
       }
-      const v = view.current
-      const dt = (d / size.current.w) * (v.end - v.start)
-      clampView(v.start + dt, v.end + dt)
+      pan(d)
       follow.current = false
       clearTimeout(el._followTimer)
       el._followTimer = setTimeout(() => { follow.current = true }, 2500)
@@ -820,10 +852,7 @@ export default function Timeline() {
       <div className="tl-row tl-main-row">
         <div className="tl-heads">
           <div className="tl-head tl-ruler-head" style={{ height: RULER_H }}>
-            <button className="mini-btn" onClick={() => bus.emit('fit')} title="Fit whole recording">Fit</button>
-            <button className="mini-btn" onClick={() => bus.emit('zoom', 1.6)} title="Zoom out · Alt+wheel">−</button>
-            <button className="mini-btn" onClick={() => bus.emit('zoom', 1 / 1.6)} title="Zoom in · Alt+wheel">+</button>
-            <span className="dim small tl-hint" title="Wheel: pan · Alt+wheel: zoom · Ctrl+wheel: scroll tracks">⇆ ⌥ ⌃</span>
+            <ZoomBar get={zoomGet} set={zoomSet} onFit={() => bus.emit('fit')} onStep={(dir) => bus.emit('zoom', dir > 0 ? 1 / 1.6 : 1.6)} fitTitle="Fit the whole recording" />
           </div>
           <div className="tl-heads-scroll">
             <div style={{ transform: `translateY(${-scrollY}px)` }}>

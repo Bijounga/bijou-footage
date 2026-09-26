@@ -1,6 +1,6 @@
 {
   "name": "bijou-footage",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Bijou Footage — a fast footage reviewer for long OBS recordings, feeding BijouDocs",
   "main": "out/main/index.js",
   "author": "Bijou",

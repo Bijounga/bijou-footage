@@ -1402,3 +1402,11 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .proj-folder:hover .row-btn { opacity: 1; }
 .proj-folder-btns { display: flex; gap: 6px; margin-top: 3px; }
 .proj-folder-btns .btn { flex: 1; }
+
+/* ---- zoom bar (Review + Edit timeline heads) ---- */
+.zoom-bar { display: flex; align-items: center; gap: 3px; width: 100%; min-width: 0; }
+.zoom-range { flex: 1; min-width: 40px; height: 16px; margin: 0 2px; -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; }
+.zoom-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--cyan) var(--z), var(--panel-3) var(--z)); }
+.zoom-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: var(--ink); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line); }
+.zoom-range:hover::-webkit-slider-thumb { background: #fff; }
+.et-head-ruler .zoom-bar { padding: 0 6px; }
