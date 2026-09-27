@@ -1410,3 +1410,55 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .zoom-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: var(--ink); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line); }
 .zoom-range:hover::-webkit-slider-thumb { background: #fff; }
 .et-head-ruler .zoom-bar { padding: 0 6px; }
+
+/* viewer window button (lit while it's open) */
+.viewer-btn { display: inline-flex; align-items: center; justify-content: center; }
+.viewer-btn.on { color: var(--cyan); }
+
+/* ---- layout: hide the player / full-height panel (LayoutToggles.jsx) ---- */
+.layout-btn { display: inline-flex; align-items: center; justify-content: center; }
+.layout-btn.on { color: var(--cyan); }
+/* Review */
+.app.panel-full { grid-template-columns: 290px minmax(0, 1fr) var(--notes-w, 360px); }
+.app.panel-full.lib-hidden { grid-template-columns: minmax(0, 1fr) var(--notes-w, 360px); }
+.app.panel-full > .notes-panel { border-left: 1px solid var(--line); min-height: 0; }
+.app.player-hidden .stage { display: none; }
+.app.player-hidden .upper { flex: none; }
+.app.player-hidden .timeline { flex: 1 1 auto; height: auto !important; }
+/* Edit */
+.app.edit-app.panel-full { grid-template-columns: 290px minmax(0, 1fr) auto; }
+.app.edit-app.panel-full.side-hidden { grid-template-columns: minmax(0, 1fr) auto; }
+.app.edit-app.panel-full > .edit-panel { border-left: 1px solid var(--line); min-height: 0; }
+.app.edit-app.player-hidden .em-stage { display: none; }
+.app.edit-app.player-hidden .edit-upper { flex: none; min-height: 0; }
+.app.edit-app.player-hidden .et { flex: 1 1 auto; height: auto; }
+.app.panel-full > .notes-panel { max-width: none; } /* the beside-the-player cap does not apply in its own column */
+
+/* compact transport: icon-only buttons (name + key on hover) */
+.snap-btn.icon-only { padding: 0 7px; gap: 0; }
+.icon-btn-t { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; }
+.icon-btn-t.marker-btn .mk-shield { margin: 0; }
+.transport .t-vol input[type=range] { width: 64px; }
+
+/* ---- sketch notes (SketchEditor.jsx) ---- */
+.note-sketch { display: block; max-width: 100%; max-height: 150px; margin: 6px 0 2px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; background: #000; object-fit: contain; }
+.note-sketch:hover { border-color: var(--cyan); }
+.ep-sketch { max-height: 110px; margin: 4px 0 2px 0; }
+.sketch-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(8, 9, 12, 0.92); display: flex; flex-direction: column; padding: 12px 16px; gap: 10px; }
+.sketch-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sketch-group { display: flex; gap: 3px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+.sketch-tool { width: 32px; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--ink); font-size: 15px; cursor: pointer; }
+.sketch-tool:hover { background: var(--panel-3); }
+.sketch-tool.on { background: var(--cyan); color: #06201d; }
+.sketch-color { width: 22px; height: 22px; margin: 3px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.25); cursor: pointer; }
+.sketch-color.on { border-color: #fff; box-shadow: 0 0 0 2px var(--cyan); }
+.sketch-size input { width: 110px; }
+.sketch-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.sketch-canvases { position: relative; max-width: 100%; max-height: 100%; height: 100%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+.sketch-canvases canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sketch-live { cursor: crosshair; touch-action: none; }
+.sketch-live.tool-text { cursor: text; }
+.sketch-text { position: absolute; min-width: 120px; min-height: 1.4em; background: rgba(0, 0, 0, 0.35); border: 1px dashed rgba(255, 255, 255, 0.6); outline: none; resize: both; font-weight: 700; font-family: Inter, 'Segoe UI', sans-serif; line-height: 1.2; padding: 0; overflow: hidden; }
+.sketch-hint { text-align: center; }
+
+.sketch-display { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 12px; }

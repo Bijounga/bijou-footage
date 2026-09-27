@@ -6,11 +6,23 @@ import { fmtTime, fmtDay, fmtClock } from '../lib/time.js'
 import { clipProgress } from './Library.jsx'
 import { MARKER_COLORS } from '../lib/beats.js'
 import { useKeyHint } from './Keybinds.jsx'
+import ViewerButton from './ViewerButton.jsx'
+import { PlayerHideButton } from './LayoutToggles.jsx'
 
 // A button's key hint, following the user's bindings (hidden if unbound).
 function Kbd({ id }) {
   const k = useKeyHint(id)
   return k ? <kbd>{k}</kbd> : null
+}
+
+// An icon-only transport button; hovering shows what it does and its key.
+function IconBtn({ keyId, title, className = '', children, ...rest }) {
+  const k = useKeyHint(keyId)
+  return (
+    <button className={'t-btn icon-btn-t ' + className} title={title + (k ? ' (' + k + ')' : '')} {...rest}>
+      {children}
+    </button>
+  )
 }
 
 function LibraryToggle() {
@@ -192,14 +204,13 @@ function SkipSilenceToggle() {
   const on = useStore((s) => !!s.settings.skipSilence)
   const toggle = useStore((s) => s.toggleSkipSilence)
   return (
-    <button className={'snap-btn' + (on ? ' on' : '')} onClick={toggle} title={(on ? 'Skip silence is ON — playback jumps over pauses longer than ~1 s where nobody on the ⇥ tracks is talking. Click to turn off.' : 'Skip silence — play only the parts where someone is talking (uses the ⇥ tracks)') + ' (Shift+X)'}>
+    <button className={'snap-btn icon-only' + (on ? ' on' : '')} onClick={toggle} title={(on ? 'Skip silence is ON — playback jumps over pauses longer than ~1 s where nobody on the ⇥ tracks is talking. Click to turn off.' : 'Skip silence — play only the parts where someone is talking (uses the ⇥ tracks)') + ' (Shift+X)'}>
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
         <rect x="1" y="6" width="2" height="4" rx="1" fill="currentColor" />
         <rect x="4" y="4" width="2" height="8" rx="1" fill="currentColor" />
         <path d="M8 8h3" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1 1.4" />
         <path d="M11 5l3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span>Skip silence</span>
     </button>
   )
 }
@@ -208,13 +219,12 @@ function SnapToggle() {
   const on = useStore((s) => s.settings.snap !== false)
   const toggleSnap = useStore((s) => s.toggleSnap)
   return (
-    <button className={'snap-btn' + (on ? ' on' : '')} onClick={toggleSnap} title={on ? 'Snapping is ON — clicks & drags on the timeline snap to notes and markers. Click to turn off.' : 'Snapping is OFF — click to snap the playhead to notes and markers'}>
+    <button className={'snap-btn icon-only' + (on ? ' on' : '')} onClick={toggleSnap} title={on ? 'Snapping is ON — clicks & drags on the timeline snap to notes and markers. Click to turn off.' : 'Snapping is OFF — click to snap the playhead to notes and markers'}>
       <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true">
         <path d="M3 2h3v6a2 2 0 0 0 4 0V2h3v6a5 5 0 0 1-10 0V2z" fill="currentColor" />
         <rect x="3" y="2" width="3" height="2.5" fill="currentColor" opacity="0.6" />
         <rect x="10" y="2" width="3" height="2.5" fill="currentColor" opacity="0.6" />
       </svg>
-      <span>Snap</span>
     </button>
   )
 }
@@ -247,14 +257,34 @@ function Transport() {
       <SnapToggle />
       <SkipSilenceToggle />
       <div className="t-spacer" />
-      <button className="btn small" onClick={() => addNote('beat')} title="Add beat at playhead">+ Beat <Kbd id="addBeat" /></button>
-      <button className="btn small" onClick={() => addNote('note')} title="Add plain note">+ Note <Kbd id="addNote" /></button>
-      <button className="btn small marker-btn" style={{ '--c': (MARKER_COLORS[markerColor] || MARKER_COLORS.yellow).hex }} onClick={() => addNote('marker')} onContextMenu={(e) => { e.preventDefault(); useStore.getState().openColorMenu({ x: e.clientX, y: e.clientY }) }} title="Drop a colored Premiere marker · right-click to choose the color new markers use"><span className="mk-shield" /> Marker <Kbd id="addMarker" /></button>
-      <button className="btn small ghost" onClick={() => addNote('break')} title="Scene break">Break <Kbd id="sceneBreak" /></button>
+      <IconBtn keyId="addBeat" title="Add a beat at the playhead" onClick={() => addNote('beat')}>
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l4.5 6.5L8 14.5 3.5 8z" fill="currentColor" /></svg>
+      </IconBtn>
+      <IconBtn keyId="addNote" title="Add a note" onClick={() => addNote('note')}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 3v-3h-2z" /></svg>
+      </IconBtn>
+      <IconBtn
+        keyId="addMarker"
+        className="marker-btn"
+        style={{ '--c': (MARKER_COLORS[markerColor] || MARKER_COLORS.yellow).hex }}
+        title="Drop a colored Premiere marker · right-click to choose the color new markers use"
+        onClick={() => addNote('marker')}
+        onContextMenu={(e) => { e.preventDefault(); useStore.getState().openColorMenu({ x: e.clientX, y: e.clientY }) }}
+      >
+        <span className="mk-shield" />
+      </IconBtn>
+      <IconBtn keyId="sketch" title="Sketch note — draw your idea on this frame" onClick={() => useStore.getState().openSketch()}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" /><path d="M9 4l3 3" /></svg>
+      </IconBtn>
+      <IconBtn keyId="sceneBreak" title="Scene break" onClick={() => addNote('break')}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M8 1.5v4M8 10.5v4M3 8h10" /><path d="M5.5 5.5L3 8l2.5 2.5M10.5 5.5L13 8l-2.5 2.5" /></svg>
+      </IconBtn>
       <div className="t-vol" title={`Master volume ${Math.round(masterVol * 100)}%`}>
         <span>🔊</span>
         <input type="range" min="0" max="1.5" step="0.01" value={masterVol} onChange={(e) => setMasterVol(Number(e.target.value))} onDoubleClick={() => setMasterVol(1)} />
       </div>
+      <ViewerButton />
+      <PlayerHideButton />
       <button className="t-btn" onClick={() => bus.emit('fullscreen')} title="Fullscreen (F)">⛶</button>
     </div>
   )

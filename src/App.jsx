@@ -15,6 +15,8 @@ import ColorMenu from './components/ColorMenu.jsx'
 import CacheReminder from './components/CacheReminder.jsx'
 import { UpdateBanner } from './components/Updates.jsx'
 import { ToolsBanner } from './components/ToolsSetup.jsx'
+import { usePanelOutside } from './components/LayoutToggles.jsx'
+import SketchEditor from './components/SketchEditor.jsx'
 import { startSkipSilence } from './lib/skipSilence.js'
 import EditWorkspace from './components/EditWorkspace.jsx'
 import { editKeymap } from './lib/editKeys.js'
@@ -131,6 +133,8 @@ export default function App() {
   const notesWidth = useStore((s) => s.settings.notesWidth || 360)
   const frameless = useStore((s) => s.frameless)
   const workspace = useStore((s) => s.settings.workspace || 'review')
+  const playerHidden = useStore((s) => !!s.settings.playerHidden)
+  const panelOutside = usePanelOutside()
   // No title bar: the app's top strips become the window's drag handle.
   useEffect(() => { document.body.classList.toggle('frameless', frameless) }, [frameless])
   // Mac: tooltips and key hints are written with "Ctrl+"; show ⌘ / ⌥ / ⇧
@@ -180,28 +184,31 @@ export default function App() {
         <CacheReminder />
         <UpdateBanner />
         <ToolsBanner />
+        <SketchEditor />
         {toast && <div className={'toast ' + toast.kind} key={toast.id}>{toast.text}</div>}
       </>
     )
   }
   return (
-    <div className={'app' + (libraryHidden ? ' lib-hidden' : '') + (notesHidden ? ' notes-hidden' : '')} style={{ '--notes-w': notesWidth + 'px' }}>
+    <div className={'app' + (libraryHidden ? ' lib-hidden' : '') + (notesHidden ? ' notes-hidden' : '') + (playerHidden ? ' player-hidden' : '') + (panelOutside && !notesHidden ? ' panel-full' : '')} style={{ '--notes-w': notesWidth + 'px' }}>
       {!libraryHidden && <Library />}
       <section className={'center' + (hasClip ? '' : ' no-clip')}>
         {/* Video and notes side by side on top; the timeline spans the full width under both. */}
         <div className="upper">
           <PlayerView />
-          {!notesHidden && <NotesPanel />}
+          {!notesHidden && !panelOutside && <NotesPanel />}
         </div>
-        {hasClip && <Splitter />}
+        {hasClip && !playerHidden && <Splitter />}
         <Timeline />
       </section>
+      {!notesHidden && panelOutside && <NotesPanel />}
       {modal === 'export' && <ExportModal />}
       {modal === 'addFootage' && <AddFootageModal />}
       <ColorMenu />
       <CacheReminder />
       <UpdateBanner />
       <ToolsBanner />
+      <SketchEditor />
       {modal === 'settings' && <SettingsModal />}
       {modal === 'help' && <KeybindsModal />}
       {toast && <div className={'toast ' + toast.kind} key={toast.id}>{toast.text}</div>}

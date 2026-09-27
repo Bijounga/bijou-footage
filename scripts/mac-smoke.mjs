@@ -114,7 +114,16 @@ await step('make a test recording', true, async () => {
   fs.mkdirSync(media, { recursive: true })
   const speech = path.join(WORK, 'speech.aiff')
   const sentence = 'This is a test of Bijou Footage on a Mac. We found the treasure behind the waterfall, and then the dragon attacked the castle.'
-  if (process.platform === 'darwin') execFileSync('say', ['-o', speech, sentence])
+  // `say` on a CI machine now and then writes a file with no speech in it —
+  // check it's a real few seconds of sound, and try again if not.
+  if (process.platform === 'darwin') {
+    for (let i = 0; i < 4; i++) {
+      execFileSync('say', ['-o', speech, sentence])
+      if (fs.existsSync(speech) && fs.statSync(speech).size > 200000) break
+      await wait(2000)
+    }
+    if (!fs.existsSync(speech) || fs.statSync(speech).size <= 200000) throw new Error('macOS `say` produced no speech')
+  }
   const args = ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=60:duration=40']
   if (fs.existsSync(speech)) args.push('-i', speech)
   else args.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo:d=40')
@@ -212,6 +221,26 @@ await step('Edit: trackpad pinch zooms, sideways swipe pans', true, async () => 
   `)
   if (!r.zoomed || !r.panned || !(r.zoomedIn > 0) || r.afterPinchOut !== 0) throw new Error(JSON.stringify(r))
   return { zoomed: r.zoomed, panned: r.panned, sliderAfterZoomIn: r.zoomedIn, sliderAfterPinchOut: r.afterPinchOut }
+})
+
+await step('viewer window shows the picture', true, async () => {
+  const r = await js(`
+    const w = (ms) => new Promise((r) => setTimeout(r, ms))
+    document.querySelector('.viewer-btn').click()
+    await w(1500)
+    const v = window.__viewer()
+    const c = v.document.querySelector('canvas')
+    const t = document.createElement('canvas'); t.width = 32; t.height = 18
+    const x = t.getContext('2d'); x.drawImage(c, 0, 0, 32, 18)
+    const d = x.getImageData(0, 0, 32, 18).data
+    let lit = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] > 40) lit++
+    const size = [v.innerWidth, v.innerHeight]
+    document.querySelector('.viewer-btn').click() // close it again
+    await w(800)
+    return { lit, size, closed: v.closed }
+  `)
+  if (!(r.lit > 50) || !r.closed) throw new Error(JSON.stringify(r))
+  return r
 })
 
 await step('install transcription (tiny model)', false, async () => {

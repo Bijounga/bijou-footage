@@ -225,6 +225,7 @@ export const useStore = create(
     frameless: false, // whether THIS window was created without a title bar
     tx: { installed: true, running: null, queue: [] }, // transcription queue (from main)
     txDone: {}, // clipKey -> [tracks with a transcript]
+    sketch: null, // the sketch being drawn (SketchEditor.jsx): {key, t} or {key, noteId, file}
     pads: {}, // project id (or 'all') -> project notes, see setPad
     padUndo: [],
     sections: [], // the current project's edit sections (from its folder)
@@ -1353,6 +1354,53 @@ export const useStore = create(
 
     // kind: 'beat' (auto Setup/But/Therefore like Beat Notes), 'note', 'break',
     // 'marker' (a colored Premiere marker; opens for an optional name — Esc keeps it unnamed).
+    // ---- sketch notes (SketchEditor.jsx) ----
+    // New sketch at the playhead: Review's recording, or in Edit the
+    // recording under the playhead (the note lives on the recording).
+    openSketch() {
+      const st = get()
+      let key = null
+      let t = 0
+      if (st.settings.workspace === 'edit') {
+        const it = seqPlayer.items[seqPlayer.cur]
+        if (!it) return
+        key = it.key
+        t = it.in + Math.max(0, seqPlayer.getTime() - it.start)
+        seqPlayer.pause()
+      } else {
+        if (!st.currentKey) return
+        key = st.currentKey
+        t = player.getTime()
+        player.pause()
+      }
+      set((s) => { s.sketch = { key, t } })
+    },
+    editSketch(key, noteId) {
+      const n = ((get().reviews[key] || {}).notes || []).find((x) => x.id === noteId)
+      if (n && n.sketch) set((s) => { s.sketch = { key, noteId, file: n.sketch } })
+    },
+    closeSketch() {
+      set((s) => { s.sketch = null })
+    },
+    addSketchNote(key, t, file, id) {
+      get().snapshot(key)
+      set((s) => {
+        const r = s.reviews[key] || (s.reviews[key] = emptyReview())
+        r.notes.push({ id, t: Math.round(t * 100) / 100, type: 'NOTE', text: '', star: false, createdAt: Date.now(), sketch: file, sketchV: Date.now() })
+        r.notes.sort((a, b) => a.t - b.t)
+        s.selectedNoteId = id
+        s.settings.notesHidden = false
+      })
+      get().scheduleSave()
+    },
+    updateSketchNote(key, id, file) {
+      set((s) => {
+        const n = ((s.reviews[key] || {}).notes || []).find((x) => x.id === id)
+        if (n) { n.sketch = file; n.sketchV = Date.now() }
+      })
+      get().scheduleSave()
+    },
+
     addNote(kind = 'beat', opts = {}) {
       const key = get().currentKey
       if (!key) return null

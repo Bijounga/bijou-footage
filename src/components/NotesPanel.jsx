@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store.js'
 import TranscriptPanel from './TranscriptPanel.jsx'
 import ProjectPad from './ProjectPad.jsx'
-import { player } from '../lib/player.js'
+import { PanelFullButton } from './LayoutToggles.jsx'
+import { player, mediaUrl } from '../lib/player.js'
 import { usePlayerDerived, bus } from '../lib/hooks.js'
 import { fmtTime, fmtDay } from '../lib/time.js'
 import { TYPES, LABEL, DEFAULT_COLORS, MARKER_COLORS, DEFAULT_MARKER_COLOR, cycleType, pickDefaultType, noteHex } from '../lib/beats.js'
@@ -192,6 +193,15 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
         />
       ) : (
         n.text && <div className="note-text">{n.text}</div>
+      )}
+      {n.sketch && (
+        <img
+          className="note-sketch"
+          src={mediaUrl(n.sketch) + '?v=' + (n.sketchV || 0)}
+          alt="Sketch"
+          title="Your sketch — click to keep drawing on it"
+          onClick={(e) => { e.stopPropagation(); useStore.getState().editSketch(clipKey, n.id) }}
+        />
       )}
     </div>
   )
@@ -411,7 +421,7 @@ export default function NotesPanel() {
   async function exportPremiere(kind) {
     const ids = new Set(target)
     const payload = groups
-      .map((g) => ({ path: g.c.path, name: g.c.name, probe: g.c.probe, notes: g.notes.filter((n) => ids.has(n.id)).map((n) => ({ t: n.t, end: n.end, type: n.type, text: n.text, star: n.star, color: n.color })) }))
+      .map((g) => ({ path: g.c.path, name: g.c.name, probe: g.c.probe, notes: g.notes.filter((n) => ids.has(n.id)).map((n) => ({ t: n.t, end: n.end, type: n.type, text: n.text, star: n.star, color: n.color, sketch: n.sketch })) }))
       .filter((g) => g.notes.length)
     const file = await window.footage.exportPremiere(payload, kind, project ? project.name : 'Footage notes')
     if (file) useStore.getState().showToast((kind === 'csv' ? 'CSV' : 'Premiere XML') + ' saved: ' + file)
@@ -493,6 +503,7 @@ export default function NotesPanel() {
           )}
         </div>}
         {showNotes && <button className={'icon-btn small' + (showFilters ? ' on' : '')} onClick={() => setShowFilters(!showFilters)} title="Filter notes">⚲</button>}
+        <PanelFullButton />
         <button className="icon-btn small" onClick={toggleNotesPanel} title="Hide notes (Ctrl+Shift+\)">»</button>
       </div>
       {pad && <div className="np-body"><ProjectPad /></div>}

@@ -7,6 +7,7 @@ import { trackNamesFor } from '../state/store.js'
 // built from the physical key (e.code), so they don't depend on keyboard
 // layout or on what Shift turns a key into ("Shift+1" not "!").
 import { cycleType } from './beats.js'
+import { toggleViewer } from './viewer.js'
 import { speechStarts, hasWave } from './speech.js'
 
 // Skip to the next/previous moment anyone on the ⇥ tracks starts talking —
@@ -137,6 +138,8 @@ export const ACTIONS = [
     }
   } },
   { id: 'fullscreen', label: 'Fullscreen video', cat: 'View', keys: ['F'], needsClip: true, run: ({ bus }) => bus.emit('fullscreen') },
+  { id: 'sketch', label: 'Sketch note — draw on the frame', cat: 'Notes', keys: ['P'], needsClip: true, run: ({ st }) => st.openSketch() },
+  { id: 'viewer', label: 'Viewer window (for a second monitor)', cat: 'View', keys: ['Ctrl+Shift+V'], run: () => toggleViewer() },
   { id: 'appFullscreen', label: 'Full screen (whole app, covers the taskbar)', cat: 'View', keys: ['F11'], global: true, run: () => window.footage.toggleFullscreen() },
   { id: 'prevRecording', label: 'Previous recording', cat: 'Library', keys: ['Ctrl+Up'], run: ({ bus }) => bus.emit('neighbourClip', -1) },
   { id: 'nextRecording', label: 'Next recording', cat: 'Library', keys: ['Ctrl+Down'], run: ({ bus }) => bus.emit('neighbourClip', 1) },

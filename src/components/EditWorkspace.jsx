@@ -7,6 +7,8 @@ import { parseTimecode } from './PlayerView.jsx'
 import * as EM from '../lib/editModel.js'
 import { ProjectPicker, ProjectFolders, clipTitle } from './Library.jsx'
 import { Brand } from './Updates.jsx'
+import ViewerButton from './ViewerButton.jsx'
+import { PlayerHideButton, usePanelOutside } from './LayoutToggles.jsx'
 import EditTimeline from './EditTimeline.jsx'
 import EditPanel from './EditPanel.jsx'
 import { ToolsMenu, RemoveSilenceDialog, CutAroundDialog, ExportSectionDialog } from './EditTools.jsx'
@@ -325,6 +327,9 @@ function Monitor({ section }) {
           <span>Skip silence</span>
         </button>
         <div className="t-spacer" />
+        <button className="t-btn" onClick={() => useStore.getState().openSketch()} title="Sketch note — draw your idea on this frame (P)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" /><path d="M9 4l3 3" /></svg></button>
+        <ViewerButton />
+        <PlayerHideButton />
         {panelHidden && <button className="btn small ghost" onClick={() => useStore.getState().toggleEditPanel()} title="Show Notes & Transcript (Ctrl+Shift+\)">Notes &amp; transcript</button>}
         <ToolsMenu />
         <span className="em-name dim">{section ? section.name : ''}</span>
@@ -430,23 +435,27 @@ export default function EditWorkspace() {
   const etH = useStore((s) => s.settings.editTimelineHeight)
   const sideHidden = useStore((s) => !!s.settings.editSidebarHidden)
   const panelHidden = useStore((s) => !!s.settings.editPanelHidden)
+  const playerHidden = useStore((s) => !!s.settings.playerHidden)
+  const panelOutside = usePanelOutside()
+  const sidePanel = ready && !panelHidden && panelOutside
   return (
-    <div className={'app edit-app' + (sideHidden ? ' side-hidden' : '')}>
+    <div className={'app edit-app' + (sideHidden ? ' side-hidden' : '') + (playerHidden ? ' player-hidden' : '') + (sidePanel ? ' panel-full' : '')}>
       {!sideHidden && <EditSidebar />}
       <section className="center edit-center" style={{ '--et-h': etH ? etH + 'px' : undefined }}>
         {ready ? (
           <>
             <div className="edit-upper">
               <Monitor section={section} />
-              {!panelHidden && <EditPanel section={section} />}
+              {!panelHidden && !panelOutside && <EditPanel section={section} />}
             </div>
-            <EditSplitter />
+            {!playerHidden && <EditSplitter />}
             <EditTimeline section={section} />
           </>
         ) : (
           <Setup />
         )}
       </section>
+      {sidePanel && <EditPanel section={section} />}
       {modal === 'removeSilence' && <RemoveSilenceDialog />}
       {modal === 'cutAround' && <CutAroundDialog />}
       {modal === 'exportSection' && <ExportSectionDialog onExport={exportSection} />}

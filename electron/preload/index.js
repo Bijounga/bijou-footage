@@ -9,6 +9,9 @@ function on(channel, cb) {
 contextBridge.exposeInMainWorld('footage', {
   platform: process.platform,
   appVersion: () => ipcRenderer.invoke('app:version'),
+  saveSketch: (id, dataUrl) => ipcRenderer.invoke('sketch:save', id, dataUrl),
+  listDisplays: () => ipcRenderer.invoke('displays:list'),
+  setSketchDisplay: (id) => ipcRenderer.invoke('sketch:display', id),
   setupStatus: () => ipcRenderer.invoke('setup:status'),
   setupInstall: (what, opts) => ipcRenderer.invoke('setup:install', what, opts),
   setupCancel: () => ipcRenderer.invoke('setup:cancel'),

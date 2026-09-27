@@ -14,7 +14,8 @@ const PORT = 9223
 async function findTarget() {
   const res = await fetch(`http://127.0.0.1:${PORT}/json`)
   const list = await res.json()
-  return list.find((t) => t.type === 'page' && !t.url.startsWith('devtools'))
+  // the app's window, not the viewer (about:blank)
+  return list.find((t) => t.type === 'page' && !t.url.startsWith('devtools') && t.url !== 'about:blank')
 }
 
 function connect(wsUrl) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useTrackColors } from '../state/store.js'
 import { seqPlayer } from '../lib/seqPlayer.js'
+import { mediaUrl } from '../lib/player.js'
 import { onTick } from '../lib/hooks.js'
 import { fmtTime } from '../lib/time.js'
 import { LABEL, MARKER_COLORS, noteHex } from '../lib/beats.js'
@@ -8,6 +9,7 @@ import * as EM from '../lib/editModel.js'
 import { clipTitle } from './Library.jsx'
 import { useSummarizer, SummaryCard } from './TranscriptPanel.jsx'
 import ProjectPad from './ProjectPad.jsx'
+import { PanelFullButton } from './LayoutToggles.jsx'
 import { remapMarkers } from '../lib/editTools.js'
 
 // A little air around transcript lines when cutting by them (the words'
@@ -67,7 +69,7 @@ function NotesList({ section }) {
       }
       for (let k = lo; k < notes.length && notes[k].t < it.out; k++) {
         const n = notes[k]
-        out.push({ kind: 'rec', id: n.id + '@' + it.id, n, t: it.start + n.t - it.in, from: titles.get(it.key) })
+        out.push({ kind: 'rec', id: n.id + '@' + it.id, n, key: it.key, t: it.start + n.t - it.in, from: titles.get(it.key) })
       }
     }
     return out.sort((a, b) => a.t - b.t)
@@ -111,6 +113,15 @@ function NotesList({ section }) {
               )}
               {r.kind === 'rec' && <span className="ep-from dim"> · {r.from}</span>}
             </span>
+            {r.kind === 'rec' && r.n.sketch && (
+              <img
+                className="note-sketch ep-sketch"
+                src={mediaUrl(r.n.sketch) + '?v=' + (r.n.sketchV || 0)}
+                alt="Sketch"
+                title="Your sketch — click to keep drawing on it"
+                onClick={(e) => { e.stopPropagation(); st().editSketch(r.key, r.n.id) }}
+              />
+            )}
             {r.kind === 'seq' && (
               <span className="ep-actions" onClick={(e) => e.stopPropagation()}>
                 {Object.entries(MARKER_COLORS).map(([k, c]) => (
@@ -403,6 +414,7 @@ export default function EditPanel({ section }) {
             <button className={'np-pad-tab' + (tab === 'pad' ? ' on' : '')} onClick={() => set({ editPanelTab: 'pad' })} title="Project notes — checklists and notes for the whole project, shared with Review">☑ Project</button>
           </div>
         </div>
+        <PanelFullButton />
         <button className="icon-btn small" onClick={() => useStore.getState().toggleEditPanel()} title="Hide this panel (Ctrl+Shift+\)">»</button>
       </div>
       {tab === 'pad' ? (

@@ -29,17 +29,24 @@ function rateXml(r) {
 const LABEL = { SETUP: 'Setup', AND_THEN: 'And Then', BECAUSE: 'Because', BUT: 'But', THEREFORE: 'Therefore', NOTE: 'Note', MARKER: 'Marker' }
 const MARKER_LABEL = { green: 'Green', red: 'Red', purple: 'Purple', orange: 'Orange', yellow: 'Yellow', white: 'White', blue: 'Blue', cyan: 'Cyan' }
 
+// Premiere's own marker colors (the <pproColor> tag it writes on its XML
+// export and reads back on import), read from a Premiere export of one
+// marker per color on 2026-09-27. Green is Premiere's default, so it has
+// no tag. The number stores the color as 0xAABBGGRR.
+const MARKER_PPRO = { red: 4281740498, yellow: 4281049552, purple: 4289825711, orange: 4280578025, white: 4294967295, blue: 4294741314, cyan: 4292277273 }
+
 function markersXml(notes, r) {
   return notes
     .map((n) => {
       const inF = Math.round(n.t * r.fps)
       const outF = n.end != null ? Math.round(n.end * r.fps) : -1
-      // Premiere's XML import doesn't take marker colors, so a colored
-      // marker carries its color in its name instead ("Yellow marker").
+      // The color goes in <pproColor> (below) where it's known, and in the
+      // name too ("Yellow marker"), in case the import drops the tag.
       const color = MARKER_LABEL[n.color] || 'Yellow'
       const name = n.type === 'MARKER' ? (n.text ? `${n.text} (${color})` : `${color} marker`) : (LABEL[n.type] || n.type)
       const comment = n.type === 'MARKER' ? `${color} marker` : n.text
-      return `<marker><name>${esc(name)}${n.star ? ' ★' : ''}</name><comment>${esc(comment)}</comment><in>${inF}</in><out>${outF}</out></marker>`
+      const ppro = n.type === 'MARKER' && MARKER_PPRO[n.color] ? `<pproColor>${MARKER_PPRO[n.color]}</pproColor>` : ''
+      return `<marker><name>${esc(name)}${n.star ? ' ★' : ''}</name><comment>${esc(comment)}</comment><in>${inF}</in><out>${outF}</out>${ppro}</marker>`
     })
     .join('')
 }
@@ -53,6 +60,26 @@ function markersXml(notes, r) {
 // Careful with <sourcetrack><trackindex>: on plain clips it counts
 // CHANNELS (1–4 came in as "Ch. L (1), Ch. R (1), Ch. L (2), Ch. R (2)"),
 // but on stereo-tagged pairs it counts STREAMS.
+// Sketch notes → a second video track (V2): each sketch a still image at
+// its moment, a few seconds long, turned off — there to see (and turn on as
+// an overlay guide), never in the render. items: [{t (s), file, text}]
+const SKETCH_SECS = 3
+function sketchTrackXml(items, r, w, h, prefix) {
+  const list = items.filter((x) => x.file).sort((a, b) => a.t - b.t)
+  if (!list.length) return ''
+  const D = Math.round(SKETCH_SECS * r.fps)
+  const clips = list.map((x, i) => {
+    const start = Math.round(x.t * r.fps)
+    const next = list[i + 1] ? Math.round(list[i + 1].t * r.fps) : Infinity
+    const end = Math.max(start + 1, Math.min(start + D, next)) // no overlaps on the track
+    const len = end - start
+    const nm = 'Sketch' + (x.text ? ' — ' + x.text : '')
+    const fid = prefix + '-file-' + i
+    return `<clipitem id="${prefix}-${i}"><name>${esc(nm)}</name><enabled>FALSE</enabled><duration>${len}</duration>${rateXml(r)}<start>${start}</start><end>${end}</end><in>0</in><out>${len}</out><file id="${fid}"><name>${esc(x.file.split(/[\\/]/).pop())}</name><pathurl>${esc(pathUrl(x.file))}</pathurl>${rateXml(r)}<duration>${len}</duration><media><video><samplecharacteristics><width>${w}</width><height>${h}</height></samplecharacteristics></video></media></file></clipitem>`
+  })
+  return `<track>${clips.join('')}<enabled>TRUE</enabled><locked>FALSE</locked></track>`
+}
+
 function audioLayout(audio) {
   const out = [] // [{stream, channels, firstChannel}]
   let ch = 1
@@ -96,7 +123,7 @@ export function buildXml(clips, binName) {
     const clipitem = (id, extraAttrs, inner, withFile, withMarkers) =>
       `<clipitem id="${id}"${extraAttrs}><name>${esc(c.name)}</name><enabled>TRUE</enabled><duration>${durF}</duration>${rateXml(r)}<start>0</start><end>${durF}</end><in>0</in><out>${durF}</out>${withFile ? fileXml : `<file id="${fileId}"/>`}${inner}${links}${withMarkers ? markers : ''}</clipitem>`
 
-    const videoTrack = `<track>${clipitem(vId, '', '', true, true)}</track>`
+    const videoTrack = `<track>${clipitem(vId, '', '', true, true)}</track>` + sketchTrackXml((c.notes || []).filter((n) => n.sketch).map((n) => ({ t: n.t, file: n.sketch, text: n.text })), r, w, h, 'sk' + ci)
     const audioTracks = aItems
       .map((a) => {
         const trackAttrs = a.stereo
@@ -209,7 +236,7 @@ export function buildSequenceXml({ name, clips, markers }) {
     }
   })
 
-  const videoTrack = `<track>${vItems.join('')}</track>`
+  const videoTrack = `<track>${vItems.join('')}</track>` + sketchTrackXml((markers || []).filter((m) => m.sketch).map((m) => ({ t: m.t, file: m.sketch, text: m.text })), r, w, h, 'sk')
   const audioTracks = slots
     .map((slot, ti) => {
       const attrs = slot.stereo

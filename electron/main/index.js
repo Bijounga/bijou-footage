@@ -66,13 +66,18 @@ function migrateOldData() {
 // track enabled in each) and mixes them through Web Audio — so multi-track
 // playback needs no extraction or preprocessing at all.
 app.commandLine.appendSwitch('enable-blink-features', 'AudioVideoTracks')
+// The viewer window copies the main window's video: keep that video
+// decoding and drawing even when the main window is minimized or covered.
+app.commandLine.appendSwitch('disable-background-media-suspend')
+app.commandLine.appendSwitch('disable-renderer-backgrounding')
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
 if (isDev) app.commandLine.appendSwitch('remote-debugging-port', '9223')
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'footage', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, bypassCSP: true } }
 ])
 
-const MIME = { '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.m4a': 'audio/mp4' }
+const MIME = { '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska', '.webm': 'video/webm', '.m4a': 'audio/mp4', '.png': 'image/png' }
 
 // Serves local video files with proper HTTP range support — seeking in a
 // multi-GB recording only ever reads the bytes around the seek point.
@@ -152,6 +157,84 @@ const OVERLAY_H = 40
 
 // Window size/position/maximized, remembered between launches.
 const windowFile = () => path.join(userData(), 'window.json')
+
+// The sketch window (SketchEditor.jsx) opens maximized on a chosen display —
+// by default the one with the most real pixels (a 4K drawing tablet, even
+// when Windows scales it to look like 1080p), else the app's own.
+let sketchWin = null
+let sketchDisplayId = null // the user's pick (settings.sketchDisplay)
+function sketchDisplay() {
+  const all = screen.getAllDisplays()
+  const picked = all.find((d) => String(d.id) === String(sketchDisplayId))
+  if (picked) return picked
+  const px = (d) => d.size.width * d.scaleFactor * d.size.height * d.scaleFactor
+  return all.slice().sort((a, b) => px(b) - px(a))[0] || screen.getPrimaryDisplay()
+}
+function placeSketch(w, d) {
+  if (!w || w.isDestroyed()) return
+  if (w.isMaximized()) w.unmaximize()
+  w.setBounds(d.workArea)
+  setTimeout(() => { if (!w.isDestroyed()) { w.setBounds(d.workArea); w.maximize() } }, 60) // twice: other-DPI monitors
+}
+
+// Sketch notes go with a Premiere export: copied into "<name> sketches"
+// beside the XML (so the project finds them wherever it's opened), and the
+// notes pointed at the copies.
+function copySketches(xmlPath, notes) {
+  if (!notes.some((n) => n.sketch)) return notes
+  const dir = xmlPath.replace(/\.xml$/i, '') + ' sketches'
+  fs.mkdirSync(dir, { recursive: true })
+  return notes.map((n) => {
+    if (!n.sketch || !fs.existsSync(n.sketch)) return n
+    const to = path.join(dir, path.basename(n.sketch))
+    try { fs.copyFileSync(n.sketch, to) } catch { return n }
+    return { ...n, sketch: to }
+  })
+}
+
+// The viewer window's size and place, kept between sessions. First time:
+// the biggest other monitor if there is one, else a good size on this one.
+const viewerFile = () => path.join(userData(), 'viewer-window.json')
+let viewerMaximized = false
+let viewerBounds = null
+function viewerOptions() {
+  let saved = null
+  try { saved = JSON.parse(fs.readFileSync(viewerFile(), 'utf8')) } catch { /* first time */ }
+  // Only where a monitor still is (it may have been unplugged).
+  const onScreen = saved && screen.getAllDisplays().some((d) => {
+    const a = d.workArea
+    const b = saved.bounds
+    return b.x < a.x + a.width - 80 && b.x + b.width > a.x + 80 && b.y < a.y + a.height - 80 && b.y + b.height > a.y
+  })
+  viewerMaximized = !!(onScreen && saved.maximized)
+  let bounds = onScreen ? saved.bounds : null
+  if (!bounds) {
+    const main = win ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay()
+    const others = screen.getAllDisplays().filter((d) => d.id !== main.id).sort((a, b) => b.workArea.width * b.workArea.height - a.workArea.width * a.workArea.height)
+    const a = (others[0] || main).workArea
+    const w = Math.round(a.width * 0.7)
+    const h = Math.round(Math.min(a.height * 0.8, (w * 9) / 16))
+    bounds = { x: Math.round(a.x + (a.width - w) / 2), y: Math.round(a.y + (a.height - h) / 2), width: w, height: h }
+  }
+  viewerBounds = bounds
+  return {
+    ...bounds,
+    minWidth: 240,
+    minHeight: 135,
+    title: 'Bijou Footage — Viewer',
+    backgroundColor: '#000000',
+    autoHideMenuBar: true,
+    show: true,
+    icon: path.join(__dirname, '../../build/icon.ico'),
+    webPreferences: { backgroundThrottling: false },
+  }
+}
+function saveViewerState(w) {
+  try {
+    if (w.isDestroyed() || w.isFullScreen()) return
+    fs.writeFileSync(viewerFile(), JSON.stringify({ bounds: w.getNormalBounds(), maximized: w.isMaximized() }))
+  } catch { /* not important */ }
+}
 function loadWindowState() {
   try {
     const st = JSON.parse(fs.readFileSync(windowFile(), 'utf8'))
@@ -233,10 +316,47 @@ function createWindow() {
       if (level >= 2) console.log('[renderer]', message, '(' + sourceId + ':' + line + ')')
     })
   }
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  // The viewer (src/lib/viewer.js) is the one window the page may open;
+  // every other link goes to the browser.
+  win.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    if (frameName === 'bijou-viewer' && (url === 'about:blank' || url === '')) {
+      return { action: 'allow', overrideBrowserWindowOptions: viewerOptions() }
+    }
+    if (frameName === 'bijou-sketch' && (url === 'about:blank' || url === '')) {
+      const d = sketchDisplay()
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: { ...d.workArea, title: 'Bijou Footage — Sketch', backgroundColor: '#08090c', autoHideMenuBar: true, show: true, icon: path.join(__dirname, '../../build/icon.ico'), webPreferences: { backgroundThrottling: false } },
+      }
+    }
     shell.openExternal(url)
     return { action: 'deny' }
   })
+  win.webContents.on('did-create-window', (child, { frameName }) => {
+    if (frameName === 'bijou-sketch') {
+      sketchWin = child
+      child.removeMenu()
+      placeSketch(child, sketchDisplay())
+      child.on('closed', () => { if (sketchWin === child) sketchWin = null })
+      return
+    }
+    if (frameName !== 'bijou-viewer') return
+    child.removeMenu()
+    // Placed again once it exists: created straight onto a monitor with other
+    // display scaling, Windows scales its size a second time (it opened at
+    // double size on a 200% monitor).
+    if (viewerBounds) { child.setBounds(viewerBounds); setTimeout(() => !child.isDestroyed() && child.setBounds(viewerBounds), 50) }
+    let t = null
+    const remember = () => { clearTimeout(t); t = setTimeout(() => saveViewerState(child), 400) }
+    child.on('resize', remember)
+    child.on('move', remember)
+    child.on('maximize', remember)
+    child.on('unmaximize', remember)
+    child.on('close', () => saveViewerState(child))
+    if (viewerMaximized) child.maximize()
+  })
+  // Closing the app's window closes the viewer too.
+  win.on('close', () => { for (const w of BrowserWindow.getAllWindows()) if (w !== thisWin && !w.isDestroyed()) w.close() })
   if (isDev && process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
   else win.loadFile(path.join(__dirname, '../renderer/index.html'))
 }
@@ -290,6 +410,30 @@ function registerIpc() {
     return ok
   })
   ipcMain.handle('setup:cancel', () => setup.cancel())
+  // Displays, for the sketch window's display picker.
+  ipcMain.handle('displays:list', () => {
+    const appD = win ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay()
+    const cur = sketchWin && !sketchWin.isDestroyed() ? screen.getDisplayMatching(sketchWin.getBounds()) : sketchDisplay()
+    return screen.getAllDisplays().map((d, i) => ({
+      id: String(d.id),
+      name: d.label || 'Display ' + (i + 1),
+      px: Math.round(d.size.width * d.scaleFactor) + '×' + Math.round(d.size.height * d.scaleFactor),
+      app: d.id === appD.id,
+      current: d.id === cur.id,
+    }))
+  })
+  ipcMain.handle('sketch:display', (_e, id) => {
+    sketchDisplayId = id || null
+    if (sketchWin && !sketchWin.isDestroyed()) placeSketch(sketchWin, sketchDisplay())
+  })
+  // Sketch notes: one PNG per note in <userData>/sketches (see SketchEditor.jsx).
+  ipcMain.handle('sketch:save', (_e, id, dataUrl) => {
+    const dir = path.join(userData(), 'sketches')
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, String(id).replace(/[^\w-]/g, '') + '.png')
+    fs.writeFileSync(file, Buffer.from(String(dataUrl).split(',')[1], 'base64'))
+    return file
+  })
 
   ipcMain.handle('library:scan', (_e, folders, files) => {
     const t = tools()
@@ -350,7 +494,8 @@ function registerIpc() {
       filters: [{ name: 'Premiere / FCP XML', extensions: ['xml'] }]
     })
     if (r.canceled || !r.filePath) return null
-    fs.writeFileSync(r.filePath, buildSequenceXml(payload), 'utf8')
+    const markers = copySketches(r.filePath, payload.markers || [])
+    fs.writeFileSync(r.filePath, buildSequenceXml({ ...payload, markers }), 'utf8')
     return r.filePath
   })
   ipcMain.handle('llm:installed', () => llm.installed())
@@ -374,7 +519,8 @@ function registerIpc() {
       filters: [kind === 'csv' ? { name: 'CSV', extensions: ['csv'] } : { name: 'Premiere / FCP XML', extensions: ['xml'] }]
     })
     if (r.canceled || !r.filePath) return null
-    const body = kind === 'csv' ? buildCsv(clips) : buildXml(clips, (name || 'Footage notes') + ' ' + stamp)
+    const withSketches = kind === 'csv' ? clips : clips.map((c) => ({ ...c, notes: copySketches(r.filePath, c.notes || []) }))
+    const body = kind === 'csv' ? buildCsv(clips) : buildXml(withSketches, (name || 'Footage notes') + ' ' + stamp)
     fs.writeFileSync(r.filePath, body, 'utf8')
     return r.filePath
   })

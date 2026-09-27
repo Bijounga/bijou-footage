@@ -4,6 +4,7 @@
 // come from there.
 import * as EM from './editModel.js'
 import { seqPlayer } from './seqPlayer.js'
+import { toggleViewer } from './viewer.js'
 import { speechStarts, hasWave } from './speech.js'
 
 // Every place someone on the ⇥ tracks starts talking, in timeline time.
@@ -141,6 +142,8 @@ export const EDIT_ACTIONS = [
   { id: 'e.skipSilence', label: 'Toggle skip silence (play only the talking)', cat: 'Playback', keys: ['Shift+X'], run: ({ st }) => st.toggleEditSkipSilence() },
   { id: 'e.sidebar', label: 'Show / hide the left sidebar', cat: 'View', keys: ['Ctrl+\\'], run: ({ st }) => st.toggleEditSidebar() },
   { id: 'e.panel', label: 'Show / hide the Notes / Transcript panel', cat: 'View', keys: ['Ctrl+Shift+\\'], run: ({ st }) => st.toggleEditPanel() },
+  { id: 'e.sketch', label: 'Sketch note — draw on the frame', cat: 'View', keys: ['P'], run: ({ st }) => st.openSketch() },
+  { id: 'e.viewer', label: 'Viewer window (for a second monitor)', cat: 'View', keys: ['Ctrl+Shift+V'], run: () => toggleViewer() },
   { id: 'e.zoomIn', label: 'Zoom in', cat: 'Timeline', keys: ['=', 'Shift+='], run: ({ bus }) => bus.emit('editZoom', 1) },
   { id: 'e.zoomOut', label: 'Zoom out', cat: 'Timeline', keys: ['-'], run: ({ bus }) => bus.emit('editZoom', -1) },
   { id: 'e.zoomFit', label: 'Fit the whole section', cat: 'Timeline', keys: ['\\'], run: ({ bus }) => bus.emit('editZoom', 0) },
