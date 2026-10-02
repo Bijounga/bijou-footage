@@ -123,12 +123,53 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
 }
 
+// A notes file that can't be read for a moment (Windows: a save replacing
+// it, an antivirus scan) must never look like "no notes yet" — the app would
+// start empty and its next save would replace the real file. So: retry, then
+// keep the unreadable file and start from the newest backup that reads.
+// Only a file that isn't there at all means a first launch.
 function loadReviews() {
-  try {
-    return JSON.parse(fs.readFileSync(dataFile(), 'utf8'))
-  } catch {
-    return null
+  const file = dataFile()
+  if (!fs.existsSync(file)) return null
+  for (let i = 0; i < 20; i++) {
+    try {
+      return JSON.parse(fs.readFileSync(file, 'utf8'))
+    } catch {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100)
+    }
   }
+  const dir = path.join(userData(), 'backups')
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    fs.copyFileSync(file, path.join(dir, `unreadable-${Date.now()}.json`))
+  } catch {}
+  try {
+    for (const b of fs.readdirSync(dir).filter((n) => n.startsWith('reviews-')).sort().reverse()) {
+      try {
+        return JSON.parse(fs.readFileSync(path.join(dir, b), 'utf8'))
+      } catch {}
+    }
+  } catch {}
+  return null
+}
+
+// Every save goes through here: write a temp file, then swap it in. A save
+// that would shrink the file to a fraction of itself (projects and notes
+// gone) first keeps a copy of what it replaces — whatever caused it.
+function writeData(json) {
+  const file = dataFile()
+  try {
+    const old = fs.statSync(file).size
+    if (old > 4096 && json.length < old * 0.3) {
+      const dir = path.join(userData(), 'backups')
+      fs.mkdirSync(dir, { recursive: true })
+      fs.copyFileSync(file, path.join(dir, `before-shrink-${Date.now()}.json`))
+      const old5 = fs.readdirSync(dir).filter((n) => n.startsWith('before-shrink-')).sort().slice(0, -5)
+      old5.forEach((n) => fs.unlinkSync(path.join(dir, n)))
+    }
+  } catch {}
+  fs.writeFileSync(file + '.tmp', json, 'utf8')
+  fs.renameSync(file + '.tmp', file)
 }
 
 // Keeps one backup per day of the notes file, last 7 days — cheap insurance
@@ -276,7 +317,11 @@ function createWindow() {
   win = new BrowserWindow({
     // No title bar: Windows draws its buttons over the app (overlay); a Mac
     // keeps its traffic lights, inset into the app's top-left corner.
-    ...(frameless ? (isMac ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 13 } } : { titleBarStyle: 'hidden', titleBarOverlay: { color: '#17181e', symbolColor: '#ece9e2', height: OVERLAY_H } }) : {}),
+    // Otherwise the app draws a themed title bar (components/TitleBar.jsx):
+    // its own buttons on Windows, the traffic lights inset into it on a Mac.
+    ...(frameless
+      ? (isMac ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 13 } } : { titleBarStyle: 'hidden', titleBarOverlay: { color: '#17181e', symbolColor: '#ece9e2', height: OVERLAY_H } })
+      : (isMac ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 12, y: 9 } } : { titleBarStyle: 'hidden' })),
     width: winState ? winState.bounds.width : 1500,
     height: winState ? winState.bounds.height : 920,
     ...(winState ? { x: winState.bounds.x, y: winState.bounds.y } : {}),
@@ -309,6 +354,8 @@ function createWindow() {
   win.on('resize', remember)
   win.on('move', remember)
   win.on('maximize', remember)
+  const sendWindowState = () => { if (win && !win.isDestroyed()) win.webContents.send('window:state', { maximized: win.isMaximized(), fullscreen: win.isFullScreen() }) }
+  for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen']) win.on(ev, sendWindowState)
   win.on('unmaximize', remember)
   win.on('close', () => saveWindowState(thisWin))
   if (isDev) {
@@ -369,16 +416,14 @@ function tools() {
 function registerIpc() {
   ipcMain.handle('data:load', () => loadReviews())
   ipcMain.handle('data:save', (_e, json) => {
-    fs.writeFileSync(dataFile() + '.tmp', json, 'utf8')
-    fs.renameSync(dataFile() + '.tmp', dataFile())
+    writeData(json)
     return true
   })
   // Synchronous variant for the window-closing flush, where an async IPC
   // round trip might not finish before the renderer is torn down.
   ipcMain.on('data:saveSync', (e, json) => {
     try {
-      fs.writeFileSync(dataFile() + '.tmp', json, 'utf8')
-      fs.renameSync(dataFile() + '.tmp', dataFile())
+      writeData(json)
       e.returnValue = true
     } catch {
       e.returnValue = false
@@ -529,6 +574,14 @@ function registerIpc() {
 
   ipcMain.handle('bijou:customThemes', () => bijou.customThemes())
   ipcMain.handle('window:frameless', () => frameless)
+  // The app-drawn title bar's buttons, and the state they show.
+  ipcMain.handle('window:caption', (_e, action) => {
+    if (!win) return
+    if (action === 'minimize') win.minimize()
+    else if (action === 'maximize') win.isMaximized() ? win.unmaximize() : win.maximize()
+    else if (action === 'close') win.close()
+  })
+  ipcMain.handle('window:state', () => (win ? { maximized: win.isMaximized(), fullscreen: win.isFullScreen() } : { maximized: false, fullscreen: false }))
   ipcMain.handle('window:overlayColors', (_e, colors) => {
     if (frameless && !isMac && win && win.setTitleBarOverlay) win.setTitleBarOverlay({ ...colors, height: OVERLAY_H })
   })

@@ -109,7 +109,7 @@ export function Brand() {
   return (
     <div className="brand" ref={ref}>
       <button className="brand-btn" onClick={toggle} title="Version and updates">
-        <span className="brand-mark">▶</span> Bijou Footage
+        <span className="brand-mark">▶</span> <span className="brand-name">{[...'Bijou Footage'].map((c, i) => <span key={i}>{c === ' ' ? ' ' : c}</span>)}</span>
       </button>
       {open && (
         <div className="brand-menu">

@@ -7,6 +7,7 @@ import { clipProgress } from './Library.jsx'
 import { MARKER_COLORS } from '../lib/beats.js'
 import { useKeyHint } from './Keybinds.jsx'
 import ViewerButton from './ViewerButton.jsx'
+import { useVideoZoom } from '../lib/videoZoom.js'
 import { PlayerHideButton } from './LayoutToggles.jsx'
 
 // A button's key hint, following the user's bindings (hidden if unbound).
@@ -296,6 +297,7 @@ export default function PlayerView() {
   const videoRef = useRef(null)
   const ghostRef = useRef(null)
   const stageRef = useRef(null)
+  const zoom = useVideoZoom(stageRef, 'video', clip && clip.key)
   const [osd, setOsd] = useState(null)
   const [error, setError] = useState(null)
   const st = usePlayerState()
@@ -327,6 +329,7 @@ export default function PlayerView() {
         <video ref={videoRef} className="video" onClick={() => player.toggle()} />
         {/* Instant-seek stand-in, see player.js "ghost". Clicks pass through. */}
         <video ref={ghostRef} className="video ghost" muted />
+        {zoom.scale > 1 && <button className="zoom-badge" onClick={(e) => { e.stopPropagation(); zoom.reset() }} onDoubleClick={(e) => e.stopPropagation()} title="Back to 100% (Ctrl+0) · Ctrl+scroll or pinch to zoom, drag to move">{Math.round(zoom.scale * 100)}% ⟲</button>}
 
         {!clip && (
           <div className="stage-empty">

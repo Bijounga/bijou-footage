@@ -96,6 +96,34 @@ export const BUILT_IN_THEMES = [
     colors: { '--bg': '#c6cbd1', '--panel': '#eef0f2', '--panel-2': '#fafbfc', '--panel-3': '#d3d8de', '--ink': '#14171b', '--ink-dim': '#3d444c', '--ink-faint': '#5d646d', '--line': '#9ea5ae', '--line-soft': '#c3c8ce', '--cyan': '#a85206', '--amber': '#8f6a0a', '--pink': '#a8326a', '--danger': '#b8312f', '--green': '#2a7a3f' }
   },
   {
+    id: 'y2kLcd',
+    base: 'y2kChrome',
+    variant: 'lcd',
+    name: 'Y2K Chrome LCD',
+    note: 'Amber LCD timeline',
+    dark: false,
+    font: "'Bahnschrift', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#c6cbd1', '--panel': '#eef0f2', '--panel-2': '#fafbfc', '--panel-3': '#d3d8de', '--ink': '#14171b', '--ink-dim': '#3d444c', '--ink-faint': '#5d646d', '--line': '#9ea5ae', '--line-soft': '#c3c8ce', '--cyan': '#a85206', '--amber': '#8f6a0a', '--pink': '#a8326a', '--danger': '#b8312f', '--green': '#2a7a3f' }
+  },
+  {
+    id: 'y2kDark',
+    name: 'Y2K Gunmetal',
+    note: 'Y2K Chrome, dark',
+    dark: true,
+    font: "'Bahnschrift', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#1c1f23', '--panel': '#26292e', '--panel-2': '#2f3338', '--panel-3': '#3a3e45', '--ink': '#e6e8eb', '--ink-dim': '#a9afb7', '--ink-faint': '#8a9099', '--line': '#3f444b', '--line-soft': '#30343a', '--cyan': '#ffa526', '--amber': '#e0b24a', '--pink': '#e46aa3', '--danger': '#ff6b5a', '--green': '#4fcf7a' }
+  },
+  {
+    id: 'y2kDarkLcd',
+    base: 'y2kDark',
+    variant: 'lcd',
+    name: 'Y2K Gunmetal LCD',
+    note: 'Amber LCD timeline',
+    dark: true,
+    font: "'Bahnschrift', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#1c1f23', '--panel': '#26292e', '--panel-2': '#2f3338', '--panel-3': '#3a3e45', '--ink': '#e6e8eb', '--ink-dim': '#a9afb7', '--ink-faint': '#8a9099', '--line': '#3f444b', '--line-soft': '#30343a', '--cyan': '#ffa526', '--amber': '#e0b24a', '--pink': '#e46aa3', '--danger': '#ff6b5a', '--green': '#4fcf7a' }
+  },
+  {
     id: 'dos',
     name: 'MS-DOS',
     note: 'BijouDocs',
@@ -118,6 +146,24 @@ export const BUILT_IN_THEMES = [
     dark: false,
     font: "'Corbel', 'Segoe UI', system-ui, sans-serif",
     colors: { '--bg': '#e4eef9', '--panel': '#f1f7fd', '--panel-2': '#ffffff', '--panel-3': '#d3e5f7', '--ink': '#0b1d33', '--ink-dim': '#2b4665', '--ink-faint': '#62799a', '--line': '#9cbbdc', '--line-soft': '#d3e5f7', '--cyan': '#1a5fc0', '--amber': '#9a6a12', '--pink': '#6e44b0', '--danger': '#b8312f', '--green': '#237a45' }
+  },
+  // ---- Bijou's own: a modern editing suite (id kept from its first version) ----
+  {
+    id: 'cuttingRoom',
+    name: 'Studio',
+    note: 'Editing suite',
+    dark: true,
+    font: "'Inter', 'Segoe UI Variable Display', 'Segoe UI', sans-serif",
+    colors: { '--bg': '#0a0c16', '--panel': '#121527', '--panel-2': '#181c33', '--panel-3': '#20253f', '--ink': '#e9ebf5', '--ink-dim': '#9aa0bd', '--ink-faint': '#7d83a3', '--line': '#262b45', '--line-soft': '#1b1f35', '--cyan': '#8b7bff', '--amber': '#ffad5c', '--pink': '#e66bd0', '--danger': '#ff5d6c', '--green': '#3ddc97' }
+  },
+  // ---- Bijou Doodle's own theme ----
+  {
+    id: 'doodleClub',
+    name: 'Doodle Club',
+    note: 'Bijou Doodle',
+    dark: false,
+    font: "'Trebuchet MS', 'Segoe UI', sans-serif",
+    colors: { '--bg': '#fffbe9', '--panel': '#fffbe9', '--panel-2': '#ffffff', '--panel-3': '#f5ecc4', '--ink': '#202031', '--ink-dim': '#4a4960', '--ink-faint': '#6a6879', '--line': '#d6cca6', '--line-soft': '#ece3c2', '--cyan': '#1f5fbf', '--amber': '#aa5100', '--pink': '#b92a65', '--danger': '#c8302b', '--green': '#23782a' }
   }
 ]
 
@@ -146,4 +192,7 @@ export function applyTheme(theme) {
   else root.style.removeProperty('--sans')
   root.style.colorScheme = theme && theme.dark === false ? 'light' : 'dark'
   root.dataset.themeKind = theme && theme.dark === false ? 'light' : 'dark'
+  // A variant (e.g. Y2K Chrome LCD) wears its base theme's look plus its own tweaks.
+  root.dataset.theme = (theme && (theme.base || theme.id)) || 'dark' // lets themes-fx.css style per theme
+  root.dataset.variant = (theme && theme.variant) || ''
 }

@@ -60,13 +60,66 @@ export function openViewer() {
       background: rgba(20, 21, 26, 0.82); color: #ece9e2; font: 12px/1.3 'Inter', -apple-system, 'Segoe UI', sans-serif;
       opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
     body.show-hint .hint { opacity: 1; }
-    body.idle { cursor: none; }`
+    body.idle { cursor: none; }
+    body.zoomed { cursor: grab; }
+    .zbadge { position: fixed; top: 12px; right: 12px; display: none; padding: 4px 10px; border: 0; border-radius: 7px;
+      background: rgba(10, 11, 14, 0.75); color: #fff; font: 600 12px Menlo, Consolas, monospace; cursor: pointer; }`
   doc.head.appendChild(style)
   const canvas = doc.createElement('canvas')
   const hint = doc.createElement('div')
   hint.className = 'hint'
-  hint.textContent = 'Double-click: full screen · keys work here too · Ctrl+Shift+V closes'
-  doc.body.append(canvas, hint)
+  hint.textContent = 'Double-click: full screen · Ctrl+scroll / pinch to zoom, drag to move · keys work here too · Ctrl+Shift+V closes'
+  const badge = doc.createElement('button')
+  badge.className = 'zbadge'
+  badge.title = 'Back to 100% (Ctrl+0)'
+  doc.body.append(canvas, hint, badge)
+
+  // Zoom into the picture: Ctrl+scroll or a pinch at the mouse, drag to
+  // move, Ctrl+0 / the badge back to 100%. In canvas pixels.
+  const vz = { s: 1, x: 0, y: 0 }
+  const clampZ = () => {
+    const W = canvas.width
+    const H = canvas.height
+    vz.x = Math.min(0, Math.max(W - W * vz.s, vz.x))
+    vz.y = Math.min(0, Math.max(H - H * vz.s, vz.y))
+  }
+  const zoomChanged = () => {
+    clampZ()
+    badge.textContent = Math.round(vz.s * 100) + '% ⟲'
+    badge.style.display = vz.s > 1 ? 'block' : 'none'
+    doc.body.classList.toggle('zoomed', vz.s > 1)
+    paint(true)
+  }
+  const resetZoom = () => { vz.s = 1; vz.x = 0; vz.y = 0; zoomChanged() }
+  badge.addEventListener('click', resetZoom)
+  badge.addEventListener('dblclick', (e) => e.stopPropagation())
+  win.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return
+    e.preventDefault()
+    const dpr = win.devicePixelRatio || 1
+    const px = e.clientX * dpr
+    const py = e.clientY * dpr
+    const d = e.deltaY * (e.deltaMode === 1 ? 16 : 1)
+    const s = Math.max(1, Math.min(8, vz.s * (Math.abs(d) >= 50 ? (d < 0 ? 1.25 : 0.8) : Math.exp(-d * 0.01))))
+    vz.x = px - (px - vz.x) * (s / vz.s)
+    vz.y = py - (py - vz.y) * (s / vz.s)
+    vz.s = s
+    if (s === 1) { vz.x = 0; vz.y = 0 }
+    zoomChanged()
+  }, { passive: false })
+  win.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || vz.s === 1 || e.target === badge) return
+    const dpr = win.devicePixelRatio || 1
+    const start = { x: e.clientX, y: e.clientY, ox: vz.x, oy: vz.y }
+    const move = (ev) => {
+      vz.x = start.ox + (ev.clientX - start.x) * dpr
+      vz.y = start.oy + (ev.clientY - start.y) * dpr
+      zoomChanged()
+    }
+    const up = () => { win.removeEventListener('pointermove', move); win.removeEventListener('pointerup', up) }
+    win.addEventListener('pointermove', move)
+    win.addEventListener('pointerup', up)
+  })
   const ctx = canvas.getContext('2d', { alpha: false })
 
   // The hint (and the pointer) show while the mouse moves, then hide.
@@ -89,6 +142,7 @@ export function openViewer() {
   // Keys → the main window's shortcuts (Esc leaves full screen first).
   win.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && doc.fullscreenElement) return
+    if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.code === 'Digit0')) { e.preventDefault(); resetZoom(); return }
     const copy = new KeyboardEvent('keydown', {
       key: e.key, code: e.code, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey, repeat: e.repeat, bubbles: true, cancelable: true,
     })
@@ -134,11 +188,14 @@ export function openViewer() {
     const sc = Math.min(w / el.videoWidth, h / el.videoHeight)
     const dw = Math.round(el.videoWidth * sc)
     const dh = Math.round(el.videoHeight * sc)
-    if (resized || w !== last.w || h !== last.h || dw !== last.dw) {
+    if (resized || w !== last.w || h !== last.h || dw !== last.dw || vz.s > 1) {
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, w, h)
     }
+    // Zoomed in (its own zoom, separate from the main player's).
+    if (vz.s > 1) ctx.setTransform(vz.s, 0, 0, vz.s, vz.x, vz.y)
     ctx.drawImage(el, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh)
+    if (vz.s > 1) ctx.setTransform(1, 0, 0, 1, 0, 0)
     stats.draws++
     last = { el, frame, w, h, vw: el.videoWidth, dw }
   }

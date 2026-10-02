@@ -1,0 +1,321 @@
+/* The app-drawn title bar (components/TitleBar.jsx). Same variables and
+   per-theme looks as Bijou Doodle's titlebar.css (whose novelty bars came
+   from BijouDocs / BijouMusic), so a theme's window looks alike in every
+   Bijou app. */
+:root {
+  --titlebar-h: 32px;
+  --titlebar-bg: var(--panel);
+  --titlebar-text: var(--ink);
+  --titlebar-border: var(--line-soft);
+  --titlebar-weight: 400;
+  --titlebar-text-shadow: none;
+  --caption-top: 0px;
+  --caption-width: 46px;
+  --caption-close-width: 46px;
+  --caption-height: 32px;
+  --caption-inset: 0px;
+  --caption-gap: 0px;
+  --caption-radius: 0;
+  --caption-border: transparent;
+  --caption-bg: transparent;
+  --caption-bg-hover: color-mix(in srgb, var(--ink) 10%, transparent);
+  --caption-bg-active: color-mix(in srgb, var(--ink) 6%, transparent);
+  --caption-shadow: none;
+  --caption-icon: var(--ink);
+  --caption-icon-filter: none;
+  --caption-stroke: 1;
+  --caption-close-border: transparent;
+  --caption-close-bg: transparent;
+  --caption-close-bg-hover: #c42b1c;
+  --caption-close-bg-active: #b0281a;
+  --caption-close-icon-hover: #ffffff;
+  --caption-close-shadow-hover: none;
+}
+body.has-titlebar #root { height: calc(100% - var(--titlebar-h)); }
+
+.titlebar {
+  height: var(--titlebar-h);
+  display: flex;
+  align-items: center;
+  background: var(--titlebar-bg);
+  border-bottom: 1px solid var(--titlebar-border);
+  box-sizing: border-box;
+  color: var(--titlebar-text);
+  -webkit-app-region: drag;
+  user-select: none;
+  position: relative;
+  z-index: 300;
+}
+.titlebar.mac { padding-left: 70px; }
+.titlebar-icon { width: 16px; height: 16px; margin: 0 8px 0 12px; flex-shrink: 0; object-fit: contain; }
+.titlebar.mac .titlebar-icon { margin-left: 4px; }
+.titlebar-title { font-size: 12px; font-weight: var(--titlebar-weight); text-shadow: var(--titlebar-text-shadow); white-space: nowrap; }
+.titlebar-captions {
+  align-self: flex-start;
+  margin: var(--caption-top) var(--caption-inset) 0 auto;
+  display: flex;
+  gap: var(--caption-gap);
+  -webkit-app-region: no-drag;
+}
+.titlebar-caption {
+  width: var(--caption-width);
+  height: var(--caption-height);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--caption-border);
+  border-top: none;
+  border-radius: var(--caption-radius);
+  background: var(--caption-bg);
+  box-shadow: var(--caption-shadow);
+  color: var(--caption-icon);
+  outline: none;
+  cursor: default;
+  transition: background 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+.titlebar-caption svg { width: 10px; height: 10px; overflow: visible; fill: none; stroke: currentColor; stroke-width: var(--caption-stroke); filter: var(--caption-icon-filter); pointer-events: none; }
+.titlebar-caption:hover { background: var(--caption-bg-hover); }
+.titlebar-caption:active { background: var(--caption-bg-active); }
+.titlebar-caption:focus-visible { outline: 2px solid var(--cyan); outline-offset: -3px; }
+.titlebar-close { width: var(--caption-close-width); border-color: var(--caption-close-border); background: var(--caption-close-bg); }
+.titlebar-close:hover { background: var(--caption-close-bg-hover); box-shadow: var(--caption-close-shadow-hover); color: var(--caption-close-icon-hover); }
+.titlebar-close:active { background: var(--caption-close-bg-active); }
+
+/* ---- per theme (from Bijou Doodle's imported BijouDocs / BijouMusic themes) ---- */
+[data-theme='dos'] {
+  --titlebar-bg: linear-gradient(to right, #000080, #1084d0);
+  --titlebar-border: #000000;
+  --titlebar-text: #ffffff;
+  --titlebar-weight: 700;
+  --caption-top: 7px;
+  --caption-width: 18px;
+  --caption-close-width: 18px;
+  --caption-height: 16px;
+  --caption-gap: 2px;
+  --caption-inset: 6px;
+  --caption-bg: #c0c0c0;
+  --caption-bg-hover: #d4d0c8;
+  --caption-bg-active: #a0a0a0;
+  --caption-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #404040;
+  --caption-icon: #000000;
+  --caption-stroke: 2;
+  --caption-close-bg: #c0c0c0;
+  --caption-close-bg-hover: #d4d0c8;
+  --caption-close-bg-active: #a0a0a0;
+  --caption-close-icon-hover: #000000;
+}
+[data-theme='aero'] {
+  --titlebar-bg: linear-gradient(180deg, #f4fbff 0%, #d8eefc 50%, #b9dcf5 51%, #cfe8f9 100%);
+  --titlebar-border: rgba(20, 80, 130, 0.35);
+  --titlebar-text: #0b2545;
+  --titlebar-text-shadow: 0 0 8px rgba(255, 255, 255, 0.95);
+  --caption-width: 28px;
+  --caption-close-width: 46px;
+  --caption-height: 20px;
+  --caption-gap: 1px;
+  --caption-inset: 8px;
+  --caption-radius: 0 0 5px 5px;
+  --caption-border: rgba(20, 70, 120, 0.6);
+  --caption-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(225, 242, 252, 0.6) 45%, rgba(160, 205, 240, 0.55) 50%, rgba(196, 228, 248, 0.7) 100%);
+  --caption-bg-hover: linear-gradient(180deg, #d4f0ff 0%, #8ed2fa 45%, #1f93d4 50%, #5fbfee 100%);
+  --caption-bg-active: linear-gradient(180deg, #a6dcf7 0%, #4fb2e6 45%, #0b6fb0 50%, #2f98d6 100%);
+  --caption-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --caption-icon: #ffffff;
+  --caption-icon-filter: drop-shadow(0 0 1px rgba(0, 30, 60, 0.95)) drop-shadow(0 1px 1px rgba(0, 30, 60, 0.6));
+  --caption-stroke: 1.8;
+  --caption-close-border: rgba(120, 25, 10, 0.75);
+  --caption-close-bg: linear-gradient(180deg, #f3b3a6 0%, #e27b66 45%, #c9432b 50%, #db5d40 100%);
+  --caption-close-bg-hover: linear-gradient(180deg, #ffd0c4 0%, #ff8d73 45%, #e8432a 50%, #ff7a52 100%);
+  --caption-close-bg-active: linear-gradient(180deg, #e39787 0%, #c9533d 45%, #a72d17 50%, #bf4428 100%);
+  --caption-close-shadow-hover: 0 0 8px rgba(255, 90, 50, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+[data-theme='aeroDark'] {
+  --titlebar-bg: linear-gradient(180deg, #3a4a64 0%, #1e2a3e 50%, #0e1624 51%, #162032 100%);
+  --titlebar-border: rgba(0, 0, 0, 0.55);
+  --titlebar-text: #f2f7fd;
+  --titlebar-text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(0, 0, 0, 0.8);
+  --caption-width: 28px;
+  --caption-close-width: 46px;
+  --caption-height: 20px;
+  --caption-gap: 1px;
+  --caption-inset: 8px;
+  --caption-radius: 0 0 5px 5px;
+  --caption-border: rgba(0, 0, 0, 0.75);
+  --caption-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0.1) 100%);
+  --caption-bg-hover: linear-gradient(180deg, #9fdcff 0%, #4ab4f0 45%, #1470c0 50%, #2f9be6 100%);
+  --caption-bg-active: linear-gradient(180deg, #6fbde8 0%, #2e8acc 45%, #0b4f92 50%, #1d78c0 100%);
+  --caption-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  --caption-icon: #ffffff;
+  --caption-icon-filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.95)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+  --caption-stroke: 1.8;
+  --caption-close-border: rgba(70, 10, 0, 0.85);
+  --caption-close-bg: linear-gradient(180deg, #e8998a 0%, #cf5d48 45%, #b0331d 50%, #c64a30 100%);
+  --caption-close-bg-hover: linear-gradient(180deg, #ffd0c4 0%, #ff8d73 45%, #e8432a 50%, #ff7a52 100%);
+  --caption-close-bg-active: linear-gradient(180deg, #d98676 0%, #bb4a35 45%, #962512 50%, #ad3a20 100%);
+  --caption-close-shadow-hover: 0 0 10px rgba(255, 90, 50, 0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+[data-theme='vaporwave'] {
+  --titlebar-bg: linear-gradient(90deg, #2d0a6e 0%, #7a1fb8 42%, #e0409f 78%, #ff8ac8 100%);
+  --titlebar-border: #1b0f33;
+  --titlebar-text: #ffffff;
+  --titlebar-text-shadow: -1px 0 rgba(255, 60, 200, 0.7), 1px 0 rgba(0, 230, 255, 0.7);
+  --titlebar-weight: 700;
+  --caption-top: 6px;
+  --caption-width: 22px;
+  --caption-close-width: 22px;
+  --caption-height: 20px;
+  --caption-gap: 2px;
+  --caption-inset: 6px;
+  --caption-border: #1b0f33;
+  --caption-bg: #d4cce8;
+  --caption-bg-hover: #e6def8;
+  --caption-bg-active: #c2b8de;
+  --caption-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #8f80b8;
+  --caption-icon: #1b0f33;
+  --caption-stroke: 2;
+  --caption-close-border: #1b0f33;
+  --caption-close-bg: #d4cce8;
+  --caption-close-bg-hover: #ff4fb8;
+  --caption-close-bg-active: #d8309a;
+  --caption-close-shadow-hover: inset 1px 1px 0 #ffc4e8, inset -1px -1px 0 #9c1072;
+}
+[data-theme='y2kChrome'] {
+  --titlebar-bg: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0 1px, rgba(0, 0, 0, 0.035) 1px 2px), linear-gradient(180deg, #f2f3f5 0%, #d7dbe0 55%, #c6cbd1 100%);
+  --titlebar-border: #8a919a;
+  --titlebar-text: #1d2126;
+  --titlebar-text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  --titlebar-weight: 600;
+  --caption-top: 6px;
+  --caption-width: 26px;
+  --caption-close-width: 26px;
+  --caption-height: 20px;
+  --caption-gap: 4px;
+  --caption-inset: 8px;
+  --caption-radius: 5px;
+  --caption-border: #7a818b;
+  --caption-bg: linear-gradient(180deg, #fdfdfd 0%, #e1e4e8 45%, #c4c9cf 50%, #e6e8eb 100%);
+  --caption-bg-hover: linear-gradient(180deg, #ffffff 0%, #eef0f2 45%, #d2d6db 50%, #f0f2f4 100%);
+  --caption-bg-active: linear-gradient(180deg, #c8cdd3 0%, #b3b9c0 100%);
+  --caption-shadow: inset 0 1px 0 #ffffff, 0 1px 1px rgba(0, 0, 0, 0.25);
+  --caption-icon: #2a2f36;
+  --caption-stroke: 1.6;
+  --caption-close-border: #7a818b;
+  --caption-close-bg: linear-gradient(180deg, #fdfdfd 0%, #e1e4e8 45%, #c4c9cf 50%, #e6e8eb 100%);
+  --caption-close-bg-hover: linear-gradient(180deg, #ff9a88 0%, #e0452c 50%, #c9321a 100%);
+  --caption-close-bg-active: linear-gradient(180deg, #d9533c 0%, #a82814 100%);
+  --caption-close-shadow-hover: 0 0 6px rgba(230, 60, 30, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+[data-theme='aqua'] {
+  --titlebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(214, 245, 247, 0.55) 50%, rgba(160, 225, 232, 0.5) 51%, rgba(190, 238, 242, 0.6) 100%);
+  --titlebar-border: rgba(40, 120, 130, 0.45);
+  --titlebar-text: #06303a;
+  --titlebar-text-shadow: 0 0 8px rgba(255, 255, 255, 0.95), 0 0 2px rgba(255, 255, 255, 0.9);
+  --caption-width: 28px;
+  --caption-close-width: 46px;
+  --caption-height: 20px;
+  --caption-gap: 1px;
+  --caption-inset: 8px;
+  --caption-radius: 0 0 5px 5px;
+  --caption-border: rgba(20, 90, 100, 0.7);
+  --caption-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(228, 250, 252, 0.55) 45%, rgba(160, 225, 232, 0.5) 50%, rgba(196, 240, 244, 0.65) 100%);
+  --caption-bg-hover: linear-gradient(180deg, #d4fbff 0%, #8eeaf2 45%, #1fb3c4 50%, #5fd8e6 100%);
+  --caption-bg-active: linear-gradient(180deg, #a6eef5 0%, #4fcfdc 45%, #0b8595 50%, #2fb3c2 100%);
+  --caption-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --caption-icon: #ffffff;
+  --caption-icon-filter: drop-shadow(0 0 1px rgba(0, 40, 50, 0.95)) drop-shadow(0 1px 1px rgba(0, 40, 50, 0.6));
+  --caption-stroke: 1.8;
+  --caption-close-border: rgba(120, 25, 10, 0.75);
+  --caption-close-bg: linear-gradient(180deg, #f3b3a6 0%, #e27b66 45%, #c9432b 50%, #db5d40 100%);
+  --caption-close-bg-hover: linear-gradient(180deg, #ffd0c4 0%, #ff8d73 45%, #e8432a 50%, #ff7a52 100%);
+  --caption-close-bg-active: linear-gradient(180deg, #e39787 0%, #c9533d 45%, #a72d17 50%, #bf4428 100%);
+  --caption-close-shadow-hover: 0 0 8px rgba(255, 90, 50, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+[data-theme='luna'] {
+  --titlebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(226, 240, 254, 0.55) 50%, rgba(186, 218, 248, 0.5) 51%, rgba(206, 230, 252, 0.6) 100%);
+  --titlebar-border: rgba(70, 110, 160, 0.45);
+  --titlebar-text: #0b1d33;
+  --titlebar-text-shadow: 0 0 8px rgba(255, 255, 255, 0.95), 0 0 2px rgba(255, 255, 255, 0.9);
+  --caption-width: 28px;
+  --caption-close-width: 46px;
+  --caption-height: 20px;
+  --caption-gap: 1px;
+  --caption-inset: 8px;
+  --caption-radius: 0 0 5px 5px;
+  --caption-border: rgba(38, 72, 118, 0.7);
+  --caption-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(230, 242, 254, 0.55) 45%, rgba(170, 205, 240, 0.5) 50%, rgba(200, 226, 250, 0.65) 100%);
+  --caption-bg-hover: linear-gradient(180deg, #d9f1ff 0%, #9fd6ff 45%, #3f9be6 50%, #69c0ff 100%);
+  --caption-bg-active: linear-gradient(180deg, #a9d8ff 0%, #5aa9e8 45%, #1e6fc0 50%, #3f93dd 100%);
+  --caption-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --caption-icon: #ffffff;
+  --caption-icon-filter: drop-shadow(0 0 1px rgba(0, 25, 60, 0.95)) drop-shadow(0 1px 1px rgba(0, 25, 60, 0.6));
+  --caption-stroke: 1.8;
+  --caption-close-border: rgba(120, 25, 10, 0.75);
+  --caption-close-bg: linear-gradient(180deg, #f3b3a6 0%, #e27b66 45%, #c9432b 50%, #db5d40 100%);
+  --caption-close-bg-hover: linear-gradient(180deg, #ffd0c4 0%, #ff8d73 45%, #e8432a 50%, #ff7a52 100%);
+  --caption-close-bg-active: linear-gradient(180deg, #e39787 0%, #c9533d 45%, #a72d17 50%, #bf4428 100%);
+  --caption-close-shadow-hover: 0 0 8px rgba(255, 90, 50, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+/* Studio: the bar is part of the dark room, lit at its bottom edge. */
+[data-theme='cuttingRoom'] {
+  --titlebar-bg: linear-gradient(180deg, rgba(20, 23, 44, 0.9), rgba(10, 12, 24, 0.9));
+  --titlebar-border: rgba(150, 160, 255, 0.12);
+  --titlebar-text: #c9cde4;
+  --titlebar-weight: 500;
+  --caption-bg-hover: rgba(160, 145, 255, 0.14);
+  --caption-bg-active: rgba(160, 145, 255, 0.08);
+  --caption-icon: #c9cde4;
+  --caption-close-bg-hover: #e5484d;
+}
+/* Doodle Club: exactly Bijou Doodle's bar. */
+[data-theme='doodleClub'] {
+  --titlebar-bg: #28549a;
+  --titlebar-border: #172b50;
+  --titlebar-text: #fffbe9;
+  --titlebar-weight: 700;
+  --caption-top: 4px;
+  --caption-height: 23px;
+  --caption-width: 28px;
+  --caption-close-width: 30px;
+  --caption-gap: 5px;
+  --caption-inset: 7px;
+  --caption-radius: 2px;
+  --caption-border: #18253d;
+  --caption-bg: #fffbe9;
+  --caption-bg-hover: #ffe475;
+  --caption-bg-active: #e3ca64;
+  --caption-shadow: inset 1px 1px #fff, inset -1px -1px #aaa48d;
+  --caption-icon: #202031;
+  --caption-stroke: 1.5;
+  --caption-close-border: #18253d;
+  --caption-close-bg: #f5bcc7;
+  --caption-close-bg-hover: #e64566;
+  --caption-close-bg-active: #d95c78;
+}
+/* Y2K Gunmetal: the brushed bar in dark anodised metal, black-chrome keys. */
+[data-theme='y2kDark'] {
+  --titlebar-bg: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0.1) 1px 2px), linear-gradient(180deg, #4a4f57 0%, #30343a 55%, #24272c 100%);
+  --titlebar-border: #0b0c0e;
+  --titlebar-text: #e6e8eb;
+  --titlebar-text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.6);
+  --titlebar-weight: 600;
+  --caption-top: 6px;
+  --caption-width: 26px;
+  --caption-close-width: 26px;
+  --caption-height: 20px;
+  --caption-gap: 4px;
+  --caption-inset: 8px;
+  --caption-radius: 5px;
+  --caption-border: #0c0d0f;
+  --caption-bg: linear-gradient(180deg, #5a616a 0%, #3d4249 45%, #272a2f 50%, #353940 100%);
+  --caption-bg-hover: linear-gradient(180deg, #69707a 0%, #4a5058 45%, #31353b 50%, #40454c 100%);
+  --caption-bg-active: linear-gradient(180deg, #1c1f23 0%, #2a2e33 100%);
+  --caption-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 1px rgba(0, 0, 0, 0.5);
+  --caption-icon: #e6e8eb;
+  --caption-stroke: 1.6;
+  --caption-close-border: #0c0d0f;
+  --caption-close-bg: linear-gradient(180deg, #5a616a 0%, #3d4249 45%, #272a2f 50%, #353940 100%);
+  --caption-close-bg-hover: linear-gradient(180deg, #ff9a88 0%, #e0452c 50%, #c9321a 100%);
+  --caption-close-bg-active: linear-gradient(180deg, #d9533c 0%, #a82814 100%);
+  --caption-close-shadow-hover: 0 0 6px rgba(230, 60, 30, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}

@@ -1,0 +1,556 @@
+/* Theme looks beyond colors — the "novelty" themes, made to match how the
+   same themes look in BijouDocs and BijouMusic: a wallpaper behind
+   everything (the same photos / artwork), panels floating on it as glass
+   or bevelled plates, glossy buttons, a glowing selection. Readability
+   first: panels stay near-solid behind text, the video stays black.
+   Applied by data-theme on <html> (lib/themes.js applyTheme). */
+
+/* ---- each theme's materials ---- */
+[data-theme='aero'] {
+  --fx-wall: linear-gradient(to top, rgba(88, 190, 70, 0.55) 0%, rgba(120, 205, 90, 0.25) 14%, rgba(140, 215, 110, 0) 34%),
+    linear-gradient(180deg, rgba(6, 42, 69, 0.45) 0%, rgba(10, 77, 120, 0.2) 40%, rgba(255, 255, 255, 0) 100%),
+    url('./assets/aero-sky.jpg') center / cover no-repeat;
+  --fx-panel: rgba(234, 246, 255, 0.72);
+  --fx-panel-edge: rgba(255, 255, 255, 0.9);
+  --fx-blur: blur(18px) saturate(1.4);
+  --fx-shadow: 0 8px 28px rgba(10, 40, 70, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --fx-btn: linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.6) 45%, rgba(200, 232, 255, 0.45) 50%, rgba(170, 215, 250, 0.35) 100%);
+  --fx-btn-edge: rgba(255, 255, 255, 0.9);
+  --fx-btn-shadow: 0 1px 3px rgba(10, 40, 70, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --fx-on: linear-gradient(to bottom, rgba(170, 225, 255, 0.98) 0%, rgba(90, 190, 250, 0.8) 45%, rgba(40, 150, 230, 0.75) 50%, rgba(20, 120, 200, 0.7) 100%);
+  --fx-on-ink: #04213a;
+  --fx-glow: 0 0 12px rgba(15, 159, 219, 0.55);
+  --fx-radius: 14px;
+  --fx-btn-radius: 12px;
+  --fx-bar: linear-gradient(to bottom, rgba(255, 255, 255, 0.75), rgba(214, 238, 255, 0.55));
+  --fx-bar-ink: var(--ink);
+}
+[data-theme='aeroDark'] {
+  --fx-wall: url('./assets/aero-night.jpg') center / cover no-repeat, #0a1120;
+  --fx-panel: rgba(16, 26, 44, 0.72);
+  --fx-panel-edge: rgba(120, 180, 255, 0.22);
+  --fx-blur: blur(18px) saturate(1.3);
+  --fx-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(160, 210, 255, 0.14);
+  --fx-btn: linear-gradient(to bottom, rgba(70, 110, 170, 0.55) 0%, rgba(30, 55, 95, 0.55) 50%, rgba(18, 34, 62, 0.6) 100%);
+  --fx-btn-edge: rgba(130, 190, 255, 0.3);
+  --fx-btn-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(170, 215, 255, 0.25);
+  --fx-on: linear-gradient(to bottom, rgba(110, 205, 255, 0.95) 0%, rgba(60, 170, 240, 0.85) 50%, rgba(30, 130, 210, 0.85) 100%);
+  --fx-on-ink: #04182c;
+  --fx-glow: 0 0 14px rgba(76, 194, 255, 0.55);
+  --fx-radius: 14px;
+  --fx-btn-radius: 12px;
+  --fx-bar: linear-gradient(to bottom, rgba(40, 70, 120, 0.55), rgba(16, 26, 44, 0.4));
+  --fx-bar-ink: var(--ink);
+}
+[data-theme='vaporwave'] {
+  --fx-wall: linear-gradient(to top, #1f0a45 0%, rgba(58, 20, 110, 0.85) 14%, rgba(120, 50, 160, 0.35) 28%, rgba(160, 90, 190, 0) 40%),
+    url('./assets/vapor-clouds.png') center / cover no-repeat, #8a8fd0;
+  --fx-panel: rgba(240, 228, 255, 0.86);
+  --fx-panel-edge: rgba(255, 255, 255, 0.75);
+  --fx-blur: blur(14px) saturate(1.3);
+  --fx-shadow: 0 10px 30px rgba(43, 16, 85, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --fx-btn: linear-gradient(to bottom, #fff7ff, #ecdcff);
+  --fx-btn-edge: #c9a7f0;
+  --fx-btn-shadow: 0 1px 2px rgba(80, 30, 140, 0.25);
+  --fx-on: linear-gradient(135deg, #ff4fb8 0%, #b44cff 100%);
+  --fx-on-ink: #ffffff;
+  --fx-glow: 0 0 12px rgba(255, 79, 184, 0.45);
+  --fx-radius: 10px;
+  --fx-btn-radius: 8px;
+  --fx-bar: linear-gradient(90deg, #ff4fb8 0%, #b44cff 55%, #6a3df0 100%);
+  --fx-bar-ink: #ffffff;
+}
+[data-theme='dos'] {
+  --fx-wall: url('./assets/dos-bg.jpg') center / cover no-repeat, #008080;
+  --fx-panel: #c0c0c0;
+  --fx-panel-edge: #ffffff;
+  --fx-blur: none;
+  --fx-shadow: inset -1px -1px 0 #000, inset 1px 1px 0 #fff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
+  --fx-btn: #c0c0c0;
+  --fx-btn-edge: transparent;
+  --fx-btn-shadow: inset -1px -1px 0 #000, inset 1px 1px 0 #fff, inset -2px -2px 0 #808080, inset 2px 2px 0 #dfdfdf;
+  --fx-on: #000080;
+  --fx-on-ink: #ffffff;
+  --fx-glow: none;
+  --fx-radius: 0px;
+  --fx-btn-radius: 0px;
+  --fx-bar: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+  --fx-bar-ink: #ffffff;
+}
+[data-theme='y2kChrome'] {
+  --fx-wall: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px), linear-gradient(180deg, #c9ced4 0%, #9ea5ad 100%);
+  --fx-panel: linear-gradient(180deg, #f6f7f8 0%, #e3e6e9 100%);
+  --fx-panel-edge: #ffffff;
+  --fx-blur: none;
+  --fx-shadow: 0 6px 18px rgba(20, 24, 30, 0.25), inset 0 1px 0 #ffffff, inset 0 -1px 0 #b9bfc6;
+  --fx-btn: linear-gradient(to bottom, #ffffff 0%, #e4e7ea 48%, #cfd4d9 52%, #e6e9ec 100%);
+  --fx-btn-edge: #9ea5ae;
+  --fx-btn-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), inset 0 1px 0 #ffffff;
+  --fx-on: linear-gradient(to bottom, #ffb35c 0%, #f08a1c 48%, #d86f05 52%, #f29a3a 100%);
+  --fx-on-ink: #2a1500;
+  --fx-glow: 0 0 10px rgba(240, 138, 28, 0.45);
+  --fx-radius: 12px;
+  --fx-btn-radius: 10px;
+  --fx-bar: linear-gradient(to bottom, #fdfdfd, #d4d8dc);
+  --fx-bar-ink: var(--ink);
+}
+[data-theme='aqua'] {
+  --fx-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3ClinearGradient id='w' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%237ee8f5'/%3E%3Cstop offset='0.3' stop-color='%232bb7cf'/%3E%3Cstop offset='0.7' stop-color='%230b7fa6'/%3E%3Cstop offset='1' stop-color='%2304466e'/%3E%3C/linearGradient%3E%3ClinearGradient id='r' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='0.42'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/linearGradient%3E%3CradialGradient id='b' cx='0.36' cy='0.3' r='0.7'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='0.95'/%3E%3Cstop offset='0.22' stop-color='%23fff' stop-opacity='0.12'/%3E%3Cstop offset='0.78' stop-color='%23fff' stop-opacity='0.06'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0.55'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1600' height='1000' fill='url(%23w)'/%3E%3Cpath d='M120 0L180 0L360 1000L260 1000Z M360 0L450 0L710 1000L580 1000Z M640 0L690 0L810 1000L720 1000Z M820 0L930 0L1230 1000L1080 1000Z M1100 0L1170 0L1370 1000L1260 1000Z M1340 0L1435 0L1695 1000L1560 1000Z' fill='url(%23r)'/%3E%3Cpath d='M0 38 Q200 22 400 38 T800 38 T1200 38 T1600 38 M0 70 Q200 56 400 70 T800 70 T1200 70 T1600 70' stroke='%23fff' stroke-opacity='0.35' stroke-width='3' fill='none'/%3E%3Cg fill='url(%23b)' stroke='%23fff' stroke-opacity='0.45' stroke-width='1.2'%3E%3Ccircle cx='177' cy='843' r='4'/%3E%3Ccircle cx='192' cy='196' r='10'/%3E%3Ccircle cx='679' cy='229' r='6'/%3E%3Ccircle cx='99' cy='469' r='6'/%3E%3Ccircle cx='77' cy='596' r='14'/%3E%3Ccircle cx='289' cy='623' r='6'/%3E%3Ccircle cx='194' cy='665' r='10'/%3E%3Ccircle cx='503' cy='933' r='8'/%3E%3Ccircle cx='168' cy='192' r='8'/%3E%3Ccircle cx='1491' cy='656' r='4'/%3E%3Ccircle cx='103' cy='941' r='10'/%3E%3Ccircle cx='1223' cy='814' r='24'/%3E%3Ccircle cx='951' cy='821' r='4'/%3E%3Ccircle cx='759' cy='177' r='18'/%3E%3Ccircle cx='1402' cy='370' r='10'/%3E%3Ccircle cx='1285' cy='268' r='4'/%3E%3Ccircle cx='460' cy='338' r='10'/%3E%3Ccircle cx='1344' cy='604' r='6'/%3E%3Ccircle cx='1487' cy='988' r='18'/%3E%3Ccircle cx='378' cy='253' r='18'/%3E%3Ccircle cx='1339' cy='368' r='6'/%3E%3Ccircle cx='211' cy='728' r='14'/%3E%3Ccircle cx='1405' cy='912' r='24'/%3E%3Ccircle cx='1415' cy='471' r='4'/%3E%3Ccircle cx='233' cy='508' r='4'/%3E%3Ccircle cx='182' cy='592' r='8'/%3E%3Ccircle cx='1177' cy='251' r='8'/%3E%3Ccircle cx='404' cy='867' r='10'/%3E%3Ccircle cx='231' cy='422' r='8'/%3E%3Ccircle cx='232' cy='957' r='14'/%3E%3Ccircle cx='1463' cy='382' r='18'/%3E%3Ccircle cx='1422' cy='919' r='8'/%3E%3Ccircle cx='1358' cy='680' r='14'/%3E%3Ccircle cx='352' cy='840' r='18'/%3E%3Ccircle cx='788' cy='146' r='4'/%3E%3Ccircle cx='310' cy='962' r='10'/%3E%3Ccircle cx='1432' cy='191' r='4'/%3E%3Ccircle cx='327' cy='987' r='14'/%3E%3Ccircle cx='1045' cy='195' r='18'/%3E%3Ccircle cx='103' cy='541' r='6'/%3E%3Ccircle cx='139' cy='468' r='10'/%3E%3Ccircle cx='328' cy='144' r='14'/%3E%3Ccircle cx='234' cy='983' r='18'/%3E%3Ccircle cx='397' cy='133' r='18'/%3E%3Ccircle cx='1355' cy='988' r='6'/%3E%3Ccircle cx='1232' cy='561' r='24'/%3E%3C/g%3E%3C/svg%3E") center / cover no-repeat, #2bb7cf;
+  --fx-panel: rgba(238, 250, 250, 0.74);
+  --fx-panel-edge: rgba(255, 255, 255, 0.85);
+  --fx-blur: blur(16px) saturate(1.3);
+  --fx-shadow: 0 8px 26px rgba(4, 70, 110, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --fx-btn: linear-gradient(to bottom, rgba(255, 255, 255, 0.95) 0%, rgba(230, 250, 250, 0.7) 48%, rgba(170, 230, 236, 0.55) 52%, rgba(200, 240, 244, 0.6) 100%);
+  --fx-btn-edge: rgba(140, 201, 207, 0.9);
+  --fx-btn-shadow: 0 1px 3px rgba(4, 70, 110, 0.2), inset 0 1px 0 #ffffff;
+  --fx-on: linear-gradient(to bottom, #7ee8f5 0%, #2bb7cf 48%, #0b8fa6 52%, #33c0d6 100%);
+  --fx-on-ink: #022a33;
+  --fx-glow: 0 0 12px rgba(10, 138, 153, 0.5);
+  --fx-radius: 14px;
+  --fx-btn-radius: 12px;
+  --fx-bar: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(205, 238, 240, 0.6));
+  --fx-bar-ink: var(--ink);
+}
+[data-theme='luna'] {
+  --fx-wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%231a4fae'/%3E%3Cstop offset='0.5' stop-color='%23367fd6'/%3E%3Cstop offset='1' stop-color='%238cc6f2'/%3E%3C/linearGradient%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0021 0.0046' numOctaves='5' seed='11'/%3E%3CfeColorMatrix type='matrix' values='0 0.35 0 0 0.72  0 0.3 0 0 0.78  0 0.15 0 0 0.9  3.9 0 0 0 -2.1'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='1600' height='1000' fill='url(%23s)'/%3E%3Crect width='1600' height='1000' filter='url(%23c)'/%3E%3C/svg%3E") center / cover no-repeat, #367fd6;
+  --fx-panel: rgba(241, 247, 253, 0.78);
+  --fx-panel-edge: rgba(255, 255, 255, 0.9);
+  --fx-blur: blur(14px);
+  --fx-shadow: 0 8px 24px rgba(10, 40, 90, 0.3), inset 0 1px 0 #ffffff;
+  --fx-btn: linear-gradient(to bottom, #ffffff 0%, #ecf2fa 50%, #d6e4f5 100%);
+  --fx-btn-edge: #9cbbdc;
+  --fx-btn-shadow: 0 1px 2px rgba(10, 40, 90, 0.2), inset 0 1px 0 #ffffff;
+  --fx-on: linear-gradient(to bottom, #5a9ae8 0%, #2a6dcf 50%, #1a5fc0 100%);
+  --fx-on-ink: #ffffff;
+  --fx-glow: 0 0 10px rgba(26, 95, 192, 0.45);
+  --fx-radius: 10px;
+  --fx-btn-radius: 6px;
+  --fx-bar: linear-gradient(to bottom, #2f74d6 0%, #1a5fc0 60%, #134ea3 100%);
+  --fx-bar-ink: #ffffff;
+}
+
+/* ---- shared: wallpaper, floating panels, buttons, selection ---- */
+:is([data-theme='aero'], [data-theme='aeroDark'], [data-theme='vaporwave'], [data-theme='dos'], [data-theme='y2kChrome'], [data-theme='y2kDark'], [data-theme='aqua'], [data-theme='luna'], [data-theme='cuttingRoom'], [data-theme='doodleClub']) {
+  & body { background: var(--fx-wall); }
+  & #root > .app {
+    gap: 8px;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  /* Panels float on the wallpaper. */
+  & .app > .library,
+  & .app > .notes-panel,
+  & .app > .center > .upper > .notes-panel {
+    background: var(--fx-panel);
+    -webkit-backdrop-filter: var(--fx-blur);
+    backdrop-filter: var(--fx-blur);
+    border: 1px solid var(--fx-panel-edge);
+    border-radius: var(--fx-radius);
+    box-shadow: var(--fx-shadow);
+    overflow: hidden;
+  }
+  & .app > .center { background: transparent; gap: 8px; }
+  & .app > .center > .upper,
+  & .app > .center > .edit-upper { gap: 8px; background: transparent; }
+  & .player-area,
+  & .edit-upper > .em,
+  & .timeline,
+  & .et {
+    border-radius: var(--fx-radius);
+    box-shadow: var(--fx-shadow);
+    border: 1px solid var(--fx-panel-edge);
+  }
+  /* Not the timelines: their skim preview pops up above them. */
+  & .player-area, & .edit-upper > .em { overflow: hidden; }
+  & .timeline,
+  & .et,
+  & .transport,
+  & .clip-header {
+    background: var(--fx-panel);
+    -webkit-backdrop-filter: var(--fx-blur);
+    backdrop-filter: var(--fx-blur);
+  }
+  & .stage, & .em-stage { background: #000; } /* footage always on black */
+  & .splitter { background: transparent; border: 0; }
+
+  /* The top strip of the sidebar = the title bar. */
+  & .lib-top {
+    background: var(--fx-bar);
+    color: var(--fx-bar-ink);
+    border-bottom: 1px solid var(--fx-panel-edge);
+  }
+  & .lib-top .icon-btn, & .lib-top .brand-btn { color: var(--fx-bar-ink); }
+
+  /* Buttons: the theme's gloss / bevel. */
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small, & .sketch-tool {
+    background: var(--fx-btn);
+    border: 1px solid var(--fx-btn-edge);
+    border-radius: var(--fx-btn-radius);
+    box-shadow: var(--fx-btn-shadow);
+    color: var(--ink);
+  }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover {
+    filter: brightness(1.06);
+    box-shadow: var(--fx-btn-shadow), var(--fx-glow);
+  }
+  /* "On" / selected: the theme's glowing pill. */
+  & .btn.primary, & .snap-btn.on, & .t-btn.play, & .seg button.on, & .np-tabs button.on,
+  & .ws-switch .on, & .lib-row.active, & .bin-row.active, & .sketch-tool.on, & .layout-btn.on, & .viewer-btn.on {
+    background: var(--fx-on);
+    color: var(--fx-on-ink);
+    border-color: var(--fx-btn-edge);
+    box-shadow: var(--fx-btn-shadow), var(--fx-glow);
+  }
+  & .lib-row.active * { color: var(--fx-on-ink); }
+  & .seg, & .np-tabs { background: transparent; }
+  & ::selection { background: var(--cyan); color: #fff; }
+}
+
+/* MS-DOS: Windows-98 plates, square everything, no glass. */
+[data-theme='dos'] {
+  & .lib-top { font-weight: 700; }
+  & .btn:active, & .t-btn:active, & .mini-btn:active { box-shadow: inset 1px 1px 0 #000, inset -1px -1px 0 #fff, inset 2px 2px 0 #808080; }
+  & .timeline, & .et, & .player-area, & .edit-upper > .em { border: 0; }
+}
+/* Vaporwave: the neon floor grid rising from the bottom of the wallpaper. */
+[data-theme='vaporwave'] #root > .app { position: relative; isolation: isolate; }
+[data-theme='vaporwave'] #root > .app::before {
+  content: '';
+  position: absolute;
+  left: -50%;
+  right: -50%;
+  bottom: 0;
+  height: 70%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 79, 216, 0.8) 0 2px, transparent 2px 56px),
+    repeating-linear-gradient(90deg, rgba(1, 205, 254, 0.65) 0 2px, transparent 2px 56px);
+  transform: perspective(800px) rotateX(45deg);
+  transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 100%);
+}
+
+/* ---- Studio (id cuttingRoom): a modern editing suite ----
+   Deep blue-black room lit by violet and blue light from the edges, panels
+   as raised cards with a lit top edge, tactile buttons that press in, a
+   glowing violet pill for whatever is on and a round lit play button. */
+[data-theme='cuttingRoom'] {
+  --fx-wall: radial-gradient(ellipse 60% 55% at 12% 0%, rgba(124, 92, 255, 0.24), transparent 70%),
+    radial-gradient(ellipse 55% 60% at 100% 100%, rgba(56, 110, 255, 0.2), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 62% 52%, rgba(170, 80, 255, 0.08), transparent 75%),
+    #070914;
+  --fx-panel: linear-gradient(180deg, rgba(25, 29, 54, 0.94), rgba(16, 19, 38, 0.94));
+  --fx-panel-edge: rgba(150, 160, 255, 0.11);
+  --fx-blur: blur(20px) saturate(1.2);
+  --fx-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --fx-btn: linear-gradient(180deg, #252a46, #1a1e36);
+  --fx-btn-edge: rgba(255, 255, 255, 0.08);
+  --fx-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 5px rgba(0, 0, 0, 0.45);
+  --fx-on: linear-gradient(180deg, #927eff, #5a45e6);
+  --fx-on-ink: #ffffff;
+  --fx-glow: 0 0 0 1px rgba(165, 145, 255, 0.55), 0 4px 18px rgba(110, 80, 255, 0.45);
+  --fx-radius: 12px;
+  --fx-btn-radius: 8px;
+  --fx-bar: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent);
+  --fx-bar-ink: #e9ebf5;
+
+  & #root > .app { gap: 10px; padding: 10px; }
+  & .timeline, & .et { background: linear-gradient(180deg, #121528, #0d1020); }
+  & .lib-top { border-bottom: 1px solid var(--fx-panel-edge); }
+
+  /* Wordmark: wide caps, a lit violet mark. */
+  & .brand-name { font-weight: 600; letter-spacing: 3px; text-transform: uppercase; font-size: 13px; }
+  & .brand-mark { color: #a493ff; text-shadow: 0 0 10px rgba(140, 110, 255, 0.6); }
+
+  /* Tactile: lift on hover, press in on click. */
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small { transition: filter 0.12s, transform 0.08s, box-shadow 0.12s; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { filter: brightness(1.18); box-shadow: var(--fx-btn-shadow); }
+  & .btn:active:not(:disabled), & .t-btn:active, & .mini-btn:active, & .snap-btn:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  /* The play button: round and lit. */
+  & .t-btn.play {
+    border-radius: 999px;
+    background: radial-gradient(circle at 50% 30%, #a493ff, #5a45e6 70%);
+    color: #fff;
+    border-color: rgba(190, 175, 255, 0.6);
+    box-shadow: 0 0 0 3px rgba(139, 123, 255, 0.22), 0 0 22px rgba(120, 90, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  & .t-time { font-family: 'Consolas', 'Menlo', monospace; color: #cfc7ff; letter-spacing: 0.4px; }
+
+  /* Selected recording: a lit outline, like a selected thumbnail. */
+  & .lib-row.active, & .bin-row.active {
+    background: linear-gradient(180deg, rgba(130, 105, 255, 0.24), rgba(90, 70, 230, 0.16));
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px rgba(165, 145, 255, 0.65), 0 0 16px rgba(110, 80, 255, 0.25);
+  }
+  & .lib-row.active * { color: inherit; }
+  & ::selection { background: #6d58f0; color: #fff; }
+}
+
+/* ---- Doodle Club: Bijou Doodle's theme, as an editor ----
+   Bijou Doodle's own blue doodle wallpaper, cream paper panels drawn with
+   a thick ink outline, the felt-tip rainbow logo, pastel buttons, a
+   light-blue "on" and a marker-yellow play button. */
+[data-theme='doodleClub'] {
+  --fx-wall: url('./assets/doodle-club-tile.png') 0 0 / 400px 400px repeat, #2459a6;
+  --fx-panel: #fffbe9;
+  --fx-panel-edge: #27283b;
+  --fx-blur: none;
+  --fx-shadow: 0 3px 0 rgba(23, 43, 80, 0.55);
+  --fx-btn: #fffbe9;
+  --fx-btn-edge: #27283b;
+  --fx-btn-shadow: inset 1px 1px #fff, inset -1px -2px #cbc5a7;
+  --fx-on: #cfe3ff;
+  --fx-on-ink: #13284d;
+  --fx-glow: inset 0 -2px #8fb3e8;
+  --fx-radius: 12px;
+  --fx-btn-radius: 6px;
+  --fx-bar: #fffbe9;
+  --fx-bar-ink: #202031;
+  --doodle-font: 'Comic Sans MS', 'Chalkboard SE', 'Trebuchet MS', cursive;
+
+  & #root > .app { gap: 12px; padding: 12px; }
+  & .app > .library,
+  & .app > .notes-panel,
+  & .app > .center > .upper > .notes-panel,
+  & .player-area,
+  & .edit-upper > .em,
+  & .timeline,
+  & .et { border-width: 2.5px; }
+  & .lib-top { border-bottom: 2px solid #27283b; }
+  & .transport { border-top: 2px solid #27283b; }
+
+  /* The logo: a yellow star and felt-tip letters, each its own color. */
+  & .brand-mark { font-size: 0; margin-right: 6px; }
+  & .brand-mark::before { content: '★'; font-size: 17px; color: #f4b400; -webkit-text-stroke: 1px #27283b; }
+  & .brand-name { font-family: var(--doodle-font); font-size: 18px; font-weight: 900; letter-spacing: -0.5px; color: #1f5fbf; }
+  & .brand-name > span { display: inline-block; }
+  & .brand-name > span:nth-child(5n + 2) { color: #b92a65; transform: rotate(-7deg); }
+  & .brand-name > span:nth-child(5n + 3) { color: #258026; transform: translateY(-2px); }
+  & .brand-name > span:nth-child(5n + 4) { color: #aa5100; transform: rotate(6deg); }
+  & .brand-name > span:nth-child(5n) { color: #813caa; }
+  & .brand-btn:hover .brand-name > span { animation: dc-wiggle 0.4s ease-in-out; }
+
+  /* Headings and tabs in the doodle hand. */
+  & .np-tabs button, & .ws-switch button, & .lib-day, & .ch-name, & .seg button, & .titlebar-title { font-family: var(--doodle-font); }
+
+  /* Buttons: ink-outlined crayon-box pastels. */
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small, & .sketch-tool { border-width: 1.5px; }
+  & .t-btn:nth-child(3n + 2), & .mini-btn:nth-child(3n + 2) { background: #d7edff; }
+  & .t-btn:nth-child(3n), & .mini-btn:nth-child(3n) { background: #f2dcf4; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #fff0a8; filter: none; }
+  & .btn:active:not(:disabled), & .t-btn:active, & .mini-btn:active { transform: translateY(1px); }
+  & .btn.primary, & .snap-btn.on, & .seg button.on, & .np-tabs button.on,
+  & .ws-switch .on, & .lib-row.active, & .bin-row.active, & .sketch-tool.on, & .layout-btn.on, & .viewer-btn.on {
+    border-color: #27283b;
+  }
+  & .lib-row.active { box-shadow: inset 0 0 0 2px #27283b; }
+  & .t-btn.play { background: #ffe45c; color: #202031; border-color: #202031; box-shadow: inset 0 -3px #d4ad26; }
+  & ::selection { background: #ffe45c; color: #202031; }
+}
+@keyframes dc-wiggle {
+  25% { translate: 0 -2px; }
+  75% { translate: 0 1px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='doodleClub'] .brand-btn:hover .brand-name > span { animation: none; }
+}
+
+/* ---- Y2K Chrome (+ Y2K Gunmetal): the app as a Y2K media player ----
+   BijouMusic's Y2K Chrome, ported: brushed-aluminium panels screwed down at
+   the corners, chrome push-buttons with 1px of key travel, spun-metal knobs
+   for the transport with the play knob ringed by an amber power LED, an
+   amber backlit LCD for the timecode, and labels in Bahnschrift. Gunmetal is
+   the same hardware in dark anodised aluminium and black chrome. */
+[data-theme='y2kDark'] {
+  --fx-wall: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, rgba(0, 0, 0, 0.08) 1px 2px), linear-gradient(180deg, #2a2e34 0%, #16191d 100%);
+  --fx-panel: #24272c;
+  --fx-panel-edge: #0b0c0e;
+  --fx-blur: none;
+  --fx-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --fx-btn: linear-gradient(180deg, #555b64 0%, #3a3f46 48%, #26292e 52%, #33373d 100%);
+  --fx-btn-edge: #0c0d0f;
+  --fx-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --fx-on: linear-gradient(180deg, #ffbf47 0%, #f29a17 48%, #d97c00 52%, #f0a133 100%);
+  --fx-on-ink: #1a0f00;
+  --fx-glow: 0 0 10px rgba(255, 160, 0, 0.4);
+  --fx-radius: 12px;
+  --fx-btn-radius: 5px;
+  --fx-bar: none;
+  --fx-bar-ink: #e6e8eb;
+}
+[data-theme='y2kChrome'] {
+  --y2k-brush: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.16) 0 1px, rgba(0, 0, 0, 0.03) 1px 3px), linear-gradient(90deg, #cdd1d6 0%, #e2e5e9 45%, #d0d4d9 100%);
+  --y2k-brush-faint: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.35) 0 1px, rgba(0, 0, 0, 0.018) 1px 3px), linear-gradient(180deg, #eef0f2 0%, #e4e7ea 100%);
+  --y2k-plate: radial-gradient(circle, rgba(40, 44, 50, 0.22) 0 1.1px, rgba(0, 0, 0, 0) 1.6px) 0 0 / 5px 5px, repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.14) 0 1px, rgba(0, 0, 0, 0.03) 1px 2px), linear-gradient(180deg, #f3f4f6 0%, #d9dde2 50%, #c9ced4 100%);
+  --y2k-screw-head: #f1f3f5;
+  --y2k-screw-rim: #7d848e;
+  --y2k-screw-slot: #565c64;
+  --y2k-key: linear-gradient(180deg, #fdfdfe 0%, #e3e6e9 48%, #c9ced4 52%, #e2e5e8 100%);
+  --y2k-key-hover: linear-gradient(180deg, #ffffff 0%, #eef0f2 48%, #d6dade 52%, #eceef1 100%);
+  --y2k-key-edge: #7d848e;
+  --y2k-key-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.25);
+  --y2k-key-down: linear-gradient(180deg, #c8cdd3 0%, #b3b9c0 100%);
+  --y2k-knob: conic-gradient(from 20deg, #f4f5f7, #b7bcc3, #eef0f2, #a9afb7, #f4f5f7, #b7bcc3, #eef0f2, #a9afb7, #f4f5f7);
+  --y2k-knob-shadow: inset 0 0 0 1px #7d848e, inset 0 2px 2px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.35);
+  --y2k-ink: #1d2126;
+  --y2k-on-ink: #8a4300;
+  --y2k-row-on: #fafbfc;
+}
+[data-theme='y2kDark'] {
+  --y2k-brush: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0.1) 1px 3px), linear-gradient(90deg, #2c3036 0%, #3a3e45 45%, #2d3137 100%);
+  --y2k-brush-faint: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, rgba(0, 0, 0, 0.08) 1px 3px), linear-gradient(180deg, #272a2f 0%, #212428 100%);
+  --y2k-plate: radial-gradient(circle, rgba(0, 0, 0, 0.45) 0 1.1px, rgba(0, 0, 0, 0) 1.6px) 0 0 / 5px 5px, repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0.1) 1px 2px), linear-gradient(180deg, #454a52 0%, #30343a 50%, #26292e 100%);
+  --y2k-screw-head: #8c939c;
+  --y2k-screw-rim: #15171a;
+  --y2k-screw-slot: #2a2e33;
+  --y2k-key: linear-gradient(180deg, #5a616a 0%, #3d4249 48%, #272a2f 52%, #353940 100%);
+  --y2k-key-hover: linear-gradient(180deg, #69707a 0%, #4a5058 48%, #31353b 52%, #40454c 100%);
+  --y2k-key-edge: #0c0d0f;
+  --y2k-key-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.55);
+  --y2k-key-down: linear-gradient(180deg, #1c1f23 0%, #2a2e33 100%);
+  --y2k-knob: conic-gradient(from 20deg, #6f767f, #2c3036, #5c636c, #24272c, #6f767f, #2c3036, #5c636c, #24272c, #6f767f);
+  --y2k-knob-shadow: inset 0 0 0 1px #0c0d0f, inset 0 2px 2px rgba(255, 255, 255, 0.18), 0 2px 4px rgba(0, 0, 0, 0.6);
+  --y2k-ink: #e6e8eb;
+  --y2k-on-ink: #ffb347;
+  --y2k-row-on: #33373e;
+}
+:is([data-theme='y2kChrome'], [data-theme='y2kDark']) {
+  /* four slotted screws, one per corner */
+  --y2k-screws:
+    linear-gradient(45deg, rgba(0, 0, 0, 0) 38%, var(--y2k-screw-slot) 38% 62%, rgba(0, 0, 0, 0) 62%) left 8px top 8px / 4px 4px no-repeat,
+    radial-gradient(circle, var(--y2k-screw-head) 0 2.6px, var(--y2k-screw-rim) 3px 3.8px, rgba(0, 0, 0, 0) 4.3px) left 5px top 5px / 10px 10px no-repeat,
+    linear-gradient(45deg, rgba(0, 0, 0, 0) 38%, var(--y2k-screw-slot) 38% 62%, rgba(0, 0, 0, 0) 62%) right 8px top 8px / 4px 4px no-repeat,
+    radial-gradient(circle, var(--y2k-screw-head) 0 2.6px, var(--y2k-screw-rim) 3px 3.8px, rgba(0, 0, 0, 0) 4.3px) right 5px top 5px / 10px 10px no-repeat,
+    linear-gradient(45deg, rgba(0, 0, 0, 0) 38%, var(--y2k-screw-slot) 38% 62%, rgba(0, 0, 0, 0) 62%) left 8px bottom 8px / 4px 4px no-repeat,
+    radial-gradient(circle, var(--y2k-screw-head) 0 2.6px, var(--y2k-screw-rim) 3px 3.8px, rgba(0, 0, 0, 0) 4.3px) left 5px bottom 5px / 10px 10px no-repeat,
+    linear-gradient(45deg, rgba(0, 0, 0, 0) 38%, var(--y2k-screw-slot) 38% 62%, rgba(0, 0, 0, 0) 62%) right 8px bottom 8px / 4px 4px no-repeat,
+    radial-gradient(circle, var(--y2k-screw-head) 0 2.6px, var(--y2k-screw-rim) 3px 3.8px, rgba(0, 0, 0, 0) 4.3px) right 5px bottom 5px / 10px 10px no-repeat;
+
+  /* Brushed panels, screwed down. */
+  & .app > .library,
+  & .app > .notes-panel,
+  & .app > .center > .upper > .notes-panel { background: var(--y2k-screws), var(--y2k-brush); }
+  & .timeline, & .et { background: var(--y2k-brush-faint); }
+  /* Header strips: perforated speaker-grille plates. */
+  & .lib-top, & .clip-header, & .np-head, & .transport {
+    background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)) top / 100% 1px no-repeat, var(--y2k-plate);
+    color: var(--y2k-ink);
+  }
+  & .lib-top { padding-left: 22px; padding-right: 20px; }
+  & .brand-name { font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; font-size: 13px; }
+
+  /* Chrome push-buttons with key travel. */
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small, & .sketch-tool {
+    background: var(--y2k-key);
+    border: 1px solid var(--y2k-key-edge);
+    border-radius: 5px;
+    box-shadow: var(--y2k-key-shadow);
+    color: var(--y2k-ink);
+    transition: transform 0.06s, filter 0.12s;
+  }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: var(--y2k-key-hover); filter: none; }
+  & .btn:active:not(:disabled), & .t-btn:active, & .mini-btn:active, & .snap-btn:active, & .icon-btn.small:active {
+    transform: translateY(1px);
+    background: var(--y2k-key-down);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+  /* On = the key latched down, its label lit amber. */
+  & .snap-btn.on, & .seg button.on, & .np-tabs button.on, & .ws-switch .on, & .sketch-tool.on, & .layout-btn.on, & .viewer-btn.on {
+    background: var(--y2k-key-down);
+    color: var(--y2k-on-ink);
+    border-color: var(--y2k-key-edge);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 160, 0, 0.55), 0 0 8px rgba(255, 160, 0, 0.3);
+    font-weight: 700;
+  }
+  & .btn.primary { background: linear-gradient(180deg, #ffbf47 0%, #f29a17 48%, #d97c00 52%, #f0a133 100%); color: #1a0f00; }
+  /* Selected recording: lit row with an amber edge, like BijouMusic's track list. */
+  & .lib-row.active, & .bin-row.active {
+    background: var(--y2k-row-on);
+    color: var(--y2k-ink);
+    box-shadow: inset 3px 0 0 #e8890c, inset 0 0 0 1px rgba(201, 100, 10, 0.35);
+    font-weight: 700;
+  }
+  & .lib-row.active * { color: inherit; }
+
+  /* Transport keys are spun-metal knobs; play is the big one with the amber LED. */
+  & .transport .t-btn {
+    border-radius: 50%;
+    border-color: transparent;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0) 58%, rgba(0, 0, 0, 0.12) 60%, rgba(255, 255, 255, 0) 62%), var(--y2k-knob);
+    box-shadow: var(--y2k-knob-shadow);
+  }
+  & .transport .t-btn.play {
+    background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 45%), var(--y2k-knob);
+    border: 1px solid #6b727c;
+    color: var(--y2k-ink);
+    box-shadow: 0 0 0 3px rgba(255, 176, 0, 0.35), 0 0 12px rgba(255, 160, 0, 0.4), 0 3px 8px rgba(0, 0, 0, 0.4);
+  }
+  /* Timecode: amber backlit LCD behind glass, in a dark bezel. */
+  & .t-time {
+    background: linear-gradient(172deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 34%, rgba(255, 255, 255, 0) 34.3%), radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%);
+    color: #ffb347;
+    text-shadow: 0 0 6px rgba(255, 160, 0, 0.55);
+    border-radius: 4px;
+    padding: 3px 9px;
+    box-shadow: inset 0 0 0 2px #2b2f35, inset 0 0 0 3px rgba(255, 255, 255, 0.07), inset 0 3px 8px rgba(0, 0, 0, 0.8);
+    font-family: 'Consolas', 'Menlo', monospace;
+  }
+  /* The picture sits in a dark bezel. */
+  & .player-area, & .edit-upper > .em { border: 1px solid var(--y2k-key-edge); }
+  & .stage, & .em-stage { box-shadow: inset 0 0 0 3px #2b2f35; }
+  & ::selection { background: #ffb000; color: #1a0f00; }
+}
+/* The LCD's digits are amber whatever the theme colors its spans. */
+:is([data-theme='y2kChrome'], [data-theme='y2kDark']) .t-time * { color: inherit; }
+
+/* Y2K Chrome's back wall: the amber LCD's dark brown, backlit at the edges. */
+[data-theme='y2kChrome'] {
+  --fx-wall: radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
+    radial-gradient(ellipse 40% 120% at 100% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
+    radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%);
+}
+/* Transport knobs: full-size and spaced out, like real hardware keys. */
+:is([data-theme='y2kChrome'], [data-theme='y2kDark']) {
+  & .transport { gap: 7px; padding: 8px 12px; }
+  & .transport .t-btn:not(.mk-nav-btn) { width: 32px; min-width: 32px; height: 32px; padding: 0; }
+  & .transport .t-btn.play { width: 40px; min-width: 40px; height: 40px; margin: 0 2px; }
+  & .transport .t-btn.mk-nav-btn { height: 32px; border-radius: 16px; padding: 0 9px; }
+}
+/* Y2K Chrome LCD (variant): the timeline is the amber LCD too — waveforms on
+   the dark brown screen, under BijouMusic's dot-matrix pixel grid. */
+[data-variant='lcd'] {
+  & .tl-main-body,
+  & .et-rows {
+    background: linear-gradient(172deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 30%, rgba(255, 255, 255, 0) 30.3%),
+      radial-gradient(ellipse 30% 140% at 0% 50%, rgba(255, 150, 0, 0.14), rgba(255, 150, 0, 0) 70%),
+      radial-gradient(ellipse 30% 140% at 100% 50%, rgba(255, 150, 0, 0.14), rgba(255, 150, 0, 0) 70%),
+      radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%);
+    box-shadow: inset 0 0 0 2px #2b2f35, inset 0 4px 14px rgba(0, 0, 0, 0.8);
+  }
+  & .tl-main-body::after,
+  & .et-rows::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0 1px, rgba(0, 0, 0, 0) 1px 3px),
+      repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.42) 0 1px, rgba(0, 0, 0, 0) 1px 3px);
+  }
+}
+/* Review's ruler is drawn in the same canvas: keep the pixel grid off it (Timeline.jsx RULER_H). */
+[data-variant='lcd'] .tl-main-body::after { top: 40px; }
+/* Gunmetal's back wall: the same LCD brown as Y2K Chrome. */
+[data-theme='y2kDark'] {
+  --fx-wall: radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
+    radial-gradient(ellipse 40% 120% at 100% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
+    radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%);
+}
+/* Settings → "Pixel grid over the LCD timeline" off: the screen stays, the grid goes. */
+[data-variant='lcd'][data-lcd-grid='off'] :is(.tl-main-body, .et-rows)::after { display: none; }

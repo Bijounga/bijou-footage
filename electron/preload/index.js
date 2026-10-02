@@ -46,6 +46,13 @@ contextBridge.exposeInMainWorld('footage', {
   showItem: (p) => ipcRenderer.invoke('shell:showItem', p),
   customThemes: () => ipcRenderer.invoke('bijou:customThemes'),
   isFrameless: () => ipcRenderer.invoke('window:frameless'),
+  windowCaption: (action) => ipcRenderer.invoke('window:caption', action),
+  windowState: () => ipcRenderer.invoke('window:state'),
+  onWindowState: (cb) => {
+    const h = (_e, s) => cb(s)
+    ipcRenderer.on('window:state', h)
+    return () => ipcRenderer.removeListener('window:state', h)
+  },
   setOverlayColors: (colors) => ipcRenderer.invoke('window:overlayColors', colors),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
   recreateWindow: () => ipcRenderer.invoke('window:recreate'),

@@ -273,6 +273,11 @@ export function SettingsModal() {
               </button>
             ))}
           </div>
+          {/Lcd$/.test(settings.theme || '') && (
+            <label className="check">
+              <input type="checkbox" checked={settings.lcdGrid !== false} onChange={(e) => updateSettings({ lcdGrid: e.target.checked })} /> Pixel grid over the LCD timeline (off: easier to read clip names and waveforms)
+            </label>
+          )}
           <p className="dim small">Includes BijouDocs' themes, and any custom themes you make there. The video area always stays black.</p>
         </section>
         <section>

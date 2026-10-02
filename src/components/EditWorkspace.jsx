@@ -8,6 +8,7 @@ import * as EM from '../lib/editModel.js'
 import { ProjectPicker, ProjectFolders, clipTitle } from './Library.jsx'
 import { Brand } from './Updates.jsx'
 import ViewerButton from './ViewerButton.jsx'
+import { useVideoZoom } from '../lib/videoZoom.js'
 import { PlayerHideButton, usePanelOutside } from './LayoutToggles.jsx'
 import EditTimeline from './EditTimeline.jsx'
 import EditPanel from './EditPanel.jsx'
@@ -258,6 +259,8 @@ function SeqTimeReadout() {
 function Monitor({ section }) {
   const aRef = useRef(null)
   const bRef = useRef(null)
+  const stageRef = useRef(null)
+  const zoom = useVideoZoom(stageRef, '.em-video')
   const playing = useSeqPlaying()
   const tool = useStore((s) => s.editTool)
   const setEditTool = useStore((s) => s.setEditTool)
@@ -286,10 +289,11 @@ function Monitor({ section }) {
   const total = section ? EM.totalDuration(section.clips) : 0
   return (
     <div className="em">
-      <div className="em-stage">
+      <div className="em-stage" ref={stageRef}>
         {sideHidden && <button className="icon-btn lib-show em-side-show" onClick={() => useStore.getState().toggleEditSidebar()} title="Show the sidebar (Ctrl+\)">»</button>}
         <video ref={aRef} className="em-video" />
         <video ref={bRef} className="em-video" />
+        {zoom.scale > 1 && <button className="zoom-badge" onClick={(e) => { e.stopPropagation(); zoom.reset() }} onDoubleClick={(e) => e.stopPropagation()} title="Back to 100% (Ctrl+0) · Ctrl+scroll or pinch to zoom, drag to move">{Math.round(zoom.scale * 100)}% ⟲</button>}
         {(!section || !section.clips.length) && (
           <div className="em-empty">
             {!section ? <p>Make a section on the left (e.g. “King Slime → Eye of Cthulhu”).</p> : <p>Drag recordings from the left onto the timeline, or press ＋ — then cut with <kbd>F</kbd>, <kbd>A</kbd>, <kbd>S</kbd>, <kbd>G</kbd>.</p>}
