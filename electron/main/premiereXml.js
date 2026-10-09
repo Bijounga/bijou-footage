@@ -15,6 +15,11 @@ function pathUrl(p) {
   return 'file://localhost/' + parts.join('/').replace(/^\/+/, '')
 }
 
+// Square pixels, progressive. Without this Premiere assumes a non-square
+// pixel aspect and imports Motion Scale as unequal width / height (the
+// picture looks squished). FilmCraft's FCP7 writer states it the same way.
+const SQUARE = '<anamorphic>FALSE</anamorphic><pixelaspectratio>square</pixelaspectratio><fielddominance>none</fielddominance>'
+
 function rateFor(fps) {
   const f = fps || 60
   const rounded = Math.round(f)
@@ -75,7 +80,7 @@ function sketchTrackXml(items, r, w, h, prefix) {
     const len = end - start
     const nm = 'Sketch' + (x.text ? ' — ' + x.text : '')
     const fid = prefix + '-file-' + i
-    return `<clipitem id="${prefix}-${i}"><name>${esc(nm)}</name><enabled>FALSE</enabled><duration>${len}</duration>${rateXml(r)}<start>${start}</start><end>${end}</end><in>0</in><out>${len}</out><file id="${fid}"><name>${esc(x.file.split(/[\\/]/).pop())}</name><pathurl>${esc(pathUrl(x.file))}</pathurl>${rateXml(r)}<duration>${len}</duration><media><video><samplecharacteristics><width>${w}</width><height>${h}</height></samplecharacteristics></video></media></file></clipitem>`
+    return `<clipitem id="${prefix}-${i}"><name>${esc(nm)}</name><enabled>FALSE</enabled><duration>${len}</duration>${rateXml(r)}<start>${start}</start><end>${end}</end><in>0</in><out>${len}</out><file id="${fid}"><name>${esc(x.file.split(/[\\/]/).pop())}</name><pathurl>${esc(pathUrl(x.file))}</pathurl>${rateXml(r)}<duration>${len}</duration><media><video><samplecharacteristics><width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></video></media></file></clipitem>`
   })
   return `<track>${clips.join('')}<enabled>TRUE</enabled><locked>FALSE</locked></track>`
 }
@@ -102,7 +107,7 @@ export function buildXml(clips, binName) {
     const h = (c.probe && c.probe.height) || 1080
     const { streams, totalChannels } = audioLayout((c.probe && c.probe.audio) || [])
     const markers = markersXml(c.notes, r)
-    const fileXml = `<file id="${fileId}"><name>${esc(c.name)}</name><pathurl>${esc(pathUrl(c.path))}</pathurl>${rateXml(r)}<duration>${durF}</duration><media><video><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height></samplecharacteristics></video>${
+    const fileXml = `<file id="${fileId}"><name>${esc(c.name)}</name><pathurl>${esc(pathUrl(c.path))}</pathurl>${rateXml(r)}<duration>${durF}</duration><media><video><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></video>${
       totalChannels ? `<audio><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics><channelcount>${totalChannels}</channelcount></audio>` : ''
     }</media></file>`
 
@@ -139,7 +144,7 @@ export function buildXml(clips, binName) {
       })
       .join('')
     const audioFormat = `<numOutputChannels>2</numOutputChannels><format><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics></format><outputs><group><index>1</index><numchannels>1</numchannels><downmix>0</downmix><channel><index>1</index></channel></group><group><index>2</index><numchannels>1</numchannels><downmix>0</downmix><channel><index>2</index></channel></group></outputs>`
-    return `<sequence id="seq-${ci}"><name>${esc(c.name.replace(/\.[^.]+$/, ''))} — notes</name><duration>${durF}</duration>${rateXml(r)}<media><video><format><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height></samplecharacteristics></format>${videoTrack}</video><audio>${audioFormat}${audioTracks}</audio></media>${markers}</sequence>`
+    return `<sequence id="seq-${ci}"><name>${esc(c.name.replace(/\.[^.]+$/, ''))} — notes</name><duration>${durF}</duration>${rateXml(r)}<media><video><format><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></format>${videoTrack}</video><audio>${audioFormat}${audioTracks}</audio></media>${markers}</sequence>`
   })
   return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4"><bin><name>${esc(binName)}</name><children>${seqs.join('')}</children></bin></xmeml>\n`
 }
@@ -199,7 +204,7 @@ export function buildSequenceXml({ name, clips, markers }) {
     const cr = rateFor(c.probe && c.probe.fps)
     const durF = Math.round(((c.probe && c.probe.duration) || 0) * cr.fps)
     const { totalChannels } = audioLayout((c.probe && c.probe.audio) || [])
-    return `<file id="${f.id}"><name>${esc(c.name)}</name><pathurl>${esc(pathUrl(c.path))}</pathurl>${rateXml(cr)}<duration>${durF}</duration><media><video><samplecharacteristics>${rateXml(cr)}<width>${(c.probe && c.probe.width) || w}</width><height>${(c.probe && c.probe.height) || h}</height></samplecharacteristics></video>${
+    return `<file id="${f.id}"><name>${esc(c.name)}</name><pathurl>${esc(pathUrl(c.path))}</pathurl>${rateXml(cr)}<duration>${durF}</duration><media><video><samplecharacteristics>${rateXml(cr)}<width>${(c.probe && c.probe.width) || w}</width><height>${(c.probe && c.probe.height) || h}</height>${SQUARE}</samplecharacteristics></video>${
       totalChannels ? `<audio><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics><channelcount>${totalChannels}</channelcount></audio>` : ''
     }</media></file>`
   }
@@ -259,5 +264,5 @@ export function buildSequenceXml({ name, clips, markers }) {
     .join('')
   const audioFormat = `<numOutputChannels>2</numOutputChannels><format><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics></format><outputs><group><index>1</index><numchannels>1</numchannels><downmix>0</downmix><channel><index>1</index></channel></group><group><index>2</index><numchannels>1</numchannels><downmix>0</downmix><channel><index>2</index></channel></group></outputs>`
   const seqMarkers = markersXml(markers || [], r)
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4"><sequence id="seq-1"><name>${esc(name)}</name><duration>${posF}</duration>${rateXml(r)}<media><video><format><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height></samplecharacteristics></format>${videoTrack}</video><audio>${audioFormat}${audioTracks}</audio></media>${seqMarkers}</sequence></xmeml>\n`
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4"><sequence id="seq-1"><name>${esc(name)}</name><duration>${posF}</duration>${rateXml(r)}<media><video><format><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></format>${videoTrack}</video><audio>${audioFormat}${audioTracks}</audio></media>${seqMarkers}</sequence></xmeml>\n`
 }
