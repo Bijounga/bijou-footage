@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, shell, screen, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, protocol, shell, screen, Menu, systemPreferences } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
@@ -10,6 +10,7 @@ import * as waveform from './waveform.js'
 import * as transcribe from './transcribe.js'
 import * as llm from './llm.js'
 import * as projects from './projects.js'
+import * as vo from './voiceover.js'
 import * as bijou from './bijou.js'
 import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
 import { initUpdater } from './updater.js'
@@ -521,6 +522,25 @@ function registerIpc() {
   ipcMain.handle('projects:list', (_e, dir) => projects.listProjects(dir))
   ipcMain.handle('projects:save', (_e, dir, p) => projects.saveProject(dir, p))
   ipcMain.handle('projects:trash', (_e, folder) => projects.trashProject(folder))
+  // Voiceover (voiceover.js): sections, recording takes to WAV, reading them back.
+  ipcMain.handle('vo:list', (_e, folder) => vo.listVoSections(folder))
+  ipcMain.handle('vo:save', (_e, folder, s) => vo.saveVoSection(folder, s))
+  ipcMain.handle('vo:trash', (_e, folder, id) => vo.trashVoSection(folder, id))
+  ipcMain.handle('vo:recStart', (_e, folder, take, sr, ch) => vo.recStart(folder, take, sr, ch))
+  ipcMain.on('vo:recChunk', (_e, file, samples, peaks) => vo.recChunk(file, samples, peaks))
+  ipcMain.handle('vo:recStop', (_e, file) => vo.recStop(file))
+  ipcMain.handle('vo:readPcm', (_e, folder, take, start, dur, rate) => {
+    const file = path.join(vo.audioDir(folder), take + '.wav')
+    if (!rate || rate === 1) return vo.readPcm(file, start, dur)
+    const t = tools()
+    return vo.readPcmTempo(file, start, dur, rate, t && t.ffmpeg)
+  })
+  ipcMain.handle('vo:readPeaks', (_e, folder, take) => vo.readPeaks(path.join(vo.audioDir(folder), take + '.wav')))
+  ipcMain.handle('vo:micAccess', async () => {
+    // A Mac asks once (and needs NSMicrophoneUsageDescription); elsewhere it's allowed.
+    if (process.platform !== 'darwin') return true
+    return systemPreferences.askForMediaAccess('microphone')
+  })
   ipcMain.handle('sections:list', (_e, folder) => projects.listSections(folder))
   ipcMain.handle('sections:save', (_e, folder, s) => projects.saveSection(folder, s))
   ipcMain.handle('sections:trash', (_e, folder, id) => projects.trashSection(folder, id))
@@ -540,7 +560,10 @@ function registerIpc() {
     })
     if (r.canceled || !r.filePath) return null
     const markers = copySketches(r.filePath, payload.markers || [])
-    fs.writeFileSync(r.filePath, buildSequenceXml({ ...payload, markers }), 'utf8')
+    // the voiceover lines: each take's real format (rate / channels / length);
+    // a take whose WAV is gone is left out rather than imported offline
+    const voItems = (payload.vo || []).map((v) => ({ ...v, ...vo.wavInfo(v.path) })).filter((v) => v.sampleRate)
+    fs.writeFileSync(r.filePath, buildSequenceXml({ ...payload, markers, vo: voItems }), 'utf8')
     return r.filePath
   })
   ipcMain.handle('llm:installed', () => llm.installed())

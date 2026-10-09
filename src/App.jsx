@@ -19,7 +19,9 @@ import { usePanelOutside } from './components/LayoutToggles.jsx'
 import SketchEditor from './components/SketchEditor.jsx'
 import { startSkipSilence } from './lib/skipSilence.js'
 import EditWorkspace from './components/EditWorkspace.jsx'
+import VoiceoverWorkspace, { handleVoKey } from './components/VoiceoverWorkspace.jsx'
 import { editKeymap } from './lib/editKeys.js'
+import { runOnSource } from './lib/voSrcKeys.js'
 
 function isTyping(el) {
   if (!el) return false
@@ -86,9 +88,16 @@ function onKeyDown(e) {
   if (document.activeElement && document.activeElement.type === 'range') document.activeElement.blur()
   const combo = comboFromEvent(e)
   if (!combo) return
+  // Voiceover has its own keys (R records, Space plays, M marks…).
+  if (st.settings.workspace === 'voiceover') {
+    handleVoKey(combo, e)
+    return
+  }
   // Edit mode has its own keys (D/F/G/A/S/…); global ones still work.
   if (st.settings.workspace === 'edit') {
     const ea = editKeymap(st.settings.editKeybinds).get(combo)
+    // the Voiceover strip has the focus: its playback keys play the strip
+    if (ea && runOnSource(ea, (t) => bus.emit('osd', t))) return e.preventDefault()
     if (ea) runAction(ea, e)
     return
   }
@@ -178,6 +187,17 @@ export default function App() {
   }, [])
 
   if (!loaded) return <div className="boot">Loading…</div>
+  if (workspace === 'voiceover') {
+    return (
+      <>
+        <VoiceoverWorkspace />
+        {modal === 'settings' && <SettingsModal />}
+        {modal === 'help' && <KeybindsModal />}
+        <UpdateBanner />
+        {toast && <div className={'toast ' + toast.kind} key={toast.id}>{toast.text}</div>}
+      </>
+    )
+  }
   if (workspace === 'edit') {
     return (
       <>

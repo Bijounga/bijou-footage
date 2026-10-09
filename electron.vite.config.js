@@ -13,7 +13,12 @@ export default defineConfig({
   },
   renderer: {
     root: 'src',
-    build: { rollupOptions: { input: resolve(__dirname, 'src/index.html') } },
+    build: {
+      rollupOptions: { input: resolve(__dirname, 'src/index.html') },
+      // The voiceover AudioWorklet must be a real file: the page's CSP
+      // doesn't allow scripts from data: URLs (Vite inlines small assets).
+      assetsInlineLimit: (file) => (/voWorklet/.test(file) ? false : undefined)
+    },
     plugins: [react()]
   }
 })

@@ -1545,3 +1545,316 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 
 .es-head { align-items: center; }
 .es-hint { padding: 0 6px 6px; margin-top: -4px; }
+
+/* ---------- Voiceover tab ---------- */
+.ws-switch { flex-wrap: nowrap; }
+.ws-switch button { flex: 1 1 0; min-width: 0; padding-left: 4px; padding-right: 4px; }
+.vo-center { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.vo-script { display: flex; flex-direction: column; border-bottom: 1px solid var(--line-soft); background: var(--panel); position: relative; }
+.vo-script-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-dim); }
+.vo-script textarea { resize: none; margin: 0 14px 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel-2); color: var(--ink); font: 14px/1.55 var(--sans, Inter, sans-serif); outline: none; }
+.vo-script textarea:focus { border-color: color-mix(in srgb, var(--cyan) 60%, var(--line)); }
+.vo-script-resize { position: absolute; left: 0; right: 0; bottom: -3px; height: 7px; cursor: ns-resize; z-index: 2; }
+.vo-tl { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
+.vo-tl-bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--line-soft); }
+.vo-tl-body { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: default; }
+.vo-tl-body canvas { display: block; }
+.vo-head { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: #fff; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4); pointer-events: none; z-index: 3; }
+.vo-lane-resize { position: absolute; left: 0; right: 0; height: 7px; cursor: ns-resize; z-index: 2; }
+.vo-lane-resize:hover { background: color-mix(in srgb, var(--cyan) 35%, transparent); }
+.vo-empty { position: absolute; left: 0; right: 0; top: 70px; text-align: center; pointer-events: none; font-size: 13px; }
+.vo-bar { display: flex; align-items: center; gap: 18px; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; row-gap: 8px; }
+.vo-rec-group { display: flex; align-items: center; gap: 12px; }
+.vo-rec-btn { width: 46px; height: 46px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ink) 25%, transparent); background: var(--panel-3); display: grid; place-items: center; cursor: pointer; flex: none; transition: transform 0.08s, box-shadow 0.15s; }
+.vo-rec-btn span { width: 18px; height: 18px; border-radius: 50%; background: #ff4d5e; transition: border-radius 0.15s, width 0.15s, height 0.15s; }
+.vo-rec-btn:hover { box-shadow: 0 0 0 4px rgba(255, 77, 94, 0.18); }
+.vo-rec-btn:active { transform: scale(0.95); }
+.vo-rec-btn.on { border-color: #ff4d5e; box-shadow: 0 0 0 4px rgba(255, 77, 94, 0.25), 0 0 18px rgba(255, 77, 94, 0.45); }
+.vo-rec-btn.on span { width: 14px; height: 14px; border-radius: 3px; }
+.vo-status { display: flex; flex-direction: column; min-width: 150px; }
+.vo-status b { font-size: 14px; }
+.vo-live { color: #ff5d6c; font-family: var(--mono); }
+.vo-count { font-size: 18px !important; color: #ffb547; }
+.vo-transport { display: flex; align-items: center; gap: 4px; margin: 0 auto; }
+.vo-mic { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.vo-mic select { max-width: 220px; }
+.vo-gain, .vo-preroll { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); }
+.vo-gain input { width: 110px; }
+.vo-meter { width: 120px; height: 8px; border-radius: 4px; background: var(--panel-3); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line-soft); }
+.vo-meter-fill { height: 100%; background: linear-gradient(90deg, #3ddc84 0%, #3ddc84 70%, #ffd23f 85%, #ff4d5e 100%); background-size: 120px 100%; transition: width 0.05s linear; }
+.vo-meter.clip { box-shadow: inset 0 0 0 1px #ff4d5e, 0 0 6px rgba(255, 77, 94, 0.6); }
+.app.vo-app.vo-recording .vo-tl-body { box-shadow: inset 0 0 0 2px rgba(255, 77, 94, 0.5); }
+
+/* ---------- Voiceover: toolbar, timeline details, record bar ---------- */
+.vo-center { container-type: inline-size; }
+.vo-toolbar { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--line-soft); background: var(--panel); flex-wrap: nowrap; overflow: hidden; }
+.vo-toolbar > * { flex-shrink: 0; }
+.vo-toolbar .t-spacer { flex: 1 1 0; min-width: 0; }
+.vo-toolbar .snap-btn { margin-left: 0; }
+.vo-toolbar .snap-btn:disabled { opacity: 0.4; pointer-events: none; }
+.vo-sep { width: 1px; height: 18px; background: var(--line); margin: 0 6px; }
+@container (max-width: 1000px) {
+  .vo-toolbar .snap-btn span { display: none; }
+  .vo-toolbar .snap-btn { padding: 0 7px; }
+}
+.vo-menu { position: fixed; z-index: 400; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 2px; min-width: 260px; }
+.vo-menu-title { padding: 2px 6px 6px; }
+.vo-menu button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: none; border: 0; border-radius: 6px; padding: 6px 8px; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.vo-menu button:hover { background: var(--panel-3); }
+.vo-menu.vo-colors { flex-direction: row; flex-wrap: wrap; width: 176px; min-width: 0; gap: 5px; padding: 8px; }
+.vo-menu.vo-colors button { width: 28px; height: 28px; padding: 0; border-radius: 7px; align-items: center; justify-content: center; border: 1px solid rgba(0, 0, 0, 0.35); }
+.vo-menu.vo-colors button.none { background: var(--panel-3); color: var(--ink-dim); font-size: 16px; }
+.vo-menu.vo-colors button:hover { outline: 2px solid var(--ink); }
+.vo-tl-body canvas { user-select: none; }
+.vo-head::before { content: ''; position: absolute; top: 0; left: -6px; width: 13px; height: 11px; background: #fff; clip-path: polygon(0 0, 100% 0, 100% 45%, 50% 100%, 0 45%); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
+.vo-marquee { position: absolute; z-index: 4; pointer-events: none; border: 1px solid rgba(110, 180, 255, 0.9); background: rgba(110, 180, 255, 0.14); }
+.vo-zoom { position: absolute; right: 12px; bottom: 10px; width: 150px; z-index: 5; opacity: 0.55; transition: opacity 0.15s; }
+.vo-zoom:hover { opacity: 1; }
+.vo-zoom .zoom-bar { gap: 2px; }
+.vo-zoom .mini-btn { padding: 0 5px; height: 18px; font-size: 11px; }
+.vo-gain { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-dim); }
+.vo-gain-label { width: 28px; }
+.vo-gain input { width: 110px; flex: none; }
+.vo-gain-val { width: 62px; text-align: right; font: 500 11px var(--mono); font-variant-numeric: tabular-nums; }
+.vo-gain-reset { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-dim); cursor: pointer; flex: none; }
+.vo-gain-reset:hover:not(:disabled) { background: var(--panel-3); color: var(--ink); }
+.vo-gain-reset:disabled { opacity: 0.3; cursor: default; }
+.vo-gain-reset svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.vo-meter { flex: none; }
+.vo-preroll { flex: none; }
+.vo-mic { flex-wrap: nowrap; }
+@container (max-width: 1250px) { .vo-mic { flex-wrap: wrap; row-gap: 6px; } }
+
+/* ---- Voiceover: volume, the mic popover ---- */
+.vo-volume { display: flex; align-items: center; gap: 6px; margin-left: 12px; color: var(--ink-dim); }
+.vo-volume input { width: 90px; }
+.vo-vol-val { width: 36px; text-align: right; font: 500 11px var(--mono); font-variant-numeric: tabular-nums; }
+.vo-meter-btn { display: flex; align-items: center; gap: 6px; background: none; border: 0; padding: 4px 6px; border-radius: 7px; cursor: pointer; color: var(--ink-dim); flex: none; }
+.vo-meter-btn:hover { background: var(--panel-3); }
+.vo-meter-label { font-size: 12px; }
+.vo-gain-pop { min-width: 300px; gap: 8px; padding: 10px; }
+.vo-gain-pop .vo-gain input { width: 150px; }
+.vo-gain-pop .vo-meter { width: 100%; }
+.vo-bar .t-btn svg { display: block; }
+
+/* ---- trimming an edge, the Premiere way (lib/trimUi.js) ---- */
+.et-edge { width: 9px; }
+.et-edge.l { cursor: var(--cur-trim-in, ew-resize); }
+.et-edge.r { cursor: var(--cur-trim-out, ew-resize); }
+.et-clip:hover .et-edge.l, .et-edge.l.active { box-shadow: inset 3px 0 0 #ff4a58; background: linear-gradient(90deg, rgba(255, 74, 88, 0.28), transparent); }
+.et-clip:hover .et-edge.r, .et-edge.r.active { box-shadow: inset -3px 0 0 #ff4a58; background: linear-gradient(270deg, rgba(255, 74, 88, 0.28), transparent); }
+.et-edge.l.active { box-shadow: inset 3px 0 0 #ff4a58, 0 0 10px rgba(255, 74, 88, 0.7) !important; }
+.et-edge.r.active { box-shadow: inset -3px 0 0 #ff4a58, 0 0 10px rgba(255, 74, 88, 0.7) !important; }
+body.trim-in, body.trim-in * { cursor: var(--cur-trim-in, ew-resize) !important; }
+body.trim-out, body.trim-out * { cursor: var(--cur-trim-out, ew-resize) !important; }
+.trim-tip { position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none; padding: 3px 8px; border-radius: 6px; background: rgba(12, 12, 16, 0.9); color: #fff; font: 600 12px var(--mono); border: 1px solid rgba(255, 74, 88, 0.7); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5); }
+.trim-tip.neg { color: #ffb3ba; }
+
+/* ---- Voiceover: the transcript under the timeline ---- */
+.vo-tx { flex: none; height: 190px; display: flex; flex-direction: column; border-top: 1px solid var(--line); background: var(--panel); min-height: 0; }
+.vo-tx-head { display: flex; align-items: center; gap: 12px; padding: 6px 14px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-dim); }
+.vo-tx-note { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink-faint); }
+.vo-tx-spacer { flex: 1; }
+.vo-tx-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 0; display: flex; flex-direction: column; align-items: center; scrollbar-width: thin; }
+.vo-tx-line { display: flex; gap: 12px; width: min(820px, 100%); padding: 5px 12px; border-radius: 8px; font-size: 15px; line-height: 1.45; cursor: pointer; transition: opacity 0.25s; border-left: 3px solid transparent; }
+.vo-tx-line:hover { background: var(--panel-2); opacity: 1 !important; }
+.vo-tx-line.now { font-size: 17px; font-weight: 600; background: color-mix(in srgb, var(--cyan) 12%, transparent); border-left-color: var(--cyan); }
+.vo-tx-time { flex: none; width: 46px; padding-top: 3px; font: 500 11px var(--mono); color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.vo-tx-text { flex: 1; }
+.vo-tx-empty { padding: 20px; font-size: 13px; }
+.vo-tx-pad { flex: none; height: 120px; }
+/* the transcript shares the height with the timeline (it used to leave a lot of it empty) */
+.vo-tl { flex: 1.15 1 0; min-height: 210px; }
+.vo-tx { flex: 1 1 0; height: auto; min-height: 150px; }
+.vo-tx-list { position: relative; }
+
+/* ---- the transcript lives bottom-left; the rest of the row is free ---- */
+.vo-lower { flex: 1 1 0; min-height: 150px; display: flex; border-top: 1px solid var(--line); background: var(--panel); min-width: 0; }
+.vo-tx { flex: none; position: relative; height: auto; min-height: 0; border-top: 0; border-right: 1px solid var(--line); max-width: 100%; }
+.vo-tx-resize { position: absolute; top: 0; bottom: 0; right: -3px; width: 7px; cursor: ew-resize; z-index: 3; }
+.vo-tx-resize:hover { background: color-mix(in srgb, var(--cyan) 35%, transparent); }
+.vo-tx-list { align-items: stretch; }
+.vo-tx-line { width: 100%; }
+.vo-tx-search { display: flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); color: var(--ink-dim); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.vo-tx-search:focus-within { border-color: color-mix(in srgb, var(--cyan) 60%, var(--line)); color: var(--ink); }
+.vo-tx-search input { width: 170px; border: 0; background: transparent; color: var(--ink); font: 12px var(--sans, Inter, sans-serif); outline: none; padding: 2px 0; }
+.vo-tx-search button { border: 0; background: transparent; color: var(--ink-dim); font-size: 9px; padding: 2px 3px; cursor: pointer; border-radius: 4px; }
+.vo-tx-search button:hover:not(:disabled) { background: var(--panel-3); color: var(--ink); }
+.vo-tx-search button:disabled { opacity: 0.3; cursor: default; }
+.vo-tx-count { font: 500 11px var(--mono); color: var(--ink-faint); white-space: nowrap; }
+.vo-tx-text mark { background: rgba(255, 210, 63, 0.35); color: inherit; border-radius: 3px; padding: 0 1px; }
+.vo-tx-line.hit { background: rgba(255, 210, 63, 0.06); }
+.vo-tx-line.here { background: rgba(255, 210, 63, 0.16); box-shadow: inset 3px 0 0 #ffd23f; }
+
+/* ---- the transcript lives bottom-RIGHT ---- */
+.vo-center { position: relative; }
+.vo-lower { justify-content: flex-end; }
+.vo-tx { border-right: 0; border-left: 1px solid var(--line); }
+.vo-tx-resize { left: -3px; right: auto; }
+.vo-tx-show { position: absolute; right: 14px; bottom: 84px; z-index: 20; display: flex; align-items: center; gap: 7px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); color: var(--ink); font: 600 12px var(--sans, Inter, sans-serif); cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); }
+.vo-tx-show:hover { background: var(--panel-3); border-color: var(--cyan); }
+
+/* the "show transcript" pill sits beside the zoom bar, not on it */
+.vo-tl-body .vo-tx-show { position: absolute; right: 178px; bottom: 6px; z-index: 6; padding: 4px 10px; font-size: 11.5px; box-shadow: none; }
+
+/* ---- Voiceover: the notes pad, bottom-left ---- */
+.vo-pills { position: absolute; right: 178px; bottom: 6px; z-index: 6; display: flex; gap: 6px; }
+.vo-tl-body .vo-pills .vo-tx-show { position: static; }
+.vo-notes { flex: 1 1 0; min-width: 260px; display: flex; flex-direction: column; min-height: 0; }
+.vo-notes-head { display: flex; align-items: center; gap: 10px; padding: 6px 14px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-dim); }
+.vo-notes-for { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; }
+.vo-notes-body { flex: 1; min-height: 0; overflow-y: auto; }
+.vo-notes-body .np-body { height: auto; overflow: visible; }
+
+/* ---- text size for the Voiceover panels ---- */
+.font-size { display: inline-flex; gap: 2px; }
+.font-size button { border: 0; background: transparent; color: var(--ink-dim); font: 700 12px var(--sans, Inter, sans-serif); padding: 2px 6px; border-radius: 5px; cursor: pointer; }
+.font-size button small { font-size: 9px; margin-left: 1px; vertical-align: 1px; }
+.font-size button:hover:not(:disabled) { background: var(--panel-3); color: var(--ink); }
+.font-size button:disabled { opacity: 0.3; cursor: default; }
+.vo-tx-line { font-size: calc(15px * var(--tz, 1)); }
+.vo-tx-line.now { font-size: calc(17px * var(--tz, 1)); }
+.vo-tx-time { font-size: calc(11px * var(--tz, 1)); width: calc(46px * var(--tz, 1)); }
+
+.vo-menu.vo-level { min-width: 300px; gap: 8px; padding: 10px; }
+.vo-menu.vo-level .vo-gain input { width: 170px; }
+
+/* ---- the crash screen (components/ErrorBoundary.jsx) ---- */
+.crash { height: 100%; overflow: auto; padding: 48px max(24px, 12vw); background: var(--bg); color: var(--ink); }
+.crash h2 { margin: 0 0 8px; }
+.crash-btns { display: flex; gap: 8px; margin: 16px 0; }
+.crash pre { padding: 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); color: var(--ink-dim); font: 12px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
+
+/* ---- Edit: the voiceover lane and its bin ---- */
+.et-head.vo { display: flex; align-items: center; gap: 8px; padding: 0 10px; border-top: 1px solid var(--line-soft); color: var(--ink-dim); }
+.et-head.vo b { font-size: 11px; letter-spacing: 0.5px; color: var(--cyan); }
+.et-row.vo { position: relative; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--cyan) 4%, transparent); overflow: hidden; }
+.et-row.vo canvas { position: absolute; left: 0; top: 0; }
+.et-vo-empty { position: absolute; left: 12px; top: 0; bottom: 0; display: flex; align-items: center; font-size: 12px; pointer-events: none; }
+.vo-bin-row { cursor: default; }
+.vo-bin-row .btn { flex: none; }
+
+/* ---- Edit: the voiceover panel (cards) ---- */
+.vo-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.vo-panel-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px 4px; }
+.vo-panel-head select { max-width: 200px; }
+.vo-panel-hint { padding: 0 12px 6px; }
+.vo-panel-list { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 10px 10px; display: flex; flex-direction: column; gap: 5px; }
+.vo-card { --cc: var(--cyan); display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line-soft); border-left: 3px solid var(--cc); border-radius: 8px; background: var(--panel-2); cursor: grab; font-size: calc(13px * var(--vz, 1)); line-height: 1.4; user-select: none; }
+.vo-card:hover { background: var(--panel-3); border-color: var(--cc); }
+.vo-card:active { cursor: grabbing; }
+.vo-card.placed { opacity: 0.55; }
+.vo-card.placed .vo-card-n { color: var(--green, #4ade80); }
+.vo-card-n { flex: none; width: calc(20px * var(--vz, 1)); font: 600 calc(11px * var(--vz, 1)) var(--mono); color: var(--ink-faint); padding-top: 2px; text-align: center; }
+.vo-card-text { flex: 1; }
+.vo-card-dur { flex: none; font: 500 calc(11px * var(--vz, 1)) var(--mono); color: var(--ink-faint); padding-top: 2px; }
+.vo-panel-foot { padding: 6px 12px 10px; border-top: 1px solid var(--line-soft); }
+.et-vo-drop { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); pointer-events: none; z-index: 3; }
+
+/* ---- the voiceover panel: clips and transcript side by side ---- */
+.vo-panel-cols { flex: 1; min-height: 0; display: flex; }
+.vo-panel-cols .vo-panel-list { flex: 1 1 0; min-width: 0; }
+.vo-panel-cols.both .vo-clips { flex: 0 0 38%; border-right: 1px solid var(--line-soft); }
+.vo-mode { margin-right: 4px; }
+.vo-card.line { border-left-width: 3px; }
+.vo-card.line .vo-card-text { font-size: calc(14px * var(--vz, 1)); line-height: 1.45; }
+.vo-lines-empty { padding: 14px 12px; }
+.vo-mode { display: inline-flex; flex: none; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.vo-mode button { border: 0; background: none; padding: 3px 10px; border-radius: 6px; color: var(--ink-dim); font: 600 12px var(--sans, Inter, sans-serif); cursor: pointer; white-space: nowrap; }
+.vo-mode button:hover { color: var(--ink); }
+.vo-mode button.on { background: var(--panel-3); color: var(--cyan); }
+.vo-panel-head { flex-wrap: wrap; row-gap: 4px; }
+
+/* ---- the voiceover as its own timeline (VoSource.jsx) ---- */
+.vo-panel-cols { flex-direction: column; }
+.vo-panel-cols.both .vo-lines { flex: 1 1 0; border-top: 1px solid var(--line-soft); margin-top: 6px; padding-top: 8px; }
+.vo-src { flex: none; display: flex; flex-direction: column; padding: 0 10px; }
+.vo-panel-cols.clips .vo-src { flex: 1; }
+.vo-src-bar { display: flex; align-items: center; gap: 6px; padding: 2px 2px 6px; }
+.vo-src-scroll { position: relative; overflow-x: auto; overflow-y: hidden; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel-2); scrollbar-width: thin; }
+.vo-src-inner { position: relative; }
+.vo-src-ruler { position: relative; border-bottom: 1px solid var(--line-soft); }
+.vo-src-tick { position: absolute; top: 4px; padding-left: 4px; border-left: 1px solid var(--line); font: 10px var(--mono); color: var(--ink-faint); line-height: 12px; }
+.vo-src-lane { position: absolute; left: 0; right: 0; }
+.vo-src-clip { position: absolute; top: 2px; bottom: 2px; box-sizing: border-box; border: 1px solid color-mix(in srgb, var(--cc) 70%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--cc) 14%, var(--panel)); cursor: grab; overflow: hidden; }
+.vo-src-clip:hover { border-color: var(--cc); background: color-mix(in srgb, var(--cc) 26%, var(--panel)); }
+.vo-src-clip:active { cursor: grabbing; }
+.vo-src-clip canvas { position: absolute; left: 0; top: 0; pointer-events: none; }
+.vo-src-clip.placed { opacity: 0.45; }
+.vo-src-n { position: absolute; left: 4px; top: 2px; font: 600 10px var(--mono); color: var(--ink); text-shadow: 0 0 3px var(--panel); pointer-events: none; }
+.vo-src-clip.placed .vo-src-n { color: var(--green, #4ade80); }
+.vo-src-said { position: absolute; left: 6px; right: 6px; bottom: 4px; font-size: 11px; line-height: 1.3; color: var(--ink); text-shadow: 0 0 4px var(--panel), 0 0 2px var(--panel); pointer-events: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ---- the voiceover track (Edit) ---- */
+.et-head-wrap.vo { border-top: 1px solid var(--line-soft); }
+.et-row.vo { background: color-mix(in srgb, var(--c, var(--cyan)) 5%, transparent); border-bottom: 1px solid var(--line-soft); }
+.et-row.vo.silent canvas { opacity: 0.4; }
+.vo-track-head .th-name { font-weight: 600; }
+body.grabbing, body.grabbing * { cursor: grabbing !important; }
+.et-vomenu { min-width: 210px; padding-bottom: 6px; }
+.et-vomenu-sub { display: flex; align-items: center; justify-content: space-between; margin: 8px 2px 4px; font-size: 11px; }
+.et-vomenu-db { font: 600 11px var(--mono); color: var(--ink); }
+.et-vomenu-range { width: 100%; accent-color: var(--cyan); }
+.et-vomenu-row { display: block; margin: 4px 2px 0; font-size: 12px; }
+.et-vomenu-sep { height: 1px; background: var(--line-soft); margin: 8px -4px 4px; }
+.et-vomenu-item { display: flex; justify-content: space-between; gap: 12px; width: 100%; border: 0; background: none; padding: 5px 6px; border-radius: 5px; color: var(--ink); font: 500 12.5px var(--sans, Inter, sans-serif); text-align: left; cursor: pointer; }
+.et-vomenu-item:hover { background: var(--panel-3); }
+.et-vomenu-item .dim { font: 11px var(--mono); }
+
+/* ---- the Voiceover strip above the Edit timeline ---- */
+.vo-strip { position: relative; flex: none; display: flex; flex-direction: column; min-height: 96px; border-top: 1px solid var(--line); background: var(--panel); }
+.vo-strip-resize { position: absolute; left: 0; right: 0; height: 6px; cursor: ns-resize; z-index: 4; }
+.vo-strip-resize.top { top: -3px; }
+.vo-strip-resize.bottom { bottom: -3px; }
+.vo-strip-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 5px 10px; min-width: 0; overflow: hidden; }
+.vo-strip-title { font-size: 12px; letter-spacing: 0.3px; color: var(--cyan); flex: none; }
+.vo-strip-head select { max-width: 180px; flex: none; }
+.vo-strip-count { white-space: nowrap; flex: none; }
+.vo-strip-x { font-size: 15px; line-height: 1; }
+.vo-strip-body { flex: 1; min-height: 0; display: flex; gap: 0; }
+.vo-strip-body .vo-src { flex: 1 1 0; min-width: 0; padding: 0 10px 6px; }
+.vo-strip-body .vo-lines { flex: 1 1 0; min-width: 0; padding: 0 10px 8px; }
+.vo-strip-body.both .vo-src { flex: 1.6 1 0; }
+.vo-strip-body.both .vo-lines { border-left: 1px solid var(--line-soft); padding-left: 10px; }
+.vo-strip .vo-src-bar { padding: 0 2px 4px; }
+.vo-strip .vo-card { padding: 5px 9px; }
+.vo-opts { display: flex; align-items: center; gap: 4px; }
+/* the strip: Fit / − / + float over the ruler's right end instead of a bar of their own */
+.vo-strip .vo-src { position: relative; }
+.vo-strip .vo-src-bar { position: absolute; top: 2px; right: 16px; z-index: 2; padding: 0; gap: 2px; }
+.vo-strip .vo-src-bar .mini-btn { background: var(--panel-2); }
+/* its transcript: quiet rows like the cut's transcript, not boxed cards */
+.vo-strip .vo-card { border: 0; border-radius: 6px; background: none; padding: 4px 8px 4px 2px; gap: 6px; }
+.vo-strip .vo-card:hover { background: var(--panel-3); }
+.vo-strip .vo-panel-list { gap: 0; }
+.vo-strip .vo-card-dur { opacity: 0.8; }
+.vo-strip .vo-card.placed { opacity: 0.5; }
+.vo-strip-x { width: 22px; height: 22px; }
+/* the strip's own player: focus ring like Premiere's active panel, playhead, transport */
+.vo-strip { transition: box-shadow 0.12s ease-out; }
+.vo-strip.focused { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 55%, transparent); }
+.vo-strip:not(.focused) .vo-strip-title { color: var(--ink-dim); }
+.vo-src-transport { display: flex; align-items: center; gap: 6px; flex: none; }
+.vo-src-play { width: 24px; height: 22px; display: inline-flex; align-items: center; justify-content: center; }
+.vo-src-play.on { color: var(--cyan); }
+.vo-src-time { font: 500 11.5px var(--mono); color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vo-src-head { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--ink); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.45); pointer-events: none; z-index: 3; will-change: transform; }
+.vo-src-head::before { content: ''; position: absolute; top: 0; left: -5px; width: 11px; height: 9px; background: var(--ink); clip-path: polygon(0 0, 100% 0, 100% 45%, 50% 100%, 0 45%); }
+.vo-strip:not(.focused) .vo-src-head { opacity: 0.55; }
+.vo-line-play { flex: none; width: 18px; height: 18px; margin-top: 1px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: none; color: var(--ink-faint); cursor: pointer; opacity: 0; transition: opacity 0.1s; }
+.vo-card:hover .vo-line-play, .vo-card.cur .vo-line-play { opacity: 1; }
+.vo-line-play:hover { background: var(--panel-3); color: var(--cyan); }
+.vo-strip .vo-card.cur { background: color-mix(in srgb, var(--cyan) 12%, transparent); }
+.vo-strip .vo-card.cur .vo-card-text { color: var(--ink); }
+/* recording voiceover over the cut */
+.th-btn.th-rec { color: #ff5a64; }
+.th-btn.th-rec.on { background: #e5384a; color: #fff; border-color: #e5384a; }
+.et-vo-rec { position: absolute; left: 0; top: 1px; bottom: 1px; width: 0; background: rgba(229, 56, 74, 0.28); border: 1px solid rgba(255, 90, 100, 0.85); border-radius: 3px; pointer-events: none; z-index: 2; overflow: hidden; will-change: transform, width; }
+.et-vo-rec span { position: absolute; left: 6px; top: 3px; font: 700 10px var(--mono); color: #fff; letter-spacing: 0.5px; white-space: nowrap; }
+.em-rec { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px; background: rgba(12, 12, 16, 0.82); color: #fff; font: 600 13px var(--mono); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); z-index: 6; pointer-events: none; font-variant-numeric: tabular-nums; }
+.em-rec i { width: 10px; height: 10px; border-radius: 50%; background: #ff4a58; }
+.em-rec.preroll i { background: #f5c542; }
+.em-rec.recording i { animation: rec-pulse 1s ease-in-out infinite; }
+.em-rec .dim { color: rgba(255, 255, 255, 0.6); font-family: var(--sans, Inter, sans-serif); font-weight: 500; }
+@keyframes rec-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .em-rec.recording i { animation: none; } }

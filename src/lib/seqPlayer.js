@@ -280,6 +280,24 @@ class SequencePlayer {
     if (wasPlaying) this.play()
   }
 
+  // While an edge is dragged: show the frame at time t of recording `key` on
+  // the monitor. The cut itself isn't touched (the trim is applied when you
+  // let go), so this is just a seek — cheap, and the newest request wins.
+  async previewFrame(key, t) {
+    if (!this.decks) return
+    const id = (this.previewId = (this.previewId || 0) + 1)
+    let src
+    try {
+      src = await this.source(key)
+    } catch {
+      return
+    }
+    if (id !== this.previewId) return
+    const d = this.active
+    await d.load(src)
+    if (id !== this.previewId) return
+    await d.seek(this.keyframeBefore(src, t))
+  }
   // Only clips' framing changed (no cut did): update in place, no re-seek.
   setMotions(clips) {
     const byId = new Map(clips.map((c) => [c.id, c]))

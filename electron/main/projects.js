@@ -75,14 +75,14 @@ export function listSections(folder) {
     if (!f.endsWith('.json')) continue
     try {
       const s = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))
-      if (s && s.id) out.push({ id: s.id, name: s.name || 'Section', order: s.order ?? 0, clips: s.clips || [], markers: s.markers || [], createdAt: s.createdAt || 0, updatedAt: s.updatedAt || 0 })
+      if (s && s.id) out.push({ id: s.id, name: s.name || 'Section', order: s.order ?? 0, clips: s.clips || [], markers: s.markers || [], vo: s.vo || [], createdAt: s.createdAt || 0, updatedAt: s.updatedAt || 0 })
     } catch { /* skip a damaged file rather than fail the whole project */ }
   }
   return out.sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)
 }
 
 export function saveSection(folder, s) {
-  writeJson(path.join(folder, 'sections', s.id + '.json'), { v: 1, id: s.id, name: s.name, order: s.order ?? 0, clips: s.clips, markers: s.markers || [], createdAt: s.createdAt || Date.now(), updatedAt: Date.now() })
+  writeJson(path.join(folder, 'sections', s.id + '.json'), { v: 1, id: s.id, name: s.name, order: s.order ?? 0, clips: s.clips, markers: s.markers || [], vo: s.vo || [], createdAt: s.createdAt || Date.now(), updatedAt: Date.now() })
   return true
 }
 

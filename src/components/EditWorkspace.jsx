@@ -12,9 +12,18 @@ import { useVideoZoom } from '../lib/videoZoom.js'
 import { PlayerHideButton, usePanelOutside } from './LayoutToggles.jsx'
 import EditTimeline from './EditTimeline.jsx'
 import FramingBox from './FramingBox.jsx'
+import { IconSkipStart, IconSkipEnd } from './Icons.jsx'
 import EditPanel from './EditPanel.jsx'
+import VoPanel, { useHasVo } from './VoPanel.jsx'
+import { voMix } from '../lib/voPlayer.js'
+import { textIn } from '../lib/voTranscripts.js'
+import { VO_TRACK } from '../state/store.js'
+import { voAudible } from './VoLane.jsx'
 import { ToolsMenu, RemoveSilenceDialog, CutAroundDialog, ExportSectionDialog } from './EditTools.jsx'
 import { startEditSkipSilence } from '../lib/editSkipSilence.js'
+import { startVoSlave } from '../lib/voSlave.js'
+import { useVo } from '../state/voStore.js'
+import * as EMVo from '../lib/voModel.js'
 import { EDIT_BY_ID } from '../lib/editKeys.js'
 import { WATCH_SPEEDS } from '../lib/player.js'
 import { MARKER_COLORS as MARKER_COLORS_ALL } from '../lib/beats.js'
@@ -27,6 +36,7 @@ export function WorkspaceSwitch() {
     <div className="ws-switch">
       <button className={ws === 'review' ? 'on' : ''} onClick={() => setWorkspace('review')} title="Review footage: watch, notes, markers, transcripts">Review</button>
       <button className={ws === 'edit' ? 'on' : ''} onClick={() => setWorkspace('edit')} title="Edit: rough-cut sections and export them to Premiere">Edit</button>
+      <button className={ws === 'voiceover' ? 'on' : ''} onClick={() => setWorkspace('voiceover')} title="Voiceover: record and clean up your voiceover, section by section">Voiceover</button>
     </div>
   )
 }
@@ -92,6 +102,39 @@ function Sections() {
               <button className="row-btn" title="Duplicate (e.g. to keep the original before an automatic cut)" onClick={() => useStore.getState().duplicateSection(x.id)}>⧉</button>
               <button className="row-btn" title="Delete section (goes to the Recycle Bin)" onClick={() => { if (confirm(`Delete the section “${x.name}”? (It goes to the Recycle Bin.)`)) deleteSection(x.id) }}>×</button>
             </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// (a selector must return the SAME empty list each time, or React re-renders forever)
+const NO_VO = []
+// The voiceover from the Voiceover tab: lay a whole section in on the cut's
+// VO lane, back to back, and slide the clips to match the footage.
+function VoBin() {
+  const sections = useVo((s) => s.sections)
+  const project = useStore((s) => s.currentProject())
+  const placed = useStore((s) => { const c = s.currentSection(); return (c && c.vo) || NO_VO })
+  if (!project) return null
+  const sorted = [...sections].sort((a, b) => a.order - b.order).filter((x) => x.clips.length)
+  return (
+    <div className="es-block">
+      <div className="es-head">
+        <span>Voiceover</span>
+        <button className="link-btn" onClick={() => useStore.getState().setWorkspace('voiceover')} title="Record and clean up voiceover">Record…</button>
+      </div>
+      {!sorted.length && <div className="es-empty dim small">Record your voiceover in the Voiceover tab, then lay it in here.</div>}
+      {sorted.map((x) => {
+        const used = placed.some((v) => v.src === x.id)
+        return (
+          <div key={x.id} className="es-row vo-bin-row">
+            <span className="es-name" title={x.name}>{x.name}</span>
+            <span className="es-meta dim">{fmtDuration(EMVo.totalVo(x.clips))}</span>
+            <button className={'btn small' + (used ? ' ghost' : ' primary')} onClick={() => useStore.getState().updateSettings({ editVoStrip: true, editVoSrc: x.id })} title={'Open “' + x.name + '” in the Voiceover strip above the timeline — click or drag its lines onto the voiceover track'}>
+              Open
+            </button>
           </div>
         )
       })}
@@ -170,6 +213,7 @@ function EditSidebar() {
       <WorkspaceSwitch />
       <ProjectPicker clipCount={clips.length} />
       <Sections />
+      <VoBin />
       <Bin />
     </aside>
   )
@@ -308,6 +352,12 @@ function Monitor({ section }) {
     useStore.getState().showSectionInPlayer()
   }, [])
   useEffect(() => seqPlayer.setMix(mixer, solo, masterVol ?? 1), [mixer, solo, masterVol])
+  // the voiceover track's volume / mute / solo
+  const voTrack = useStore((s) => s.settings.voTrack)
+  useEffect(() => {
+    const t = { ...VO_TRACK, ...(voTrack || {}) }
+    voMix.setVolume(voAudible(t, solo) ? t.vol * (masterVol ?? 1) : 0)
+  }, [voTrack, solo, masterVol])
   useEffect(() => {
     let timer
     return bus.on('osd', (text) => {
@@ -318,7 +368,7 @@ function Monitor({ section }) {
   }, [])
   const total = section ? EM.totalDuration(section.clips) : 0
   return (
-    <div className="em">
+    <div className="em" onMouseDownCapture={() => useStore.getState().setEditFocus('cut')}>
       <div className={'em-stage' + (zoom.scale < 1 ? ' view-out' : '')} ref={stageRef}>
         {sideHidden && <button className="icon-btn lib-show em-side-show" onClick={() => useStore.getState().toggleEditSidebar()} title="Show the sidebar (Ctrl+\)">»</button>}
         <div className="em-view">
@@ -335,13 +385,14 @@ function Monitor({ section }) {
           </div>
         )}
         {osd && <div className="osd" key={osd.id}>{osd.text}</div>}
+        <RecBadge />
       </div>
       <div className="transport em-transport">
-        <button className="t-btn em-jump" onClick={() => seqPlayer.seek(0)} title="Start (Home)">⏮</button>
+        <button className="t-btn em-jump" onClick={() => seqPlayer.seek(0)} title="Start (Home)"><IconSkipStart /></button>
         <button className="t-btn" onClick={() => runEditKey('e.slower')} title="Slower / reverse (J)">◀◀</button>
         <button className="t-btn play" onClick={() => seqPlayer.toggle()} title="Play / pause (Space) · K stops">{playing ? '❚❚' : '▶'}</button>
         <button className="t-btn" onClick={() => runEditKey('e.faster')} title="Faster (L)">▶▶</button>
-        <button className="t-btn em-jump" onClick={() => bus.emit('editNextCut', 1)} title="Next cut (↓)">⏭</button>
+        <button className="t-btn em-jump" onClick={() => bus.emit('editNextCut', 1)} title="Next cut (↓)"><IconSkipEnd /></button>
         <button className="t-btn em-speech" onClick={() => runEditKey('e.prevSpeech')} title="Back to the previous time someone starts talking (Ctrl+←)">‹<SpeechIcon /></button>
         <button className="t-btn em-speech" onClick={() => runEditKey('e.nextSpeech')} title="Next time someone starts talking (Ctrl+→)"><SpeechIcon />›</button>
         <div className="t-time">
@@ -406,8 +457,47 @@ async function exportSection(opts = {}) {
   if (opts.timeline !== false) for (const m of sec.markers || []) markers.push({ id: m.id, t: m.t, type: 'MARKER', color: m.color, text: m.text })
   markers.sort((a, b) => a.t - b.t)
   const project = st.currentProject()
-  const file = await window.footage.exportSection({ name: (project ? project.name + ' — ' : '') + sec.name, clips, markers })
+  // The voiceover track: each line's take WAV, where it sits, what part of
+  // the take, its volume and colour; labelled with what's said in it.
+  const vo = opts.voiceover === false || !project || !project.folder ? [] : (sec.vo || []).map((v) => {
+    const said = textIn(v.take, v.in, v.out)
+    return {
+      path: project.folder.replace(/[\\/]+$/, '') + '/voiceover/audio/' + v.take + '.wav',
+      name: v.take + '.wav',
+      label: said ? 'VO — ' + (said.length > 60 ? said.slice(0, 57) + '…' : said) : 'Voiceover',
+      at: v.at,
+      in: v.in,
+      out: v.out,
+      gain: v.gain || 0,
+      color: v.color || null
+    }
+  })
+  const voTrack = { ...VO_TRACK, ...(st.settings.voTrack || {}) }
+  const file = await window.footage.exportSection({ name: (project ? project.name + ' — ' : '') + sec.name, clips, markers, vo, voEnabled: !voTrack.mute })
   if (file) st.showToast('Premiere XML saved: ' + file)
+}
+
+// Recording voiceover over the cut: a badge on the picture — the pre-roll
+// counting down to where the take starts, then REC and the take's length.
+function RecBadge() {
+  const rec = useStore((s) => s.editRec)
+  const [txt, setTxt] = useState('')
+  useEffect(() => {
+    if (!rec) return
+    return onTick(100, () => {
+      const t = seqPlayer.getTime()
+      const n = rec.phase === 'recording' ? 'REC  ' + fmtTime(Math.max(0, t - rec.start), true) : rec.phase === 'saving' ? 'Saving…' : 'Recording in ' + Math.max(0, rec.at - t).toFixed(1) + ' s'
+      setTxt((o) => (o === n ? o : n))
+    })
+  }, [rec])
+  if (!rec) return null
+  return (
+    <div className={'em-rec ' + rec.phase} title="R, Space or Esc stops">
+      <i />
+      <span>{txt}</span>
+      <span className="dim small">R / Space stops</span>
+    </div>
+  )
 }
 
 // Drag to trade space between the preview and the timeline (like Review).
@@ -430,7 +520,7 @@ function EditSplitter() {
 }
 
 // ---- first-run / missing-project states ----
-function Setup() {
+export function Setup() {
   const projectsDir = useStore((s) => s.settings.projectsDir)
   const project = useStore((s) => s.currentProject())
   const chooseProjectsDir = useStore((s) => s.chooseProjectsDir)
@@ -470,12 +560,18 @@ export default function EditWorkspace() {
     if (target != null) seqPlayer.seek(target)
   }), [])
   useEffect(() => startEditSkipSilence(), [])
+  // The voiceover lane plays along with the cut; its sections come from the
+  // Voiceover tab (same project).
+  useEffect(() => { startVoSlave() }, [])
+  useEffect(() => { useVo.getState().load().then(() => useStore.getState().syncVoLane()) }, [project && project.id, project && project.folder])
   const ready = projectsDir && project
   const etH = useStore((s) => s.settings.editTimelineHeight)
   const sideHidden = useStore((s) => !!s.settings.editSidebarHidden)
   const panelHidden = useStore((s) => !!s.settings.editPanelHidden)
   const playerHidden = useStore((s) => !!s.settings.playerHidden)
   const panelOutside = usePanelOutside()
+  const hasVo = useHasVo()
+  const showStrip = useStore((s) => s.settings.editVoStrip !== false) && hasVo && !!section
   const sidePanel = ready && !panelHidden && panelOutside
   return (
     <div className={'app edit-app' + (sideHidden ? ' side-hidden' : '') + (playerHidden ? ' player-hidden' : '') + (sidePanel ? ' panel-full' : '')}>
@@ -488,6 +584,7 @@ export default function EditWorkspace() {
               {!panelHidden && !panelOutside && <EditPanel section={section} />}
             </div>
             {!playerHidden && <EditSplitter />}
+            {showStrip && <VoPanel section={section} />}
             <EditTimeline section={section} />
           </>
         ) : (

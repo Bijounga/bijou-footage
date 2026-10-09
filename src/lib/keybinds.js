@@ -126,7 +126,16 @@ export const ACTIONS = [
   { id: 'prevMarker', label: 'Previous marker', cat: 'Playback', keys: ['Shift+['], needsClip: true, run: ({ bus }) => bus.emit('jumpNote', -1, 'MARKER') },
   { id: 'nextMarker', label: 'Next marker', cat: 'Playback', keys: ['Shift+]'], needsClip: true, run: ({ bus }) => bus.emit('jumpNote', 1, 'MARKER') },
   { id: 'toggleTranscript', label: 'Switch Notes / Transcript / Both', cat: 'View', keys: ['Shift+T'], run: ({ st }) => st.setSideTab({ notes: 'transcript', transcript: 'both', both: 'notes' }[st.settings.sideTab || 'notes'] || 'notes') },
-  { id: 'searchTranscript', label: 'Search the transcripts', cat: 'View', keys: ['Ctrl+F'], global: true, run: ({ st, bus }) => { if (st.settings.sideTab !== 'both') st.setSideTab('transcript'); setTimeout(() => bus.emit('focusTranscriptSearch'), 0) } },
+  { id: 'searchTranscript', label: 'Search the transcripts', cat: 'View', keys: ['Ctrl+F'], global: true, run: ({ st, bus }) => {
+      // Voiceover: its own transcript, under the timeline (shown first if hidden)
+      if (st.settings.workspace === 'voiceover') {
+        if (st.settings.voTranscript === false) st.updateSettings({ voTranscript: true })
+        setTimeout(() => bus.emit('voSearch'), 60)
+        return
+      }
+      if (st.settings.sideTab !== 'both') st.setSideTab('transcript')
+      setTimeout(() => bus.emit('focusTranscriptSearch'), 0)
+    } },
   { id: 'gotoTime', label: 'Go to a time (type it)', cat: 'Playback', keys: ['Ctrl+G'], needsClip: true, run: ({ bus }) => bus.emit('gotoTime') },
   { id: 'addToSection', label: 'Add to the open edit section (I … here, or the whole recording)', cat: 'Edit', keys: ['E'], needsClip: true, run: ({ st, player, osd }) => {
     const pin = st.inPoint && st.inPoint.key === st.currentKey && Math.abs(player.getTime() - st.inPoint.t) >= 0.5 ? st.inPoint.t : null

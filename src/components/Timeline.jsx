@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { useStore, TRACK_COLORS, DEFAULT_LANE_H, useTrackColors, useTrackNames } from '../state/store.js'
 import { player } from '../lib/player.js'
-import { bus } from '../lib/hooks.js'
+import { bus, onTick } from '../lib/hooks.js'
 import { fmtTime } from '../lib/time.js'
 import { LABEL, noteHex } from '../lib/beats.js'
 import { setWave, speechSegments } from '../lib/speech.js'
@@ -49,7 +49,7 @@ function drawShield(ctx, x, top, w, h, color, selected) {
 }
 
 // Vertical volume fader, 0–200%. Drag, wheel (±5%), double-click = 100%.
-function Fader({ value, onChange, height }) {
+export function Fader({ value, onChange, height }) {
   const ref = useRef(null)
   const trackH = Math.max(20, height - 14)
   const pos = Math.max(0, Math.min(1, value / 2))
@@ -615,7 +615,6 @@ export default function Timeline() {
   // moved by at least half a pixel, and the level meters while audio plays.
   // Paused and untouched, a frame costs almost nothing.
   useEffect(() => {
-    let raf = 0
     let lastOverlay = ''
     let metersZero = false
     const meterVals = []
@@ -682,13 +681,10 @@ export default function Timeline() {
       }
     }
     frameNow.current = () => frame(true)
-    const loop = () => {
-      frame()
-      raf = requestAnimationFrame(loop)
-    }
-    raf = requestAnimationFrame(loop)
+    // every frame, on the app's one shared ticker (lib/hooks.js)
+    const off = onTick(0, () => frame())
     return () => {
-      cancelAnimationFrame(raf)
+      off()
       frameNow.current = null
     }
   }, [drawMain])

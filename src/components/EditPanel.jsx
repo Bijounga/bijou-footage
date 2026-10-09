@@ -386,7 +386,9 @@ function BothView({ section }) {
 }
 
 export default function EditPanel({ section }) {
-  const tab = useStore((s) => s.settings.editPanelTab || 'notes')
+  // (the voiceover used to be a tab here; it's its own strip above the timeline now)
+  const tab0 = useStore((s) => s.settings.editPanelTab || 'notes')
+  const tab = tab0 === 'voiceover' ? 'notes' : tab0
   const width = useStore((s) => s.settings.editPanelWidth || 380)
   const set = (patch) => useStore.getState().updateSettings(patch)
   function resizeDown(e) {

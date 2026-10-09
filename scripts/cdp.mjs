@@ -9,7 +9,7 @@
 //     {key, mods} are key presses (Enter, Backspace, Tab, ArrowUp, …)
 'use strict'
 
-const PORT = 9223
+const PORT = Number(process.env.CDP_PORT) || 9223
 
 async function findTarget() {
   const res = await fetch(`http://127.0.0.1:${PORT}/json`)

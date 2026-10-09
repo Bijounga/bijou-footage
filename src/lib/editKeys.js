@@ -3,6 +3,8 @@
 // Review actions in keybinds.js; global actions (full screen etc.) still
 // come from there.
 import * as EM from './editModel.js'
+import * as VL from './voLane.js'
+import { editRecToggle, tapPlace } from './editRecord.js'
 import { seqPlayer } from './seqPlayer.js'
 import { toggleViewer } from './viewer.js'
 import { speechStarts, hasWave } from './speech.js'
@@ -25,6 +27,7 @@ function speechInCut(st) {
 }
 
 const sec = (st) => st.currentSection()
+const clearSel = (st) => { st.setEditSel([]); st.setVoSel([]) }
 const T = () => seqPlayer.getTime()
 
 // The clip under the playhead (id), for D / G.
@@ -88,7 +91,7 @@ export const EDIT_ACTIONS = [
   // Playback
   { id: 'e.play', label: 'Play / pause', cat: 'Playback', keys: ['Space'], run: () => seqPlayer.toggle() },
   { id: 'e.stop', label: 'Stop (back to 1×)', cat: 'Playback', keys: ['K'], run: () => seqPlayer.stop() },
-  { id: 'e.faster', label: 'Shuttle faster (L) — play, then 1.5×, 2× … 10×, then skim', cat: 'Playback', keys: ['L'], run: ({ osd }) => { seqPlayer.faster(); osd(shuttleLabel()) } },
+  { id: 'e.faster', label: 'Shuttle faster (B / L) — play, then 1.5×, 2× … 10×, then skim', cat: 'Playback', keys: ['B', 'L'], run: ({ osd }) => { seqPlayer.faster(); osd(shuttleLabel()) } },
   { id: 'e.slower', label: 'Shuttle slower / reverse (J)', cat: 'Playback', keys: ['J'], run: ({ osd }) => { seqPlayer.slower(); osd(shuttleLabel()) } },
   { id: 'e.skipBack', label: 'Skip back (small)', cat: 'Playback', keys: ['Left'], run: ({ st, osd }) => { nudge(-(st.settings.skipSmall || 5)); osd('−' + (st.settings.skipSmall || 5) + 's') } },
   { id: 'e.skipFwd', label: 'Skip forward (small)', cat: 'Playback', keys: ['Right'], run: ({ st, osd }) => { nudge(st.settings.skipSmall || 5); osd('+' + (st.settings.skipSmall || 5) + 's') } },
@@ -118,13 +121,59 @@ export const EDIT_ACTIONS = [
     if (!c) return
     st.setEditSel(e && e.shiftKey ? [...new Set([...st.editSel, c.id])] : [c.id])
   } },
-  { id: 'e.cut', label: 'Add a cut at the playhead', cat: 'Edit', keys: ['F'], run: ({ st, osd }) => {
-    const s = sec(st)
-    if (s && st.applyEdit(EM.split(s.clips, T()))) osd('Cut')
-  } },
-  { id: 'e.rippleDelete', label: 'Ripple delete the selected clip (or the one at the playhead)', cat: 'Edit', keys: ['G', 'Delete', 'Backspace'], run: ({ st, osd }) => {
+  { id: 'e.cut', label: 'Add a cut at the playhead (on the voiceover track too when a voiceover clip there is selected)', cat: 'Edit', keys: ['F'], run: ({ st, osd }) => {
     const s = sec(st)
     if (!s) return
+    const t = T()
+    // a picked voiceover clip under the playhead is cut too; the picture is
+    // cut unless only voiceover is picked
+    const v = (s.vo || []).find((x) => st.voSel.includes(x.id) && t > x.at && t < VL.endOf(x))
+    const voNext = v && VL.splitAt([v], t) && VL.splitAt(s.vo, t)
+    if (voNext && !st.editSel.length) {
+      if (st.applyVo(voNext)) osd('Cut voiceover')
+      return
+    }
+    if (st.voSel.length && !st.editSel.length) return osd('No picked voiceover clip at the playhead')
+    if (voNext) {
+      st.applySection({ clips: EM.split(s.clips, t) || s.clips, vo: voNext }, {})
+      st.syncVoLane()
+      return osd('Cut')
+    }
+    if (st.applyEdit(EM.split(s.clips, t))) osd('Cut')
+  } },
+  { id: 'e.voCopy', label: 'Copy the selected voiceover clips', cat: 'Edit', keys: ['Ctrl+C'], run: ({ st, osd }) => {
+    const s = sec(st)
+    const picked = ((s && s.vo) || []).filter((x) => st.voSel.includes(x.id))
+    if (!picked.length) return osd('Select voiceover clips to copy')
+    VL.voClipboard.set(picked)
+    osd(picked.length > 1 ? `Copied ${picked.length} voiceover clips` : 'Copied voiceover clip')
+  } },
+  { id: 'e.voPaste', label: 'Paste voiceover clips at the playhead', cat: 'Edit', keys: ['Ctrl+V'], run: ({ st, osd }) => {
+    const s = sec(st)
+    const r = s && VL.pasteClips(s.vo || [], VL.voClipboard.get(), T())
+    if (!r) return osd('Nothing copied')
+    st.setEditSel([])
+    if (st.applyVo(r.vo, { select: r.ids })) osd('Pasted')
+  } },
+  { id: 'e.voDelete', label: 'Voiceover lane: take the selected clips off and close up the gap', cat: 'Edit', keys: ['Shift+Delete', 'Shift+Backspace'], run: ({ st, osd }) => {
+    const s = sec(st)
+    if (s && st.voSel.length && st.applyVo(VL.rippleRemove(s.vo || [], st.voSel), { select: [] })) osd('Voiceover removed — closed up')
+  } },
+  { id: 'e.rippleDelete', label: 'Ripple delete the selected clip (or the one at the playhead) — on the voiceover lane it takes the clip off and leaves a gap', cat: 'Edit', keys: ['G', 'Delete', 'Backspace'], run: ({ st, osd }) => {
+    const s = sec(st)
+    if (!s) return
+    if (st.voSel.length && !st.editSel.length) {
+      if (st.applyVo(VL.removeClips(s.vo || [], st.voSel), { select: [] })) osd('Voiceover removed')
+      return
+    }
+    // picture AND voiceover picked (a box across both): both go, one undo step
+    if (st.voSel.length && st.editSel.length) {
+      const items = EM.layout(s.clips).items.filter((c) => st.editSel.includes(c.id))
+      st.applySection({ clips: EM.rippleDelete(s.clips, st.editSel), vo: VL.removeClips(s.vo || [], st.voSel) }, { playhead: items.length ? items[0].start : null, select: [] })
+      clearSel(st)
+      st.syncVoLane()
+      return osd('Deleted')
+    }
     const ids = st.editSel.length ? st.editSel : [clipAtPlayhead(st)].filter(Boolean).map((c) => c.id)
     if (!ids.length) return
     const first = EM.layout(s.clips).items.find((c) => ids.includes(c.id))
@@ -147,7 +196,12 @@ export const EDIT_ACTIONS = [
   { id: 'e.zoomPreset3', label: 'Zoom preset 3 — % in Settings', cat: 'Framing', keys: ['Alt+3'], run: (c) => zoomPreset(c, 2) },
   { id: 'e.framingReset', label: 'Reset framing (100%, centred) on the selected clip (or the one at the playhead)', cat: 'Framing', keys: ['Alt+0'], run: ({ st, osd }) => { if (st.setClipMotion(framingTargets(st), () => ({ scale: 100, x: 0, y: 0 }))) osd('100%') } },
   { id: 'e.selectTool', label: 'Move tool (select / drag clips)', cat: 'Edit', keys: ['V'], run: ({ st }) => st.setEditTool('select') },
-  { id: 'e.deselect', label: 'Clear selection / back to the move tool', cat: 'Edit', keys: ['Escape'], run: ({ st }) => { st.setEditSel([]); st.setEditTool('select') } },
+  { id: 'e.deselect', label: 'Clear selection / back to the move tool (stops a voiceover recording)', cat: 'Edit', keys: ['Escape'], run: ({ st }) => {
+    if (st.editRec) return editRecToggle()
+    st.setEditSel([]); st.setVoSel([]); st.setEditTool('select')
+  } },
+  { id: 'e.voRecord', label: 'Record voiceover over the cut (from the playhead, after the pre-roll) / stop', cat: 'Voiceover', keys: ['R'], run: () => editRecToggle() },
+  { id: 'e.voTap', label: 'Tap to place: the next voiceover line from the strip, at the playhead', cat: 'Voiceover', keys: ['T'], run: () => tapPlace() },
   { id: 'e.selectAll', label: 'Select all clips', cat: 'Edit', keys: ['Ctrl+A'], run: ({ st }) => { const s = sec(st); if (s) st.setEditSel(s.clips.map((c) => c.id)) } },
   { id: 'e.undo', label: 'Undo', cat: 'Edit', keys: ['Ctrl+Z'], run: ({ st }) => st.editUndoRedo(false) },
   { id: 'e.redo', label: 'Redo', cat: 'Edit', keys: ['Ctrl+Shift+Z', 'Ctrl+Y'], run: ({ st }) => st.editUndoRedo(true) },

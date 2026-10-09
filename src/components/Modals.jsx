@@ -386,6 +386,11 @@ export function SettingsModal() {
                 </div>
               </section>
               <section>
+                <h3>Playhead</h3>
+                <label className="check"><input type="checkbox" checked={settings.editTrimJump !== false} onChange={(e) => updateSettings({ editTrimJump: e.target.checked })} /> Edit: the playhead jumps to a trimmed edge when you let go (off: it stays where it was)</label>
+                <label className="check"><input type="checkbox" checked={settings.voClickSeek !== false} onChange={(e) => updateSettings({ voClickSeek: e.target.checked })} /> Voiceover: the playhead jumps to where you click on the waveform</label>
+              </section>
+              <section>
                 <h3>On the monitor</h3>
                 <ul className="settings-tips">
                   <li><b>Click the picture</b> (Move tool) to select the clip — drag to move it, drag a handle to zoom it.</li>

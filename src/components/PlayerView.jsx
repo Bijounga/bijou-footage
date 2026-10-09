@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { IconSkipStart, IconSkipEnd } from './Icons.jsx'
 import { useStore, trackNamesFor } from '../state/store.js'
 import { player, WATCH_SPEEDS } from '../lib/player.js'
 import { usePlayerTime, usePlayerState, bus } from '../lib/hooks.js'
@@ -241,11 +242,11 @@ function Transport() {
   const dur = player.duration
   return (
     <div className="transport">
-      <button className="t-btn" onClick={() => bus.emit('jumpNote', -1)} title="Previous note ([)">⏮</button>
+      <button className="t-btn" onClick={() => bus.emit('jumpNote', -1)} title="Previous note ([)"><IconSkipStart /></button>
       <button className="t-btn" onClick={() => player.slower()} title="Slower / reverse (J)">◀◀</button>
       <button className="t-btn play" onClick={() => player.toggle()} title="Play / pause (Space or K)">{st.playing ? '❚❚' : '▶'}</button>
       <button className="t-btn" onClick={() => player.faster()} title="Faster (L)">▶▶</button>
-      <button className="t-btn" onClick={() => bus.emit('jumpNote', 1)} title="Next note (])">⏭</button>
+      <button className="t-btn" onClick={() => bus.emit('jumpNote', 1)} title="Next note (])"><IconSkipEnd /></button>
       <span className="mk-nav" style={{ '--c': (MARKER_COLORS[markerColor] || MARKER_COLORS.yellow).hex }}>
         <button className="t-btn mk-nav-btn" onClick={() => bus.emit('jumpNote', -1, 'MARKER')} title={'Previous marker' + (prevMk ? ' (' + prevMk + ')' : '')}>‹<span className="mk-shield" /></button>
         <button className="t-btn mk-nav-btn" onClick={() => bus.emit('jumpNote', 1, 'MARKER')} title={'Next marker' + (nextMk ? ' (' + nextMk + ')' : '')}><span className="mk-shield" />›</button>

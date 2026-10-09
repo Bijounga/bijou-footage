@@ -260,7 +260,8 @@ export function ExportSectionDialog({ onExport }) {
   const reviews = useStore((s) => s.reviews)
   const beatColor = useBeatColor()
   const saved = useStore((s) => s.settings.exportMarkers) || {}
-  const [opts, setOpts] = useState({ timeline: true, colors: Object.keys(MARKER_COLORS), types: [...TYPES], ...saved })
+  const [opts, setOpts] = useState({ timeline: true, voiceover: true, colors: Object.keys(MARKER_COLORS), types: [...TYPES], ...saved })
+  const voCount = (sec && sec.vo ? sec.vo.length : 0)
   const set = (p) => setOpts((o) => ({ ...o, ...p }))
   const counts = useMemo(() => (sec ? T.markerCounts(useStore.getState(), sec.clips, sec.markers) : { colors: {}, types: {}, timeline: {} }), [sec, reviews])
   const toggle = (list, k) => (list.includes(k) ? list.filter((x) => x !== k) : [...list, k])
@@ -284,6 +285,12 @@ export function ExportSectionDialog({ onExport }) {
       }
     >
       <p className="dim small td-intro">The section becomes one Premiere sequence, cut exactly like here, with your clip colours. Choose which markers come with it — they'll sit on the sequence at the right moments.</p>
+      {voCount > 0 && (
+        <div className="td-row">
+          <span className="td-label">Voiceover</span>
+          <label className="check" title="The voiceover track comes along as its own audio track, under the recordings' tracks — each line pointing at its recorded WAV, with its volume and colour"><input type="checkbox" checked={opts.voiceover !== false} onChange={(e) => set({ voiceover: e.target.checked })} /> Include as its own audio track ({voCount} {voCount === 1 ? 'line' : 'lines'})</label>
+        </div>
+      )}
       <div className="td-row">
         <span className="td-label">Timeline markers</span>
         <label className="check"><input type="checkbox" checked={opts.timeline} onChange={(e) => set({ timeline: e.target.checked })} /> Include ({tl})</label>

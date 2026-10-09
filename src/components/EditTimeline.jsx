@@ -9,6 +9,9 @@ import { clipTitle } from './Library.jsx'
 import { parseWaveform, TrackHead } from './Timeline.jsx'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
 import { makeWheelAxis, onFrame, isPinch } from '../lib/wheel.js'
+import { trimTip } from '../lib/trimUi.js'
+import VoLane, { VoTrackHead, useVoTrack } from './VoLane.jsx'
+import * as VL from '../lib/voLane.js'
 import ZoomBar from './ZoomBar.jsx'
 import { setWave, speechSegments } from '../lib/speech.js'
 
@@ -305,8 +308,8 @@ const VClip = React.memo(function VClip({ it, x, pps, sel, c, notes, tool, beatC
     >
       {w > 14 && tool === 'select' && (
         <>
-          <i className="et-edge l" onMouseDown={(e) => h.current.edgeDown(e, it, 'in')} title="Drag to trim the start (the rest slides along)" />
-          <i className="et-edge r" onMouseDown={(e) => h.current.edgeDown(e, it, 'out')} title="Drag to trim the end (the rest slides along)" />
+          <i className="et-edge l" onMouseDown={(e) => h.current.edgeDown(e, it, 'in')} title="Drag to trim or extend the start (the rest slides along)" />
+          <i className="et-edge r" onMouseDown={(e) => h.current.edgeDown(e, it, 'out')} title="Drag to trim or extend the end (the rest slides along)" />
         </>
       )}
       {w > 40 && (
@@ -322,6 +325,7 @@ const VClip = React.memo(function VClip({ it, x, pps, sel, c, notes, tool, beatC
 })
 
 const HEAD_W = 214
+const NO_VO = []
 const RULER_H = 30
 const MAX_PPS = 400 // closest zoom: pixels per second
 const V_H = 58
@@ -341,6 +345,7 @@ export default function EditTimeline({ section }) {
   const items = useMemo(() => EM.layout(clips).items, [clips])
   const total = items.length ? items[items.length - 1].start + items[items.length - 1].dur : 0
   const allClips = useStore((s) => s.clips)
+  const project = useStore((s) => s.currentProject())
   const reviews = useStore((s) => s.reviews)
   const beatColors = useStore((s) => s.beatColors)
   const trackNames = useStore((s) => s.settings.trackNames)
@@ -355,6 +360,7 @@ export default function EditTimeline({ section }) {
   const sel = useStore((s) => s.editSel)
   const selSet = useMemo(() => new Set(sel), [sel])
   const tool = useStore((s) => s.editTool)
+  const voTrack = useVoTrack()
   const snapOn = useStore((s) => s.settings.editSnap !== false)
   const byKey = useMemo(() => new Map(allClips.map((c) => [c.key, c])), [allClips])
   const nTracks = Math.max(1, ...items.map((it) => ((byKey.get(it.key) || {}).probe?.audio || []).length))
@@ -381,6 +387,8 @@ export default function EditTimeline({ section }) {
     setWidth(el.clientWidth)
     return () => ro.disconnect()
   }, [])
+  // for scripts/cdp.mjs tests: read / set the view exactly
+  window.__etView = { get: () => viewRef.current, set: (v) => setView(v), left: () => bodyRef.current && bodyRef.current.getBoundingClientRect().left }
   const fit = () => setView({ start: 0, pps: Math.max(0.0005, (width - 40) / Math.max(10, total)) })
   // Fit when a different section opens (and on first layout).
   const fittedFor = useRef(null)
@@ -499,14 +507,22 @@ export default function EditTimeline({ section }) {
   // ---- snapping ----
   // toPlayhead: also snap to the playhead (the cut tool) — never while
   // scrubbing, where it would stick to itself.
-  const snapT = (t, { exclude, toPlayhead = false } = {}) => {
-    if (!snapOn) return t
+  // What things snap to: the cuts, markers and notes (the voiceover track
+  // adds its own clips' edges and the playhead to these).
+  const snapCands = () => {
     const cands = EM.cutPoints(clips)
     for (const m of (section && section.markers) || []) cands.push(m.t)
     for (const it of items) {
       const notes = (reviews[it.key] && reviews[it.key].notes) || []
       for (const n of notes) if (n.type !== 'BREAK' && n.t >= it.in && n.t < it.out) cands.push(it.start + n.t - it.in)
     }
+    return cands
+  }
+  const snapT = (t, { exclude, toPlayhead = false } = {}) => {
+    if (!snapOn) return t
+    const cands = snapCands()
+    // …and the voiceover: its clips' starts and ends
+    for (const e of VL.edges((section && section.vo) || [])) cands.push(e)
     if (toPlayhead) cands.push(seqPlayer.getTime())
     let best = t
     let bestPx = SNAP_PX
@@ -578,31 +594,47 @@ export default function EditTimeline({ section }) {
   // Drag on empty timeline space: a box that selects every clip it touches
   // (Shift adds to the selection). A plain click just moves the playhead.
   const [box, setBox] = useState(null) // {x0, x1, y0, y1} in body px
-  function rowsDown(e) {
-    if (e.button !== 0 || e.target !== e.currentTarget) return
+  function rowsDown(e, any = false) {
+    if (e.button !== 0 || (!any && e.target !== e.currentTarget)) return
     const st = useStore.getState()
     const rect = bodyRef.current.getBoundingClientRect()
     const x0 = e.clientX - rect.left
     const y0 = e.clientY - rect.top
-    const base = e.shiftKey || e.ctrlKey ? st.editSel : []
+    const add = e.shiftKey || e.ctrlKey
+    const base = add ? st.editSel : []
+    const baseVo = add ? st.voSel : []
+    // Which rows the box covers decides what it picks, like Premiere: the
+    // picture / audio rows pick cuts, the voiceover row picks voiceover clips
+    // — drag across only the voiceover to pick just that.
+    const voEl = bodyRef.current.querySelector('.et-row.vo')
+    const vr = voEl && voEl.getBoundingClientRect()
+    const voTop = vr ? vr.top - rect.top : Infinity
+    const voBot = vr ? vr.bottom - rect.top : Infinity
+    const vrows = bodyRef.current.querySelector('.et-row.v')
+    const cutTop = vrows ? vrows.getBoundingClientRect().top - rect.top : 0
     let dragging = false
     const move = (ev) => {
       const x1 = ev.clientX - rect.left
       const y1 = ev.clientY - rect.top
       if (!dragging && Math.abs(x1 - x0) + Math.abs(y1 - y0) < 5) return
       dragging = true
-      setBox({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), y0: Math.min(y0, y1), y1: Math.max(y0, y1) })
-      const t0 = xToT(Math.min(x0, x1))
-      const t1 = xToT(Math.max(x0, x1))
-      const hit = items.filter((it) => it.start < t1 && it.start + it.dur > t0).map((it) => it.id)
-      st.setEditSel([...new Set([...base, ...hit])])
+      const b = { x0: Math.min(x0, x1), x1: Math.max(x0, x1), y0: Math.min(y0, y1), y1: Math.max(y0, y1) }
+      setBox(b)
+      const t0 = xToT(b.x0)
+      const t1 = xToT(b.x1)
+      const onCut = b.y0 < voTop && b.y1 > cutTop
+      const onVo = b.y1 > voTop && b.y0 < voBot
+      const hit = onCut ? items.filter((it) => it.start < t1 && it.start + it.dur > t0).map((it) => it.id) : []
+      const vo = (section && section.vo) || []
+      const vhit = onVo ? vo.filter((v) => v.at < t1 && VL.endOf(v) > t0).map((v) => v.id) : []
+      useStore.setState({ editSel: [...new Set([...base, ...hit])], voSel: [...new Set([...baseVo, ...vhit])] })
     }
     const up = () => {
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
       setBox(null)
       if (!dragging) {
-        st.setEditSel([])
+        if (!add) useStore.setState({ editSel: [], voSel: [] })
         seqPlayer.seek(snapT(Math.max(0, Math.min(total, xToT(x0)))))
       }
     }
@@ -693,7 +725,11 @@ export default function EditTimeline({ section }) {
   }
 
   // Drag a clip's left / right edge to trim it (ripple — the rest of the
-  // cut slides along). The preview shows the frame at the edge.
+  // cut slides along), like Premiere: the cursor shows which side moves, the
+  // edge stays lit red, a tip says how far. The monitor shows the frame at the
+  // edge while you drag (no reloading of the cut — just a seek). When you let
+  // go the playhead jumps to the edge — or stays where it was, with
+  // Settings → Editing → "Playhead jumps to a trimmed edge" off.
   function edgeDown(e, it, side) {
     if (e.button !== 0) return
     e.preventDefault()
@@ -704,9 +740,15 @@ export default function EditTimeline({ section }) {
     const maxOut = (src && src.probe && src.probe.duration) || Infinity
     const x0 = e.clientX
     const orig = side === 'in' ? it.in : it.out
+    const T0 = seqPlayer.getTime()
+    const jump = st.settings.editTrimJump !== false
+    const handle = e.currentTarget
+    handle.classList.add('active')
+    const tip = trimTip()
     seqPlayer.pause()
+    document.body.classList.add('resizing-ew', 'trim-' + side)
+    dragRef.current = true // the view holds still (no follow-the-playhead scrolling)
     let next = null
-    let edgeT = null
     const move = (ev) => {
       let v = orig + (ev.clientX - x0) / view.pps
       if (side === 'out') {
@@ -714,27 +756,28 @@ export default function EditTimeline({ section }) {
         const T = snapT(it.start + (v - it.in), { toPlayhead: true })
         v = it.in + (T - it.start)
       }
-      next = EM.trimEdge(base, it.id, side, v, maxOut)
-      if (!next) return
-      setTrimLive(next)
-      const c = next.find((x) => x.id === it.id)
-      edgeT = side === 'in' ? it.start : it.start + (c.out - c.in)
-      // show the frame at the edge (throttled; fast keyframe seeks)
-      const now = performance.now()
-      if (!edgeDown.last || now - edgeDown.last > 120) {
-        edgeDown.last = now
-        const shown = next
-        const at = side === 'in' ? edgeT : Math.max(it.start, edgeT - 1 / 60)
-        seqPlayer.setClips(shown).then(() => seqPlayer.seek(at, { fast: true }))
-      }
-      document.body.classList.add('resizing-ew')
+      const n = EM.trimEdge(base, it.id, side, v, maxOut)
+      if (!n) return
+      next = n
+      setTrimLive(n)
+      const c = n.find((x) => x.id === it.id)
+      tip.set(ev.clientX, ev.clientY, side === 'in' ? it.in - c.in : c.out - it.out)
+      seqPlayer.previewFrame(it.key, side === 'in' ? c.in : Math.max(c.in, c.out - 1 / 60))
     }
     const up = () => {
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
-      document.body.classList.remove('resizing-ew')
+      document.body.classList.remove('resizing-ew', 'trim-' + side)
+      handle.classList.remove('active')
+      tip.remove()
+      dragRef.current = false
       setTrimLive(null)
-      if (next) st.applyEdit(next, { playhead: side === 'in' ? edgeT : Math.max(it.start, edgeT - 1 / 60) })
+      if (next) {
+        const c = next.find((x) => x.id === it.id)
+        const edgeT = side === 'in' ? it.start : it.start + (c.out - c.in)
+        const at = jump ? (side === 'in' ? edgeT : Math.max(it.start, edgeT - 1 / 60)) : Math.max(0, Math.min(T0, EM.totalDuration(next) - 0.001))
+        st.applyEdit(next, { playhead: at })
+      } else seqPlayer.seek(T0)
     }
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
@@ -753,7 +796,7 @@ export default function EditTimeline({ section }) {
     let ids = st.editSel
     if (e.shiftKey || e.ctrlKey) ids = ids.includes(it.id) ? ids.filter((x) => x !== it.id) : [...ids, it.id]
     else if (!ids.includes(it.id)) ids = [it.id]
-    st.setEditSel(ids)
+    st.setEditSel(ids, { keepVo: e.shiftKey || e.ctrlKey })
     const x0 = e.clientX
     let moving = false
     const move = (ev) => {
@@ -851,7 +894,7 @@ export default function EditTimeline({ section }) {
   }
 
   return (
-    <div className="et">
+    <div className="et" onMouseDownCapture={() => useStore.getState().setEditFocus('cut')}>
       <div className="et-heads">
         <div className="et-head-ruler" style={{ height: RULER_H }}>
           <ZoomBar get={zoomGet} set={zoomSet} onFit={fit} onStep={(dir) => bus.emit('editZoom', dir)} fitTitle="Fit the whole section (\)" />
@@ -883,6 +926,9 @@ export default function EditTimeline({ section }) {
             </div>
           )
         })}
+        <div className="et-head-wrap vo" style={{ height: voTrack.h }}>
+          <VoTrackHead count={section && section.vo ? section.vo.length : 0} />
+        </div>
       </div>
       <div
         className={'et-body' + (tool === 'razor' ? ' razor' : '')}
@@ -941,6 +987,7 @@ export default function EditTimeline({ section }) {
               <WaveRow track={i} items={items} view={drawView} width={drawW} shift={slide} height={laneH[i] || A_H} color={colors[i]} byKey={byKey} waveMap={waveMap} wavesVer={wavesVer} speech={!!speechShow[i]} sens={sens} selSet={selSet} />
             </div>
           ))}
+          <VoLane vo={(section && section.vo) || NO_VO} view={view} width={width} folder={project && project.folder} snapCands={snapCands} tool={tool} onEmptyDown={(e) => rowsDown(e, true)} />
           {!items.length && <div className="et-empty dim">Drop recordings here</div>}
         </div>
         {/* The empty space under the tracks: drag here for a selection box

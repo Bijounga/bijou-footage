@@ -186,7 +186,49 @@ function motionXml(m) {
     `</effect></filter>`
 }
 
-export function buildSequenceXml({ name, clips, markers }) {
+// The voiceover track (Edit's VO lane): one more audio track under the
+// recordings' tracks, a clipitem per voiceover line pointing at its take's
+// WAV (<project>/voiceover/audio/<take>.wav), where it sits on the timeline,
+// which part of the take it plays, its volume (Audio Levels, as a gain
+// factor — Premiere shows it in dB) and its label colour.
+// vo: [{path, name, at, in, out, gain (dB), color, sampleRate, channels, dur}]
+function audioLevelsXml(db) {
+  if (!db) return ''
+  const g = Math.round(Math.pow(10, db / 20) * 1e6) / 1e6
+  return `<filter><effect><name>Audio Levels</name><effectid>audiolevels</effectid><effectcategory>audiolevels</effectcategory><effecttype>audiolevels</effecttype><mediatype>audio</mediatype><parameter><parameterid>level</parameterid><name>Level</name><valuemin>0</valuemin><valuemax>3.98109</valuemax><value>${g}</value></parameter></effect></filter>`
+}
+function voTrackXml(vo, r, enabled) {
+  const list = (vo || []).filter((v) => v.path).sort((a, b) => a.at - b.at)
+  if (!list.length) return { xml: '', end: 0 }
+  const files = new Map()
+  let end = 0
+  let lastEnd = 0
+  const items = list.map((v, i) => {
+    let f = files.get(v.path)
+    let fileXml
+    if (f) fileXml = `<file id="${f}"/>`
+    else {
+      f = 'vofile-' + (files.size + 1)
+      files.set(v.path, f)
+      const durF = Math.round((v.dur || v.out) * r.fps)
+      fileXml = `<file id="${f}"><name>${esc(v.name)}</name><pathurl>${esc(pathUrl(v.path))}</pathurl>${rateXml(r)}<duration>${durF}</duration><media><audio><samplecharacteristics><depth>32</depth><samplerate>${v.sampleRate || 48000}</samplerate></samplecharacteristics><channelcount>${v.channels || 1}</channelcount></audio></media></file>`
+    }
+    const inF = Math.round(v.in * r.fps)
+    const outF = Math.max(inF + 1, Math.round(v.out * r.fps))
+    // a track can't hold overlapping clips: a line that starts inside the one
+    // before it begins where that one ends (Premiere would drop it otherwise)
+    const start = Math.max(Math.round(v.at * r.fps), lastEnd)
+    const stop = start + (outF - inF)
+    lastEnd = stop
+    end = Math.max(end, stop)
+    const labels = v.color ? `<labels><label2>${esc(v.color)}</label2></labels>` : ''
+    return `<clipitem id="vo-${i}" premiereChannelType="mono"><name>${esc(v.label || 'Voiceover')}</name><enabled>TRUE</enabled><duration>${Math.round((v.dur || v.out) * r.fps)}</duration>${rateXml(r)}<start>${start}</start><end>${stop}</end><in>${inF}</in><out>${outF}</out>${fileXml}<sourcetrack><mediatype>audio</mediatype><trackindex>1</trackindex></sourcetrack>${audioLevelsXml(v.gain)}${labels}</clipitem>`
+  })
+  const xml = `<track currentExplodedTrackIndex="0" totalExplodedTrackCount="1" premiereTrackType="Mono">${items.join('')}<enabled>${enabled === false ? 'FALSE' : 'TRUE'}</enabled><locked>FALSE</locked><outputchannelindex>1</outputchannelindex></track>`
+  return { xml, end }
+}
+
+export function buildSequenceXml({ name, clips, markers, vo, voEnabled }) {
   const first = clips[0] || {}
   const r = rateFor(first.probe && first.probe.fps)
   const w = (first.probe && first.probe.width) || 1920
@@ -262,7 +304,9 @@ export function buildSequenceXml({ name, clips, markers }) {
       return `<track${attrs}>${aTracks[ti].join('')}<enabled>TRUE</enabled><locked>FALSE</locked><outputchannelindex>${slot.stereo ? slot.exploded + 1 : 1}</outputchannelindex></track>`
     })
     .join('')
+  const voTrack = voTrackXml(vo, r, voEnabled)
   const audioFormat = `<numOutputChannels>2</numOutputChannels><format><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics></format><outputs><group><index>1</index><numchannels>1</numchannels><downmix>0</downmix><channel><index>1</index></channel></group><group><index>2</index><numchannels>1</numchannels><downmix>0</downmix><channel><index>2</index></channel></group></outputs>`
   const seqMarkers = markersXml(markers || [], r)
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4"><sequence id="seq-1"><name>${esc(name)}</name><duration>${posF}</duration>${rateXml(r)}<media><video><format><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></format>${videoTrack}</video><audio>${audioFormat}${audioTracks}</audio></media>${seqMarkers}</sequence></xmeml>\n`
+  const durF = Math.max(posF, voTrack.end)
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4"><sequence id="seq-1"><name>${esc(name)}</name><duration>${durF}</duration>${rateXml(r)}<media><video><format><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></format>${videoTrack}</video><audio>${audioFormat}${audioTracks}${voTrack.xml}</audio></media>${seqMarkers}</sequence></xmeml>\n`
 }

@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
 import { seqPlayer } from '../lib/seqPlayer.js'
 import * as EM from '../lib/editModel.js'
+import * as VL from '../lib/voLane.js'
+import { voMix, voSrc } from '../lib/voPlayer.js'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { newId, pickDefaultType } from '../lib/beats.js'
 import { player } from '../lib/player.js'
 import { bus } from '../lib/hooks.js'
+import { onEvent as voTxEvent } from '../lib/voTranscripts.js'
 import { BUILT_IN_THEMES, fromBijouCustom, applyTheme } from '../lib/themes.js'
 
 const api = window.footage
@@ -35,6 +38,7 @@ export const TRACK_COLORS = ['#4fd1c5', '#f2a65a', '#8b8ff7', '#d46fb0', '#4ade8
 export function useTrackColors() {
   return useStore((s) => s.settings.trackColors || TRACK_COLORS)
 }
+export const VO_TRACK = { vol: 1, mute: false, color: null, h: 56 }
 export const DEFAULT_LANE_H = 64
 export const LANE_H_MIN = 40
 export const LANE_H_MAX = 320
@@ -96,6 +100,7 @@ function defaultSettings() {
     editPanelWidth: 380,
     editSkipSilence: false,
     editWatchSpeed: 1, // Edit playback speed (the speed button); shuttling returns here // Edit playback jumps over silences in the cut
+    voTrack: null, // the Edit VO lane's track: {vol, mute, color, h} (VO_TRACK when unset)
     editLaneHeights: [44, 44, 44, 44, 44, 44], // audio row heights in the edit timeline
     skipSilence: false, // playback jumps over long silences (lib/skipSilence.js)
     snap: true, // timeline clicks/scrubs/drags snap to notes & markers
@@ -141,7 +146,7 @@ function allFolders(st) {
 const savedProjects = new Map() // id -> {json, folder}
 const savedSections = new Map() // id -> json
 const projectJson = (p, pad) => JSON.stringify([p.name, p.clipKeys, p.folders || [], p.excluded || [], p.bijouScriptId || null, p.createdAt, pad || null])
-const sectionJson = (x) => JSON.stringify([x.name, x.order, x.clips, x.markers || []])
+const sectionJson = (x) => JSON.stringify([x.name, x.order, x.clips, x.markers || [], x.vo || []])
 function markProjectsSaved(list) {
   const pads = useStore.getState().pads
   for (const p of list) savedProjects.set(p.id, { json: projectJson(p, pads[p.id]), folder: p.folder })
@@ -196,6 +201,11 @@ async function syncToDisk() {
 let saveTimer = null
 const UNDO_LIMIT = 100
 
+// (voStore.js imports this file, so it's looked up when needed)
+let _voStore = null
+export const registerVoStore = (s) => { _voStore = s }
+const useVoStore = () => (_voStore ? _voStore.getState() : { sections: [] })
+
 export const useStore = create(
   immer((set, get) => ({
     loaded: false,
@@ -231,7 +241,12 @@ export const useStore = create(
     sections: [], // the current project's edit sections (from its folder)
     sectionsFor: null, // project id those sections belong to
     editSel: [], // selected clip ids in the edit timeline
+    voSel: [], // selected voiceover clips on the Edit VO lane
     editTool: 'select', // 'select' (V) | 'razor' (C)
+    // Which part of Edit the keys drive, like Premiere's panel focus: 'cut'
+    // (the timeline / picture) or 'vosrc' (the Voiceover strip's own player)
+    editFocus: 'cut',
+    editRec: null, // recording voiceover over the cut (lib/editRecord.js): {phase, at, start, take, vsId}
     editUndo: [], // [{sectionId, clips}]
     editRedo: [],
     cache: { size: 0, limit: 0, over: false, mode: 'remind' }, // media cache, from main
@@ -490,9 +505,13 @@ export const useStore = create(
     setWorkspace(ws) {
       if (ws === get().settings.workspace) return
       // Only one thing plays at a time.
-      if (ws === 'edit') player.pause()
-      else seqPlayer.pause()
-      set((s) => { s.settings.workspace = ws })
+      if (ws !== 'review') player.pause()
+      if (ws !== 'edit') { seqPlayer.pause(); voSrc.pause() }
+      set((s) => {
+        s.settings.workspace = ws
+        // soloing the voiceover is an Edit thing; Review's tracks shouldn't stay silenced by it
+        if (ws !== 'edit' && s.solo.includes('vo')) s.solo = s.solo.filter((x) => x !== 'vo')
+      })
       get().scheduleSave()
       if (ws === 'edit') get().loadSections()
     },
@@ -579,6 +598,8 @@ export const useStore = create(
     showSectionInPlayer() {
       const sec = get().currentSection()
       seqPlayer.setClips(sec ? sec.clips : [])
+      set((s) => { s.voSel = [] })
+      get().syncVoLane()
     },
     createSection(name) {
       const p = get().currentProject()
@@ -604,6 +625,7 @@ export const useStore = create(
         order: src.order + 0.5,
         clips: src.clips.map((c) => ({ ...c, id: EM.clipId() })),
         markers: (src.markers || []).map((m) => ({ ...m, id: 'm' + Math.random().toString(36).slice(2, 9) })),
+        vo: (src.vo || []).map((v) => ({ ...v, id: VL.voId() })),
         createdAt: Date.now()
       }
       set((s) => {
@@ -673,11 +695,12 @@ export const useStore = create(
       if (!sec) return false
       set((s) => {
         const x = s.sections.find((q) => q.id === sec.id)
-        s.editUndo.push({ sectionId: sec.id, clips: x.clips, markers: x.markers || [], at: Date.now() })
+        s.editUndo.push({ sectionId: sec.id, clips: x.clips, markers: x.markers || [], vo: x.vo || [], at: Date.now() })
         if (s.editUndo.length > 200) s.editUndo.shift()
         s.editRedo = []
         if (patch.clips) x.clips = patch.clips
         if (patch.markers) x.markers = patch.markers
+        if (patch.vo) x.vo = patch.vo
         const clips = x.clips
         s.editSel = select || s.editSel.filter((id) => clips.some((c) => c.id === id))
       })
@@ -726,14 +749,55 @@ export const useStore = create(
       set((s) => {
         const x = s.sections.find((q) => q.id === sec.id)
         const other = redo ? s.editUndo : s.editRedo
-        other.push({ sectionId: sec.id, clips: x.clips, markers: x.markers || [], at: entry.at })
+        other.push({ sectionId: sec.id, clips: x.clips, markers: x.markers || [], vo: x.vo || [], at: entry.at })
         ;(redo ? s.editRedo : s.editUndo).splice(i, 1)
         x.clips = entry.clips
         x.markers = entry.markers || []
+        x.vo = entry.vo || []
+        s.voSel = s.voSel.filter((id) => x.vo.some((v) => v.id === id))
         // Keep what's selected (e.g. the clip being framed) if it's still there.
         s.editSel = s.editSel.filter((id) => entry.clips.some((c) => c.id === id))
       })
       seqPlayer.setClips(entry.clips)
+      get().syncVoLane()
+    },
+    // ---- the voiceover lane (lib/voLane.js) ----
+    // Push the section's lane to its player (called whenever it changes).
+    syncVoLane() {
+      const sec = get().currentSection()
+      const p = get().currentProject()
+      voMix.setItems((p && p.folder) || null, VL.layoutLane(sec ? sec.vo || [] : []))
+    },
+    setVoSel(ids, { keepEdit = true } = {}) {
+      set((s) => { s.voSel = ids; if (ids.length && !keepEdit) s.editSel = [] })
+    },
+    // One change to the lane = one undo step.
+    applyVo(vo, { select = null } = {}) {
+      const ok = get().applySection({ vo }, {})
+      if (!ok) return false
+      set((s) => { s.voSel = select || s.voSel.filter((id) => vo.some((v) => v.id === id)) })
+      get().syncVoLane()
+      return true
+    },
+    // One voiceover clip onto the lane (click a card / drop it).
+    placeVoClip(voSecId, clipId, at, span) {
+      const sec = get().currentSection()
+      const vs = useVoStore().sections.find((x) => x.id === voSecId)
+      if (!sec || !vs) return false
+      const r = VL.placeClip(sec.vo || [], vs, clipId, at, span)
+      if (!r) return false
+      get().setEditSel([])
+      return get().applyVo(r.vo, { select: [r.id] })
+    },
+    // Put a whole voiceover section on the lane, back to back from `at`.
+    layInVoSection(voSecId, at) {
+      const sec = get().currentSection()
+      const vs = useVoStore().sections.find((x) => x.id === voSecId)
+      if (!sec || !vs || !vs.clips.length) return false
+      const { vo, ids } = VL.layIn(sec.vo || [], vs, at)
+      const ok = get().applyVo(vo, { select: ids })
+      if (ok) get().showToast('Laid in “' + vs.name + '” — slide the clips to match the footage')
+      return ok
     },
     // Framing (zoom / position) of clips — one undo step, no re-seek.
     setClipMotion(ids, fn) {
@@ -741,8 +805,13 @@ export const useStore = create(
       if (!sec || !ids.length) return false
       return get().applySection({ clips: EM.setMotion(sec.clips, ids, fn) }, { framing: true })
     },
-    setEditSel(ids) {
-      set((s) => { s.editSel = ids })
+    setEditSel(ids, { keepVo = false } = {}) {
+      // Picking video clips drops the voiceover ones — unless you add to the
+      // selection (Ctrl / Shift, or a box across both), like Premiere.
+      set((s) => { s.editSel = ids; if (ids.length && !keepVo) s.voSel = [] })
+    },
+    setEditFocus(f) {
+      if (get().editFocus !== f) set((s) => { s.editFocus = f })
     },
     setEditTool(tool) {
       set((s) => { s.editTool = tool })
@@ -1080,6 +1149,14 @@ export const useStore = create(
       api.cancelTranscripts(key || null)
     },
     transcriptEvent(ev) {
+      // a voiceover take (lib/voTranscripts.js), not one of the recordings
+      if (ev.key && String(ev.key).startsWith('vo:')) {
+        if (ev.type !== 'state') {
+          voTxEvent(ev)
+          if (ev.type === 'error') get().showToast('Voiceover transcription failed: ' + ev.message, 'error')
+          return
+        }
+      }
       if (ev.type === 'state') {
         set((s) => { s.tx = { installed: ev.installed, running: ev.running, queue: ev.queue } })
       } else if (ev.type === 'done') {
@@ -1115,7 +1192,7 @@ export const useStore = create(
     },
     pushMixer() {
       const { settings, solo } = get()
-      player.setMixer(get().effectiveMixer(), new Set(solo), settings.masterVol)
+      player.setMixer(get().effectiveMixer(), new Set(solo.filter((x) => x !== 'vo')), settings.masterVol)
     },
     setTrackVol(i, vol) {
       set((s) => { s.settings.mixer[i].vol = vol })
@@ -1172,6 +1249,21 @@ export const useStore = create(
       set((s) => { s.settings.editKeybinds = {} })
       get().scheduleSave()
     },
+    setVoKeybinds(id, combos) {
+      set((s) => {
+        if (!s.settings.voKeybinds) s.settings.voKeybinds = {}
+        s.settings.voKeybinds[id] = combos
+      })
+      get().scheduleSave()
+    },
+    resetVoKeybind(id) {
+      set((s) => { if (s.settings.voKeybinds) delete s.settings.voKeybinds[id] })
+      get().scheduleSave()
+    },
+    resetAllVoKeybinds() {
+      set((s) => { s.settings.voKeybinds = {} })
+      get().scheduleSave()
+    },
     toggleSolo(i, exclusive = true) {
       set((s) => {
         const has = s.solo.includes(i)
@@ -1192,6 +1284,12 @@ export const useStore = create(
     setWatchSpeed(r) {
       set((s) => { s.settings.watchSpeed = r })
       player.setBaseRate(r)
+      get().scheduleSave()
+    },
+    // The Edit VO lane's track: volume, mute, colour, height (its solo lives
+    // in `solo` as 'vo', next to the cut's tracks — soloing it silences them).
+    setVoTrack(patch) {
+      set((s) => { s.settings.voTrack = { ...VO_TRACK, ...(s.settings.voTrack || {}), ...patch } })
       get().scheduleSave()
     },
     setEditLaneHeight(i, h) {

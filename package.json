@@ -1,6 +1,6 @@
 {
   "name": "bijou-footage",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "description": "Bijou Footage — a fast footage reviewer for long OBS recordings, feeding BijouDocs",
   "main": "out/main/index.js",
   "author": "Bijou",
@@ -71,6 +71,9 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.video",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Bijou Footage records your voiceovers."
+      },
       "identity": null
     },
     "dmg": {

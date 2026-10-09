@@ -2,23 +2,25 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store.js'
 import { ACTIONS as REVIEW_ACTIONS, ACTION_BY_ID as REVIEW_BY_ID, bindingsFor as reviewBindingsFor, comboFromEvent, prettyCombo, shortCombo } from '../lib/keybinds.js'
 import { EDIT_ACTIONS, EDIT_BY_ID, editBindingsFor } from '../lib/editKeys.js'
+import { SOURCE_KEY_IDS } from '../lib/voSrcKeys.js'
+import { VO_ACTIONS, VO_BY_ID, voBindingsFor } from '../lib/voKeys.js'
 
 // The shortcuts window: every action A–Z, searchable, each rebindable.
 // Click a key to change it (then press the new one), ＋ to add another,
 // × to remove one. Taking a key another action uses asks first.
 export default function KeybindsModal() {
-  // Review and Edit have their own keys; opens on the workspace you're in.
-  const [mode, setMode] = useState(() => useStore.getState().settings.workspace === 'edit' ? 'edit' : 'review')
+  // Review, Edit and Voiceover have their own keys; opens on the workspace you're in.
+  const [mode, setMode] = useState(() => { const w = useStore.getState().settings.workspace; return w === 'edit' || w === 'voiceover' ? w : 'review' })
   const edit = mode === 'edit'
-  const reviewOverrides = useStore((s) => s.settings.keybinds) || {}
-  const editOverrides = useStore((s) => s.settings.editKeybinds) || {}
-  const overrides = edit ? editOverrides : reviewOverrides
-  const ACTIONS = edit ? EDIT_ACTIONS : REVIEW_ACTIONS
-  const ACTION_BY_ID = edit ? EDIT_BY_ID : REVIEW_BY_ID
-  const bindingsFor = edit ? editBindingsFor : reviewBindingsFor
-  const setKeybinds = useStore((s) => (edit ? s.setEditKeybinds : s.setKeybinds))
-  const resetKeybind = useStore((s) => (edit ? s.resetEditKeybind : s.resetKeybind))
-  const resetAllKeybinds = useStore((s) => (edit ? s.resetAllEditKeybinds : s.resetAllKeybinds))
+  const voice = mode === 'voiceover'
+  const overrideKey = voice ? 'voKeybinds' : edit ? 'editKeybinds' : 'keybinds'
+  const overrides = useStore((s) => s.settings[overrideKey]) || {}
+  const ACTIONS = voice ? VO_ACTIONS : edit ? EDIT_ACTIONS : REVIEW_ACTIONS
+  const ACTION_BY_ID = voice ? VO_BY_ID : edit ? EDIT_BY_ID : REVIEW_BY_ID
+  const bindingsFor = voice ? voBindingsFor : edit ? editBindingsFor : reviewBindingsFor
+  const setKeybinds = useStore((s) => (voice ? s.setVoKeybinds : edit ? s.setEditKeybinds : s.setKeybinds))
+  const resetKeybind = useStore((s) => (voice ? s.resetVoKeybind : edit ? s.resetEditKeybind : s.resetKeybind))
+  const resetAllKeybinds = useStore((s) => (voice ? s.resetAllVoKeybinds : edit ? s.resetAllEditKeybinds : s.resetAllKeybinds))
   const closeModal = useStore((s) => s.closeModal)
   const [q, setQ] = useState('')
   const [capture, setCapture] = useState(null) // {id, index} — index null = adding
@@ -39,7 +41,7 @@ export default function KeybindsModal() {
 
   function apply(id, index, combo, stealFrom) {
     if (stealFrom) setKeybinds(stealFrom, bindingsFor(stealFrom, overrides).filter((k) => k !== combo))
-    const keys = [...bindingsFor(id, useStore.getState().settings[edit ? 'editKeybinds' : 'keybinds'])]
+    const keys = [...bindingsFor(id, useStore.getState().settings[overrideKey])]
     if (index == null) { if (!keys.includes(combo)) keys.push(combo) } else keys[index] = combo
     setKeybinds(id, [...new Set(keys)])
   }
@@ -79,8 +81,9 @@ export default function KeybindsModal() {
         </div>
         <div className="kb-top">
           <div className="seg kb-mode">
-            <button className={!edit ? 'on' : ''} onClick={() => { setMode('review'); setCapture(null); setConflict(null) }}>Review keys</button>
+            <button className={mode === 'review' ? 'on' : ''} onClick={() => { setMode('review'); setCapture(null); setConflict(null) }}>Review keys</button>
             <button className={edit ? 'on' : ''} onClick={() => { setMode('edit'); setCapture(null); setConflict(null) }}>Edit keys</button>
+            <button className={voice ? 'on' : ''} onClick={() => { setMode('voiceover'); setCapture(null); setConflict(null) }}>Voiceover keys</button>
           </div>
           <input ref={searchRef} className="lib-search" placeholder="Search actions or keys… (e.g. marker, speed, Shift+M)" value={q} onChange={(e) => setQ(e.target.value)} />
           <span className="dim small">Click a key to change it · ＋ adds another · × removes</span>
@@ -102,6 +105,7 @@ export default function KeybindsModal() {
                 <span className="kb-label">
                   {a.label}
                   {a.global && <span className="dim small"> · works while typing</span>}
+                  {edit && SOURCE_KEY_IDS.has(a.id) && <span className="dim small" title="Click the Voiceover strip above the timeline and this key drives its own player instead of the cut"> · also the Voiceover strip</span>}
                 </span>
                 <span className="kb-cat">{a.cat}</span>
                 <span className="kb-keys">
@@ -131,8 +135,8 @@ export default function KeybindsModal() {
           {!rows.length && <div className="lib-empty dim">No actions match “{q}”.</div>}
         </div>
         <div className="kb-foot">
-          <span className="dim small">{edit ? 'Edit mode' : 'Review mode'} · {ACTIONS.length} actions · {customized ? `${customized} customized` : 'all default'}</span>
-          <button className="btn small ghost" disabled={!customized} onClick={() => { if (window.confirm('Reset every ' + (edit ? 'Edit' : 'Review') + ' shortcut to its default?')) resetAllKeybinds() }}>Reset all to defaults</button>
+          <span className="dim small">{voice ? 'Voiceover' : edit ? 'Edit mode' : 'Review mode'} · {ACTIONS.length} actions · {customized ? `${customized} customized` : 'all default'}</span>
+          <button className="btn small ghost" disabled={!customized} onClick={() => { if (window.confirm('Reset every ' + (voice ? 'Voiceover' : edit ? 'Edit' : 'Review') + ' shortcut to its default?')) resetAllKeybinds() }}>Reset all to defaults</button>
         </div>
       </div>
     </div>
