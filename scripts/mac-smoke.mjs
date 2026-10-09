@@ -93,7 +93,7 @@ await step('app opens and loads', true, async () => {
 })
 
 await step('Settings → Tools shows', true, async () => {
-  const txt = await js(`window.__store.getState().openModal('settings'); await new Promise(r => setTimeout(r, 1000)); return document.querySelector('.tools-setup') && document.querySelector('.tools-setup').innerText`)
+  const txt = await js(`try { localStorage.setItem('settingsTab', 'ai') } catch {}; window.__store.getState().openModal('settings'); await new Promise(r => setTimeout(r, 1000)); return document.querySelector('.tools-setup') && document.querySelector('.tools-setup').innerText`)
   await shot('02-tools')
   if (!txt) throw new Error('no Tools section')
   return txt.split('\n').slice(0, 6)
