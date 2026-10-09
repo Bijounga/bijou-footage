@@ -7,10 +7,10 @@ import { BUILT_IN_THEMES } from '../lib/themes.js'
 import { UpdatesSection } from './Updates.jsx'
 import { ToolsSection } from './ToolsSetup.jsx'
 
-function Modal({ title, onClose, children, wide }) {
+function Modal({ title, onClose, children, wide, className }) {
   return (
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={'modal' + (wide ? ' wide' : '')}>
+      <div className={'modal' + (wide ? ' wide' : '') + (className ? ' ' + className : '')}>
         <div className="modal-head">
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose}>×</button>
@@ -226,6 +226,16 @@ function StorageSection() {
   )
 }
 
+const SETTINGS_TABS = [
+  ['general', 'General'],
+  ['appearance', 'Appearance'],
+  ['review', 'Reviewing'],
+  ['edit', 'Editing'],
+  ['tracks', 'Audio tracks'],
+  ['ai', 'Transcription & AI'],
+  ['storage', 'Storage']
+]
+
 export function SettingsModal() {
   const settings = useStore((s) => s.settings)
   const tools = useStore((s) => s.tools)
@@ -251,126 +261,198 @@ export function SettingsModal() {
   // Pick up themes made in BijouDocs since this app started.
   useEffect(() => { refreshBijouThemes() }, [])
   const titleBarPending = !!settings.hideTitleBar !== frameless
+  // Which page is open (remembered for next time).
+  const [tab, setTab] = React.useState(() => {
+    try { return localStorage.getItem('settingsTab') || 'general' } catch { return 'general' }
+  })
+  const pickTab = (id) => {
+    setTab(id)
+    try { localStorage.setItem('settingsTab', id) } catch {}
+  }
 
   return (
-    <Modal title="Settings" onClose={closeModal}>
-      <div className="settings">
-        <UpdatesSection />
-        <ToolsSection />
-        <section>
-          <h3>Theme</h3>
-          <div className="theme-grid">
-            {allThemes.map((t) => (
-              <button key={t.id} className={'theme-card' + ((settings.theme || 'dark') === t.id ? ' on' : '')} onClick={() => setTheme(t.id)} title={t.note ? t.name + ' — ' + t.note : t.name}>
-                <span className="theme-swatch" style={{ background: t.colors['--bg'] }}>
-                  <i style={{ background: t.colors['--panel'] }} />
-                  <i style={{ background: t.colors['--panel-3'] }} />
-                  <i style={{ background: t.colors['--cyan'] }} />
-                  <i style={{ background: t.colors['--ink'] }} />
-                </span>
-                <span className="theme-name">{t.name}</span>
-                {t.note && <span className="theme-note">{t.note}</span>}
-              </button>
-            ))}
-          </div>
-          {/Lcd$/.test(settings.theme || '') && (
-            <label className="check">
-              <input type="checkbox" checked={settings.lcdGrid !== false} onChange={(e) => updateSettings({ lcdGrid: e.target.checked })} /> Pixel grid over the LCD timeline (off: easier to read clip names and waveforms)
-            </label>
-          )}
-          <p className="dim small">Includes BijouDocs' themes, and any custom themes you make there. The video area always stays black.</p>
-        </section>
-        <section>
-          <h3>Window</h3>
-          <label className="check">
-            <input type="checkbox" checked={!!settings.hideTitleBar} onChange={(e) => setHideTitleBar(e.target.checked)} />
-            Hide the Windows title bar (more room — drag the window by the app's top strips)
-          </label>
-          {titleBarPending && (
-            <div className="row">
-              <span className="dim small">The window reopens to apply this (everything's saved).</span>
-              <button className="btn small primary" onClick={() => { useStore.getState().flushSave(); window.footage.recreateWindow() }}>Apply now</button>
-            </div>
-          )}
-          <p className="dim small">For every last pixel, <b>Full screen</b> (F11, changeable in Keyboard shortcuts) also covers the taskbar.</p>
-        </section>
-        <section>
-          <h3>Recordings folders &amp; files</h3>
-          {settings.folders.map((f) => (
-            <div key={f} className="folder-row">
-              <span>{f}</span>
-              <button className="btn small ghost" onClick={() => removeFolder(f)}>Remove</button>
-            </div>
+    <Modal title="Settings" onClose={closeModal} className="settings-modal">
+      <div className="settings-layout">
+        <nav className="settings-nav">
+          {SETTINGS_TABS.map(([id, label]) => (
+            <button key={id} className={tab === id ? 'on' : ''} onClick={() => pickTab(id)}>{label}</button>
           ))}
-          {(settings.files || []).map((f) => (
-            <div key={f} className="folder-row">
-              <span title="Added as a single file">🎞 {f}</span>
-              <button className="btn small ghost" onClick={() => removeFile(f)}>Remove</button>
-            </div>
-          ))}
-          <div className="row">
-            <button className="btn small" onClick={addFolders}>Add folder…</button>
-            <button className="btn small" onClick={addFiles}>Add files…</button>
-            <button className="btn small ghost" onClick={rescan}>Rescan</button>
-            <span className="dim small">{clips.length} recordings found (subfolders included)</span>
-          </div>
-        </section>
-        <section>
-          <h3>Tracks</h3>
-          <p className="dim small">Your OBS audio tracks, in order: default name and color. To name a track differently in one recording, rename it on the timeline. Tracks that are silent in a recording are detected automatically.</p>
-          <div className="track-names">
-            {settings.trackNames.slice(0, 6).map((n, i) => (
-              <label key={i} style={{ '--c': trackColors[i] }}>
-                <span className="th-color" title="Track color · right-click to reset" onContextMenu={(e) => { e.preventDefault(); setTrackColor(i, null) }}>
-                  <input type="color" value={trackColors[i]} onChange={(e) => setTrackColor(i, e.target.value)} />
-                </span>
-                {i + 1}
-                <input defaultValue={n} placeholder={DEFAULT_TRACK_NAMES[i]} onBlur={(e) => renameTrack(i, e.target.value.trim())} />
-              </label>
-            ))}
-          </div>
-          <button className="btn small ghost" style={{ alignSelf: 'flex-start' }} onClick={() => TRACK_COLORS.forEach((_, i) => setTrackColor(i, null))}>Reset colors</button>
-          <label className="check"><input type="checkbox" checked={settings.autoMuteEmpty} onChange={(e) => updateSettings({ autoMuteEmpty: e.target.checked })} /> Auto-mute tracks that are empty in a recording</label>
-        </section>
-        <section>
-          <h3>Reviewing</h3>
-          <label className="inline wide" title="How quiet talking can be and still count, for the A speech markers and Ctrl+→ skip">Speech detection sensitivity <input type="range" min="0" max="1" step="0.05" value={settings.speechSensitivity ?? 0.5} onChange={(e) => updateSettings({ speechSensitivity: Number(e.target.value) })} /> <span className="dim small">{Math.round((settings.speechSensitivity ?? 0.5) * 100)}%</span></label>
-          <label className="check"><input type="checkbox" checked={!!settings.noteColorBars} onChange={(e) => updateSettings({ noteColorBars: e.target.checked })} /> Color strip on the left of each note (beat / marker color)</label>
-          <label className="check"><input type="checkbox" checked={settings.pauseWhileTyping} onChange={(e) => updateSettings({ pauseWhileTyping: e.target.checked })} /> Pause while typing a note (resumes on Enter)</label>
-          <label className="check"><input type="checkbox" checked={settings.instantSeek !== false} onChange={(e) => updateSettings({ instantSeek: e.target.checked })} /> Instant seeks while playing</label>
-          <p className="dim small">Clicking or skipping while playing starts from the nearest keyframe (up to ~2–4s before the spot, so you never miss it) and keeps playing with no delay. Seeks while paused are always frame-exact.</p>
-          <div className="row">
-            <label className="inline">Arrow skip <input type="number" min="1" max="120" value={settings.skipSmall} onChange={(e) => updateSettings({ skipSmall: Math.max(1, Number(e.target.value) || 5) })} /> s</label>
-            <label className="inline">Shift+Arrow skip <input type="number" min="1" max="600" value={settings.skipBig} onChange={(e) => updateSettings({ skipBig: Math.max(1, Number(e.target.value) || 30) })} /> s</label>
-          </div>
-        </section>
-        <section>
-          <h3>Transcription</h3>
-          <p className="dim small">Runs on your graphics card (Whisper large-v3-turbo). Pick which tracks get transcribed in the Transcript tab.</p>
-          <label className="check"><input type="checkbox" checked={settings.autoTranscribeOpen !== false} onChange={(e) => updateSettings({ autoTranscribeOpen: e.target.checked })} /> Transcribe a recording when I open it</label>
-          <label className="check"><input type="checkbox" checked={!!settings.autoTranscribeAll} onChange={(e) => { updateSettings({ autoTranscribeAll: e.target.checked }); if (e.target.checked) useStore.getState().autoTranscribe() }} /> Transcribe everything in the background (newest first — keeps the graphics card busy)</label>
-          <label className="inline wide">Language <select value={settings.transcriptLang ?? 'en'} onChange={(e) => updateSettings({ transcriptLang: e.target.value })}>
-            <option value="en">English</option>
-            <option value="">Detect automatically</option>
-          </select></label>
-        </section>
-        <StorageSection />
-        <section>
-          <h3>Waveforms &amp; ffmpeg</h3>
-          <div className="dim small">
-            ffmpeg: {tools.ffmpeg || <b className="error-text">not found</b>} · ffprobe: {tools.ffprobe || <b className="error-text">not found</b>}
-          </div>
-          <label className="inline wide">ffmpeg folder (optional) <input defaultValue={settings.ffmpegDir} placeholder="C:\ffmpeg\bin" onBlur={(e) => updateSettings({ ffmpegDir: e.target.value.trim() })} /></label>
-          <label className="check"><input type="checkbox" checked={settings.autoPrepare !== false} onChange={(e) => updateSettings({ autoPrepare: e.target.checked })} /> Prepare every recording in the background</label>
-          <p className="dim small">Builds waveforms and copies each audio track into a small file (no re-encoding), so seeking and multi-track playback are instant. Newest recordings first; whatever you open jumps the queue. Its size limit is under Storage above.</p>
-          <div className="row">
-            {queue > 0 ? (
-              <span className="dim small">{queue} recording{queue === 1 ? '' : 's'} left to prepare</span>
-            ) : (
-              <button className="btn small" onClick={buildAll}>Prepare all now</button>
-            )}
-          </div>
-        </section>
+        </nav>
+        <div className="settings" key={tab}>
+          {tab === 'general' && (
+            <>
+              <UpdatesSection />
+              <section>
+                <h3>Window</h3>
+                <label className="check">
+                  <input type="checkbox" checked={!!settings.hideTitleBar} onChange={(e) => setHideTitleBar(e.target.checked)} />
+                  Hide the Windows title bar (more room — drag the window by the app's top strips)
+                </label>
+                {titleBarPending && (
+                  <div className="row">
+                    <span className="dim small">The window reopens to apply this (everything's saved).</span>
+                    <button className="btn small primary" onClick={() => { useStore.getState().flushSave(); window.footage.recreateWindow() }}>Apply now</button>
+                  </div>
+                )}
+                <p className="dim small">For every last pixel, <b>Full screen</b> (F11, changeable in Keyboard shortcuts) also covers the taskbar.</p>
+              </section>
+              <section>
+                <h3>Recordings folders &amp; files</h3>
+                {settings.folders.map((f) => (
+                  <div key={f} className="folder-row">
+                    <span>{f}</span>
+                    <button className="btn small ghost" onClick={() => removeFolder(f)}>Remove</button>
+                  </div>
+                ))}
+                {(settings.files || []).map((f) => (
+                  <div key={f} className="folder-row">
+                    <span title="Added as a single file">🎞 {f}</span>
+                    <button className="btn small ghost" onClick={() => removeFile(f)}>Remove</button>
+                  </div>
+                ))}
+                <div className="row">
+                  <button className="btn small" onClick={addFolders}>Add folder…</button>
+                  <button className="btn small" onClick={addFiles}>Add files…</button>
+                  <button className="btn small ghost" onClick={rescan}>Rescan</button>
+                  <span className="dim small">{clips.length} recordings found (subfolders included)</span>
+                </div>
+              </section>
+            </>
+          )}
+          {tab === 'appearance' && (
+            <>
+              <section>
+                <h3>Theme</h3>
+                <div className="theme-grid">
+                  {allThemes.map((t) => (
+                    <button key={t.id} className={'theme-card' + ((settings.theme || 'dark') === t.id ? ' on' : '')} onClick={() => setTheme(t.id)} title={t.note ? t.name + ' — ' + t.note : t.name}>
+                      <span className="theme-swatch" style={{ background: t.colors['--bg'] }}>
+                        <i style={{ background: t.colors['--panel'] }} />
+                        <i style={{ background: t.colors['--panel-3'] }} />
+                        <i style={{ background: t.colors['--cyan'] }} />
+                        <i style={{ background: t.colors['--ink'] }} />
+                      </span>
+                      <span className="theme-name">{t.name}</span>
+                      {t.note && <span className="theme-note">{t.note}</span>}
+                    </button>
+                  ))}
+                </div>
+                {/Lcd$/.test(settings.theme || '') && (
+                  <label className="check">
+                    <input type="checkbox" checked={settings.lcdGrid !== false} onChange={(e) => updateSettings({ lcdGrid: e.target.checked })} /> Pixel grid over the LCD timeline (off: easier to read clip names and waveforms)
+                  </label>
+                )}
+                <p className="dim small">Includes BijouDocs' themes, and any custom themes you make there. The video area always stays black.</p>
+              </section>
+            </>
+          )}
+          {tab === 'review' && (
+            <>
+              <section>
+                <h3>Reviewing</h3>
+                <label className="inline wide" title="How quiet talking can be and still count, for the A speech markers and Ctrl+→ skip">Speech detection sensitivity <input type="range" min="0" max="1" step="0.05" value={settings.speechSensitivity ?? 0.5} onChange={(e) => updateSettings({ speechSensitivity: Number(e.target.value) })} /> <span className="dim small">{Math.round((settings.speechSensitivity ?? 0.5) * 100)}%</span></label>
+                <label className="check"><input type="checkbox" checked={!!settings.noteColorBars} onChange={(e) => updateSettings({ noteColorBars: e.target.checked })} /> Color strip on the left of each note (beat / marker color)</label>
+                <label className="check"><input type="checkbox" checked={settings.pauseWhileTyping} onChange={(e) => updateSettings({ pauseWhileTyping: e.target.checked })} /> Pause while typing a note (resumes on Enter)</label>
+                <label className="check"><input type="checkbox" checked={settings.instantSeek !== false} onChange={(e) => updateSettings({ instantSeek: e.target.checked })} /> Instant seeks while playing</label>
+                <p className="dim small">Clicking or skipping while playing starts from the nearest keyframe (up to ~2–4s before the spot, so you never miss it) and keeps playing with no delay. Seeks while paused are always frame-exact.</p>
+                <div className="row">
+                  <label className="inline">Arrow skip <input type="number" min="1" max="120" value={settings.skipSmall} onChange={(e) => updateSettings({ skipSmall: Math.max(1, Number(e.target.value) || 5) })} /> s</label>
+                  <label className="inline">Shift+Arrow skip <input type="number" min="1" max="600" value={settings.skipBig} onChange={(e) => updateSettings({ skipBig: Math.max(1, Number(e.target.value) || 30) })} /> s</label>
+                </div>
+              </section>
+            </>
+          )}
+          {tab === 'edit' && (
+            <>
+              <section>
+                <h3>Zoom presets</h3>
+                <p className="dim small">One key sets the selected clip (or the one under the playhead) to a zoom — bind them to mouse gestures in Logi Options. Change the keys under Keyboard shortcuts → Framing.</p>
+                <div className="preset-grid">
+                  {[0, 1, 2].map((i) => (
+                    <label key={i} className="preset">
+                      <kbd>Alt+{i + 1}</kbd>
+                      <input type="number" min="10" max="1000" step="5" value={(settings.zoomPresets || [175, 225, 325])[i]} onChange={(e) => {
+                        const next = (settings.zoomPresets || [175, 225, 325]).slice()
+                        next[i] = Math.max(10, Math.min(1000, Number(e.target.value) || 100))
+                        updateSettings({ zoomPresets: next })
+                      }} />
+                      <span>%</span>
+                    </label>
+                  ))}
+                  <div className="preset reset" title="Back to 100%, centred">
+                    <kbd>Alt+0</kbd>
+                    <span>Reset to 100%</span>
+                  </div>
+                </div>
+              </section>
+              <section>
+                <h3>On the monitor</h3>
+                <ul className="settings-tips">
+                  <li><b>Click the picture</b> (Move tool) to select the clip — drag to move it, drag a handle to zoom it.</li>
+                  <li><b>Scroll</b> over the picture zooms the clip at the mouse; <b>Ctrl+scroll</b> / pinch zooms only your view.</li>
+                  <li><b>Hold Ctrl</b> while dragging to snap to the centre and edges (always on with Snap; Shift turns it off).</li>
+                </ul>
+              </section>
+            </>
+          )}
+          {tab === 'tracks' && (
+            <>
+              <section>
+                <h3>Tracks</h3>
+                <p className="dim small">Your OBS audio tracks, in order: default name and color. To name a track differently in one recording, rename it on the timeline. Tracks that are silent in a recording are detected automatically.</p>
+                <div className="track-names">
+                  {settings.trackNames.slice(0, 6).map((n, i) => (
+                    <label key={i} style={{ '--c': trackColors[i] }}>
+                      <span className="th-color" title="Track color · right-click to reset" onContextMenu={(e) => { e.preventDefault(); setTrackColor(i, null) }}>
+                        <input type="color" value={trackColors[i]} onChange={(e) => setTrackColor(i, e.target.value)} />
+                      </span>
+                      {i + 1}
+                      <input defaultValue={n} placeholder={DEFAULT_TRACK_NAMES[i]} onBlur={(e) => renameTrack(i, e.target.value.trim())} />
+                    </label>
+                  ))}
+                </div>
+                <button className="btn small ghost" style={{ alignSelf: 'flex-start' }} onClick={() => TRACK_COLORS.forEach((_, i) => setTrackColor(i, null))}>Reset colors</button>
+                <label className="check"><input type="checkbox" checked={settings.autoMuteEmpty} onChange={(e) => updateSettings({ autoMuteEmpty: e.target.checked })} /> Auto-mute tracks that are empty in a recording</label>
+              </section>
+            </>
+          )}
+          {tab === 'ai' && (
+            <>
+              <ToolsSection />
+              <section>
+                <h3>Transcription</h3>
+                <p className="dim small">Runs on your graphics card (Whisper large-v3-turbo). Pick which tracks get transcribed in the Transcript tab.</p>
+                <label className="check"><input type="checkbox" checked={settings.autoTranscribeOpen !== false} onChange={(e) => updateSettings({ autoTranscribeOpen: e.target.checked })} /> Transcribe a recording when I open it</label>
+                <label className="check"><input type="checkbox" checked={!!settings.autoTranscribeAll} onChange={(e) => { updateSettings({ autoTranscribeAll: e.target.checked }); if (e.target.checked) useStore.getState().autoTranscribe() }} /> Transcribe everything in the background (newest first — keeps the graphics card busy)</label>
+                <label className="inline wide">Language <select value={settings.transcriptLang ?? 'en'} onChange={(e) => updateSettings({ transcriptLang: e.target.value })}>
+                  <option value="en">English</option>
+                  <option value="">Detect automatically</option>
+                </select></label>
+              </section>
+            </>
+          )}
+          {tab === 'storage' && (
+            <>
+              <StorageSection />
+              <section>
+                <h3>Waveforms &amp; ffmpeg</h3>
+                <div className="dim small">
+                  ffmpeg: {tools.ffmpeg || <b className="error-text">not found</b>} · ffprobe: {tools.ffprobe || <b className="error-text">not found</b>}
+                </div>
+                <label className="inline wide">ffmpeg folder (optional) <input defaultValue={settings.ffmpegDir} placeholder="C:\ffmpeg\bin" onBlur={(e) => updateSettings({ ffmpegDir: e.target.value.trim() })} /></label>
+                <label className="check"><input type="checkbox" checked={settings.autoPrepare !== false} onChange={(e) => updateSettings({ autoPrepare: e.target.checked })} /> Prepare every recording in the background</label>
+                <p className="dim small">Builds waveforms and copies each audio track into a small file (no re-encoding), so seeking and multi-track playback are instant. Newest recordings first; whatever you open jumps the queue. Its size limit is just above.</p>
+                <div className="row">
+                  {queue > 0 ? (
+                    <span className="dim small">{queue} recording{queue === 1 ? '' : 's'} left to prepare</span>
+                  ) : (
+                    <button className="btn small" onClick={buildAll}>Prepare all now</button>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+        </div>
       </div>
     </Modal>
   )

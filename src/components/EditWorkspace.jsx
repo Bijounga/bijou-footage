@@ -11,6 +11,7 @@ import ViewerButton from './ViewerButton.jsx'
 import { useVideoZoom } from '../lib/videoZoom.js'
 import { PlayerHideButton, usePanelOutside } from './LayoutToggles.jsx'
 import EditTimeline from './EditTimeline.jsx'
+import FramingBox from './FramingBox.jsx'
 import EditPanel from './EditPanel.jsx'
 import { ToolsMenu, RemoveSilenceDialog, CutAroundDialog, ExportSectionDialog } from './EditTools.jsx'
 import { startEditSkipSilence } from '../lib/editSkipSilence.js'
@@ -112,11 +113,11 @@ function Bin() {
     <div className="es-block es-bin">
       <div className="es-head">
         <span>Recordings</span>
-        {list.length > 0 && <span className="dim small">drag onto the timeline, or ＋</span>}
         {list.length > 0 && (
           <button className="link-btn" title="Add a folder of recordings to this project" onClick={() => useStore.getState().addProjectFolders(project.id)}>＋ Folder</button>
         )}
       </div>
+      {list.length > 0 && <div className="es-hint dim small">Drag onto the timeline, or press ＋</div>}
       {!list.length && <ProjectFolders project={project} />}
       <div className="es-bin-list">
         {list.map((c, i) => (
@@ -260,7 +261,36 @@ function Monitor({ section }) {
   const aRef = useRef(null)
   const bRef = useRef(null)
   const stageRef = useRef(null)
-  const zoom = useVideoZoom(stageRef, '.em-video')
+  const frameRef = useRef(null)
+  // View zoom (Ctrl+scroll / pinch): only how you look at the monitor —
+  // down to 25%, to reach a zoomed clip's handles. Framing is per clip.
+  const zoom = useVideoZoom(stageRef, '.em-view', undefined, { min: 0.25 })
+  // The sequence frame (the first clip's size, as in the export),
+  // letterboxed in the monitor; clips are framed inside it.
+  const seqSize = useStore((s) => {
+    const sec = s.currentSection()
+    const first = sec && sec.clips[0] && s.clips.find((c) => c.key === sec.clips[0].key)
+    const p = first && first.probe
+    return p && p.width && p.height ? p.width + 'x' + p.height : '1920x1080'
+  })
+  const [seqW, seqH] = seqSize.split('x').map(Number)
+  const [frameBox, setFrameBox] = useState(null)
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+    const fit = () => {
+      const W = stage.clientWidth
+      const H = stage.clientHeight
+      const k = Math.min(W / seqW, H / seqH)
+      const w = Math.round(seqW * k)
+      const h = Math.round(seqH * k)
+      setFrameBox({ left: Math.round((W - w) / 2), top: Math.round((H - h) / 2), width: w, height: h })
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(stage)
+    return () => ro.disconnect()
+  }, [seqW, seqH])
   const playing = useSeqPlaying()
   const tool = useStore((s) => s.editTool)
   const setEditTool = useStore((s) => s.setEditTool)
@@ -289,11 +319,16 @@ function Monitor({ section }) {
   const total = section ? EM.totalDuration(section.clips) : 0
   return (
     <div className="em">
-      <div className="em-stage" ref={stageRef}>
+      <div className={'em-stage' + (zoom.scale < 1 ? ' view-out' : '')} ref={stageRef}>
         {sideHidden && <button className="icon-btn lib-show em-side-show" onClick={() => useStore.getState().toggleEditSidebar()} title="Show the sidebar (Ctrl+\)">»</button>}
-        <video ref={aRef} className="em-video" />
-        <video ref={bRef} className="em-video" />
-        {zoom.scale > 1 && <button className="zoom-badge" onClick={(e) => { e.stopPropagation(); zoom.reset() }} onDoubleClick={(e) => e.stopPropagation()} title="Back to 100% (Ctrl+0) · Ctrl+scroll or pinch to zoom, drag to move">{Math.round(zoom.scale * 100)}% ⟲</button>}
+        <div className="em-view">
+          <div className="em-frame" ref={frameRef} style={frameBox || undefined}>
+            <video ref={aRef} className="em-video" />
+            <video ref={bRef} className="em-video" />
+          </div>
+        </div>
+        <FramingBox stageRef={stageRef} frameRef={frameRef} seqW={seqW} seqH={seqH} />
+        {zoom.scale !== 1 && <button className="zoom-badge" onClick={(e) => { e.stopPropagation(); zoom.reset() }} onDoubleClick={(e) => e.stopPropagation()} title="View back to 100% (Ctrl+0) · Ctrl+scroll or pinch to zoom the view (not the clip)">View {Math.round(zoom.scale * 100)}% ⟲</button>}
         {(!section || !section.clips.length) && (
           <div className="em-empty">
             {!section ? <p>Make a section on the left (e.g. “King Slime → Eye of Cthulhu”).</p> : <p>Drag recordings from the left onto the timeline, or press ＋ — then cut with <kbd>F</kbd>, <kbd>A</kbd>, <kbd>S</kbd>, <kbd>G</kbd>.</p>}
@@ -302,11 +337,11 @@ function Monitor({ section }) {
         {osd && <div className="osd" key={osd.id}>{osd.text}</div>}
       </div>
       <div className="transport em-transport">
-        <button className="t-btn" onClick={() => seqPlayer.seek(0)} title="Start (Home)">⏮</button>
+        <button className="t-btn em-jump" onClick={() => seqPlayer.seek(0)} title="Start (Home)">⏮</button>
         <button className="t-btn" onClick={() => runEditKey('e.slower')} title="Slower / reverse (J)">◀◀</button>
         <button className="t-btn play" onClick={() => seqPlayer.toggle()} title="Play / pause (Space) · K stops">{playing ? '❚❚' : '▶'}</button>
         <button className="t-btn" onClick={() => runEditKey('e.faster')} title="Faster (L)">▶▶</button>
-        <button className="t-btn" onClick={() => bus.emit('editNextCut', 1)} title="Next cut (↓)">⏭</button>
+        <button className="t-btn em-jump" onClick={() => bus.emit('editNextCut', 1)} title="Next cut (↓)">⏭</button>
         <button className="t-btn em-speech" onClick={() => runEditKey('e.prevSpeech')} title="Back to the previous time someone starts talking (Ctrl+←)">‹<SpeechIcon /></button>
         <button className="t-btn em-speech" onClick={() => runEditKey('e.nextSpeech')} title="Next time someone starts talking (Ctrl+→)"><SpeechIcon />›</button>
         <div className="t-time">
@@ -331,13 +366,13 @@ function Monitor({ section }) {
           <span>Skip silence</span>
         </button>
         <div className="t-spacer" />
-        <button className="t-btn" onClick={() => useStore.getState().openSketch()} title="Sketch note — draw your idea on this frame (P)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" /><path d="M9 4l3 3" /></svg></button>
+        <button className="t-btn em-sketch" onClick={() => useStore.getState().openSketch()} title="Sketch note — draw your idea on this frame (P)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3-8 8H2.5v-3z" /><path d="M9 4l3 3" /></svg></button>
         <ViewerButton />
         <PlayerHideButton />
         {panelHidden && <button className="btn small ghost" onClick={() => useStore.getState().toggleEditPanel()} title="Show Notes & Transcript (Ctrl+Shift+\)">Notes &amp; transcript</button>}
         <ToolsMenu />
         <span className="em-name dim">{section ? section.name : ''}</span>
-        <button className="btn small" disabled={!section || !section.clips.length} onClick={() => bus.emit('exportSection')} title="Export this section as a Premiere sequence (Ctrl+E)">Export to Premiere</button>
+        <button className="btn small" disabled={!section || !section.clips.length} onClick={() => bus.emit('exportSection')} title="Export this section as a Premiere sequence (Ctrl+E)"><span className="ex-long">Export to Premiere</span><span className="ex-short">Export</span></button>
       </div>
     </div>
   )
@@ -357,7 +392,7 @@ async function exportSection(opts = {}) {
   for (const it of items) {
     const c = st.clips.find((x) => x.key === it.key)
     if (!c) continue
-    clips.push({ path: c.path, name: c.name, probe: { fps: c.probe.fps, duration: c.probe.duration, width: c.probe.width, height: c.probe.height, audio: c.probe.audio }, in: it.in, out: it.out, color: it.color || null })
+    clips.push({ path: c.path, name: c.name, probe: { fps: c.probe.fps, duration: c.probe.duration, width: c.probe.width, height: c.probe.height, audio: c.probe.audio }, in: it.in, out: it.out, color: it.color || null, motion: EM.isFramed(it.motion) ? it.motion : null })
     // The recording's notes & markers that fall inside this cut, moved to
     // where they land in the section.
     const notes = (st.reviews[it.key] && st.reviews[it.key].notes) || []

@@ -34,6 +34,19 @@ function clipAtPlayhead(st) {
   return at ? at.clip : null
 }
 
+// Zoom presets (Settings → Editing): the selected clips, or the one under
+// the playhead. Bind them to mouse gestures (they're just keys).
+export const DEFAULT_ZOOM_PRESETS = [175, 225, 325]
+function framingTargets(st) {
+  if (st.editSel.length) return st.editSel
+  const c = clipAtPlayhead(st)
+  return c ? [c.id] : []
+}
+function zoomPreset({ st, osd }, i) {
+  const pct = (st.settings.zoomPresets || DEFAULT_ZOOM_PRESETS)[i]
+  if (!pct || !st.setClipMotion(framingTargets(st), (m) => ({ ...m, scale: pct }))) return
+  osd(pct + '%')
+}
 function shuttleLabel() {
   const r = seqPlayer.shuttleRate
   return r < 0 ? '◀◀ ' + Math.abs(r) + '×' : r === 0 ? '❚❚' : '▶ ' + r + '×'
@@ -129,6 +142,10 @@ export const EDIT_ACTIONS = [
   } },
   { id: 'e.snap', label: 'Toggle snapping', cat: 'Edit', keys: ['W'], run: ({ st }) => st.toggleEditSnap() },
   { id: 'e.razor', label: 'Cut tool (click a clip to cut it)', cat: 'Edit', keys: ['C'], run: ({ st }) => st.setEditTool('razor') },
+  { id: 'e.zoomPreset1', label: 'Zoom preset 1 on the selected clip (or the one at the playhead) — % in Settings', cat: 'Framing', keys: ['Alt+1'], run: (c) => zoomPreset(c, 0) },
+  { id: 'e.zoomPreset2', label: 'Zoom preset 2 — % in Settings', cat: 'Framing', keys: ['Alt+2'], run: (c) => zoomPreset(c, 1) },
+  { id: 'e.zoomPreset3', label: 'Zoom preset 3 — % in Settings', cat: 'Framing', keys: ['Alt+3'], run: (c) => zoomPreset(c, 2) },
+  { id: 'e.framingReset', label: 'Reset framing (100%, centred) on the selected clip (or the one at the playhead)', cat: 'Framing', keys: ['Alt+0'], run: ({ st, osd }) => { if (st.setClipMotion(framingTargets(st), () => ({ scale: 100, x: 0, y: 0 }))) osd('100%') } },
   { id: 'e.selectTool', label: 'Move tool (select / drag clips)', cat: 'Edit', keys: ['V'], run: ({ st }) => st.setEditTool('select') },
   { id: 'e.deselect', label: 'Clear selection / back to the move tool', cat: 'Edit', keys: ['Escape'], run: ({ st }) => { st.setEditSel([]); st.setEditTool('select') } },
   { id: 'e.selectAll', label: 'Select all clips', cat: 'Edit', keys: ['Ctrl+A'], run: ({ st }) => { const s = sec(st); if (s) st.setEditSel(s.clips.map((c) => c.id)) } },

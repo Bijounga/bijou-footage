@@ -15,8 +15,15 @@ import { player } from './player.js'
 import { seqPlayer } from './seqPlayer.js'
 import { bus } from './hooks.js'
 import { useStore } from '../state/store.js'
+import { isFramed } from './editModel.js'
 
 const workspace = () => useStore.getState().settings.workspace || 'review'
+// The framing of the edit clip on screen (or while it's being dragged).
+function seqFraming() {
+  const it = seqPlayer.currentItem()
+  const m = seqPlayer.liveMotion || (it && it.motion)
+  return isFramed(m) ? m : null
+}
 
 let win = null
 let raf = 0
@@ -183,21 +190,36 @@ export function openViewer() {
     noSourceSince = 0
     if (el.readyState < 2 || !el.videoWidth) return // between frames: keep the last one
     const frame = Math.floor(el.currentTime * fps() + 0.01)
-    if (!force && !resized && el === last.el && frame === last.frame && w === last.w && h === last.h && el.videoWidth === last.vw) return
+    // Edit: the clip's framing (zoom / position), as on the monitor.
+    const m = workspace() === 'edit' ? seqFraming() : null
+    const mk = m ? m.scale + ',' + m.x + ',' + m.y : ''
+    if (!force && !resized && el === last.el && frame === last.frame && w === last.w && h === last.h && el.videoWidth === last.vw && mk === last.mk) return
     // Letterboxed, like the main player (object-fit: contain).
     const sc = Math.min(w / el.videoWidth, h / el.videoHeight)
     const dw = Math.round(el.videoWidth * sc)
     const dh = Math.round(el.videoHeight * sc)
-    if (resized || w !== last.w || h !== last.h || dw !== last.dw || vz.s > 1) {
+    if (resized || w !== last.w || h !== last.h || dw !== last.dw || vz.s > 1 || m || last.mk) {
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, w, h)
     }
     // Zoomed in (its own zoom, separate from the main player's).
     if (vz.s > 1) ctx.setTransform(vz.s, 0, 0, vz.s, vz.x, vz.y)
-    ctx.drawImage(el, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh)
+    const ox = Math.round((w - dw) / 2)
+    const oy = Math.round((h - dh) / 2)
+    if (m) {
+      // Framed: scaled about its centre, shifted, cut to the frame.
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(ox, oy, dw, dh)
+      ctx.clip()
+      ctx.translate(ox + dw / 2 + m.x * dw, oy + dh / 2 + m.y * dh)
+      ctx.scale(m.scale / 100, m.scale / 100)
+      ctx.drawImage(el, -dw / 2, -dh / 2, dw, dh)
+      ctx.restore()
+    } else ctx.drawImage(el, ox, oy, dw, dh)
     if (vz.s > 1) ctx.setTransform(1, 0, 0, 1, 0, 0)
     stats.draws++
-    last = { el, frame, w, h, vw: el.videoWidth, dw }
+    last = { el, frame, w, h, vw: el.videoWidth, dw, mk }
   }
   const draw = () => {
     if (!win || win.closed) return

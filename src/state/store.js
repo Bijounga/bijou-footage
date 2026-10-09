@@ -668,7 +668,7 @@ export const useStore = create(
     },
     // Any change to the section (its cut and/or its timeline markers) — one
     // undo step.
-    applySection(patch, { playhead = null, select = null } = {}) {
+    applySection(patch, { playhead = null, select = null, framing = false } = {}) {
       const sec = get().currentSection()
       if (!sec) return false
       set((s) => {
@@ -681,7 +681,8 @@ export const useStore = create(
         const clips = x.clips
         s.editSel = select || s.editSel.filter((id) => clips.some((c) => c.id === id))
       })
-      if (patch.clips) seqPlayer.setClips(patch.clips).then(() => { if (playhead != null) seqPlayer.seek(playhead) })
+      if (patch.clips && framing) seqPlayer.setMotions(patch.clips)
+      else if (patch.clips) seqPlayer.setClips(patch.clips).then(() => { if (playhead != null) seqPlayer.seek(playhead) })
       else if (playhead != null) seqPlayer.seek(playhead)
       return true
     },
@@ -729,9 +730,16 @@ export const useStore = create(
         ;(redo ? s.editRedo : s.editUndo).splice(i, 1)
         x.clips = entry.clips
         x.markers = entry.markers || []
-        s.editSel = []
+        // Keep what's selected (e.g. the clip being framed) if it's still there.
+        s.editSel = s.editSel.filter((id) => entry.clips.some((c) => c.id === id))
       })
       seqPlayer.setClips(entry.clips)
+    },
+    // Framing (zoom / position) of clips — one undo step, no re-seek.
+    setClipMotion(ids, fn) {
+      const sec = get().currentSection()
+      if (!sec || !ids.length) return false
+      return get().applySection({ clips: EM.setMotion(sec.clips, ids, fn) }, { framing: true })
     },
     setEditSel(ids) {
       set((s) => { s.editSel = ids })

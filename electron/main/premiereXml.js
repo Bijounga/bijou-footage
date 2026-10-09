@@ -169,6 +169,18 @@ export function buildCsv(clips) {
 // in/out are seconds in the source recording, marker t is sequence time.
 // Each cut becomes a linked video + audio clipitem group, like a clip cut
 // with the razor in Premiere; each source file is described once.
+// A cut's framing as Premiere's Motion effect (FCP7 "Basic Motion"): Scale
+// in %, Center as the offset from the frame centre in fractions of the
+// frame — the convention FilmCraft's FCP7 writer documents, too.
+function motionXml(m) {
+  if (!m) return ''
+  const n = (v) => String(Math.round(v * 1e6) / 1e6)
+  return `<filter><effect><name>Basic Motion</name><effectid>basic</effectid><effectcategory>motion</effectcategory><effecttype>motion</effecttype><mediatype>video</mediatype>` +
+    `<parameter authoringApp="PremierePro"><parameterid>scale</parameterid><name>Scale</name><valuemin>0</valuemin><valuemax>1000</valuemax><value>${n(m.scale)}</value></parameter>` +
+    `<parameter authoringApp="PremierePro"><parameterid>center</parameterid><name>Center</name><value><horiz>${n(m.x)}</horiz><vert>${n(m.y)}</vert></value></parameter>` +
+    `</effect></filter>`
+}
+
 export function buildSequenceXml({ name, clips, markers }) {
   const first = clips[0] || {}
   const r = rateFor(first.probe && first.probe.fps)
@@ -229,7 +241,7 @@ export function buildSequenceXml({ name, clips, markers }) {
     const labels = c.color ? `<labels><label2>${esc(c.color)}</label2></labels>` : ''
     const item = (id, attrs, inner) =>
       `<clipitem id="${id}"${attrs}><name>${esc(c.name)}</name><enabled>TRUE</enabled><duration>${durF}</duration>${rateXml(r)}<start>${start}</start><end>${end}</end><in>${inF}</in><out>${outF}</out>${fileRef(c)}${inner}${links}${labels}</clipitem>`
-    vItems.push(item(vId, '', ''))
+    vItems.push(item(vId, '', motionXml(c.motion)))
     for (const a of mine) {
       const src = `<sourcetrack><mediatype>audio</mediatype><trackindex>${a.slot.stereo ? a.slot.stream + 1 : a.s.firstChannel}</trackindex></sourcetrack>`
       aTracks[a.track - 1].push(item(a.id, a.slot.stereo ? ' premiereChannelType="stereo"' : ' premiereChannelType="mono"', src))

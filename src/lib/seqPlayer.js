@@ -17,7 +17,7 @@
 // Audio: every deck's track elements feed one shared GainNode per track
 // (the same mixer volumes/mutes as Review), then a master gain.
 import { mediaUrl, RATE_LADDER } from './player.js'
-import { layout } from './editModel.js'
+import { layout, motionCss } from './editModel.js'
 
 // The incoming clip starts playing (hidden, silent) this long before its
 // cut, from this far before its first frame: a paused video takes ~3
@@ -130,6 +130,17 @@ class Deck {
   pause() {
     this.video.pause()
     for (const el of this.audios) if (el) el.pause()
+  }
+  // Which timeline clip this deck holds — and so how it's framed.
+  get idx() { return this._idx }
+  set idx(v) {
+    this._idx = v
+    this.frame()
+  }
+  frame() {
+    const it = this.sp.items && this.sp.items[this._idx]
+    const css = motionCss((this === this.sp.active && this.sp.liveMotion) || (it && it.motion))
+    if (this.video.style.transform !== css) this.video.style.transform = css
   }
   show(on) {
     // opacity, not visibility: Chrome keeps an invisible video's frames
@@ -267,6 +278,28 @@ class SequencePlayer {
     }
     await this.seek(Math.min(T, Math.max(0, this.total - 0.001)))
     if (wasPlaying) this.play()
+  }
+
+  // Only clips' framing changed (no cut did): update in place, no re-seek.
+  setMotions(clips) {
+    const byId = new Map(clips.map((c) => [c.id, c]))
+    for (const it of this.items) {
+      const c = byId.get(it.id)
+      it.motion = c ? c.motion : undefined
+    }
+    this.liveMotion = null
+    if (this.decks) for (const d of this.decks) d.frame()
+    this.emit('motion')
+  }
+  // While dragging the framing on the monitor: show it before it's committed.
+  previewMotion(m) {
+    this.liveMotion = m
+    if (this.active) this.active.frame()
+  }
+  // The timeline clip on screen (its item, with start/dur), or null.
+  currentItem() {
+    const d = this.active
+    return d && d.idx >= 0 ? this.items[d.idx] || null : null
   }
 
   // ---- time ----

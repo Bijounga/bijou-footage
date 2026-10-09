@@ -25,6 +25,28 @@ export function colorClips(clips, ids, color) {
   return clips.map((c) => (set.has(c.id) ? { ...c, color: color || undefined } : c))
 }
 
+// A clip's framing ("motion"), like Premiere's Motion effect: Scale in %
+// and Position as the offset of the clip's centre from the frame's centre,
+// in fractions of the frame (0,0 = centred) — the same numbers Premiere's
+// XML uses, so it carries over exactly. No `motion` = 100%, centred.
+export const NO_MOTION = { scale: 100, x: 0, y: 0 }
+export const motionOf = (c) => (c && c.motion) || NO_MOTION
+export const isFramed = (m) => !!m && (Math.abs(m.scale - 100) > 0.001 || Math.abs(m.x) > 1e-5 || Math.abs(m.y) > 1e-5)
+// The CSS transform that shows a framed clip (the video fills the frame).
+export const motionCss = (m) => (isFramed(m) ? `translate(${m.x * 100}%, ${m.y * 100}%) scale(${m.scale / 100})` : '')
+// Change the framing of some clips: fn(old motion) → new motion.
+export function setMotion(clips, ids, fn) {
+  const set = new Set(ids)
+  return clips.map((c) => {
+    if (!set.has(c.id)) return c
+    const m = fn(motionOf(c))
+    const next = { ...c }
+    if (isFramed(m)) next.motion = { scale: Math.round(m.scale * 10) / 10, x: m.x, y: m.y }
+    else delete next.motion
+    return next
+  })
+}
+
 let n = 0
 export const clipId = () => 'c' + Date.now().toString(36) + (n++).toString(36)
 

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 
 const MAX = 8
 
-export function useVideoZoom(stageRef, selector, resetKey) {
+export function useVideoZoom(stageRef, selector, resetKey, { min = 1 } = {}) {
   const z = useRef({ s: 1, x: 0, y: 0 })
   const [scale, setScale] = useState(1)
 
@@ -24,6 +24,12 @@ export function useVideoZoom(stageRef, selector, resetKey) {
   // Keep the picture covering the stage (no gaps at the edges).
   const clamp = (W, H) => {
     const t = z.current
+    if (t.s < 1) {
+      // Zoomed out: keep it centred.
+      t.x = (W - W * t.s) / 2
+      t.y = (H - H * t.s) / 2
+      return
+    }
     t.x = Math.min(0, Math.max(W - W * t.s, t.x))
     t.y = Math.min(0, Math.max(H - H * t.s, t.y))
   }
@@ -32,7 +38,7 @@ export function useVideoZoom(stageRef, selector, resetKey) {
     const W = stage.clientWidth
     const H = stage.clientHeight
     const t = z.current
-    const s = Math.max(1, Math.min(MAX, t.s * factor))
+    const s = Math.max(min, Math.min(MAX, t.s * factor))
     t.x = px - (px - t.x) * (s / t.s)
     t.y = py - (py - t.y) * (s / t.s)
     t.s = s
@@ -63,7 +69,7 @@ export function useVideoZoom(stageRef, selector, resetKey) {
     let drag = null
     let swallowClick = false
     const onDown = (e) => {
-      if (e.button !== 0 || z.current.s === 1) return
+      if (e.button !== 0 || z.current.s <= 1 || e._framing) return // (a drag on a clip's framing box)
       drag = { x: e.clientX, y: e.clientY, ox: z.current.x, oy: z.current.y, moved: false }
       const move = (ev) => {
         const dx = ev.clientX - drag.x
@@ -94,7 +100,7 @@ export function useVideoZoom(stageRef, selector, resetKey) {
       }
     }
     const onKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.code === 'Digit0') && z.current.s !== 1) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === '0' || e.code === 'Digit0') && z.current.s !== 1) {
         e.preventDefault()
         e.stopPropagation()
         reset()

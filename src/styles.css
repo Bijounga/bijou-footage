@@ -1260,12 +1260,34 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .em-transport { flex-wrap: nowrap; overflow: hidden; }
 .em-transport .snap-btn span, .em-transport .btn { white-space: nowrap; }
 .em-speech svg { flex: none; }
-@container (max-width: 860px) {
+/* The Edit transport gives way gradually as the monitor narrows, so its
+   buttons never squeeze into each other: labels first, then the less-used
+   buttons. (The .em is the size container.) */
+.em-transport > :not(.t-spacer) { flex-shrink: 0; }
+.em-transport .t-spacer { flex: 1 1 0; min-width: 0; }
+.em-transport .ex-short { display: none; }
+@container (max-width: 1220px) {
   .em-transport .snap-btn span, .em-transport .em-name { display: none; }
   .em-transport .snap-btn { padding: 0 7px; }
 }
-@container (max-width: 640px) {
-  .em-transport .em-speech, .em-transport .tool-seg { display: none; }
+@container (max-width: 1080px) {
+  .em-transport .ex-long { display: none; }
+  .em-transport .ex-short { display: inline; }
+  .em-transport .em-speech { display: none; }
+  .em-transport { gap: 3px; }
+}
+@container (max-width: 940px) {
+  .em-transport .tool-seg { display: none; }
+  .em-transport .t-time { margin: 0 4px; }
+}
+@container (max-width: 800px) {
+  .em-transport .t-time .dim { display: none; }
+}
+@container (max-width: 720px) {
+  .em-transport .em-sketch, .em-transport .viewer-btn, .em-transport .layout-btn { display: none; }
+}
+@container (max-width: 600px) {
+  .em-transport .em-jump { display: none; }
 }
 
 /* ---------- Edit tools (Remove silence / Cut around / Export) ---------- */
@@ -1468,3 +1490,58 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .zoom-badge { position: absolute; top: 10px; right: 10px; z-index: 5; padding: 3px 9px; border: 0; border-radius: 6px; background: rgba(10, 11, 14, 0.75); color: #fff; font: 600 11px var(--mono); cursor: pointer; backdrop-filter: blur(6px); }
 .zoom-badge:hover { background: rgba(10, 11, 14, 0.92); }
 .stage.zoom-dragging, .em-stage.zoom-dragging, .stage.zoom-dragging .video { cursor: grabbing; }
+
+/* ---- Edit monitor: the sequence frame, per-clip framing (FramingBox.jsx) ---- */
+.em-view { position: absolute; inset: 0; }
+.em-frame { position: absolute; inset: 0; overflow: hidden; background: #000; }
+.em-frame .em-video { transform-origin: 50% 50%; }
+.em-stage.view-out { background: #141518; }
+.em-stage.view-out .em-frame { outline: 1px solid rgba(255, 255, 255, 0.22); }
+/* The selected clip's box: a crisp blue line with a dark keyline outside, so
+   it reads on bright and dark footage alike; the frame's own edge gets a
+   thin light rule, so you can see where the picture ends. */
+.em-stage:has(.fb-box) .em-frame { outline: 1px solid rgba(255, 255, 255, 0.28); }
+.fb-box { position: absolute; z-index: 6; pointer-events: none; border: 1.5px solid #5aa9ff; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.35), 0 0 14px rgba(90, 169, 255, 0.28); }
+.fb-handle { position: absolute; z-index: 7; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: #fff; border: 1.5px solid #3b8cf0; border-radius: 2px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); pointer-events: auto; transition: transform 0.08s; }
+.fb-handle:hover { transform: scale(1.25); }
+.fb-center { position: absolute; z-index: 7; pointer-events: none; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5); }
+.fb-guide { position: absolute; z-index: 6; pointer-events: none; background: #ff5aa8; box-shadow: 0 0 6px rgba(255, 90, 168, 0.6); }
+.fb-guide.v { width: 1px; }
+.fb-guide.h { height: 1px; }
+/* Scale / Position bar: a quiet glass strip with Premiere-style hot text. */
+.fb-panel {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 8;
+  display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 12px;
+  border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(13, 14, 19, 0.74); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  color: rgba(236, 233, 226, 0.6); font: 500 11.5px var(--sans, Inter, sans-serif); user-select: none;
+}
+.fb-label { margin-left: 6px; letter-spacing: 0.2px; }
+.fb-label:first-child { margin-left: 0; }
+.fb-hot { min-width: 44px; padding: 3px 5px; border-radius: 5px; color: #7db9ff; font: 600 12px var(--mono); font-variant-numeric: tabular-nums; text-align: right; cursor: ew-resize; }
+.fb-hot:hover { background: rgba(125, 185, 255, 0.12); color: #a9d0ff; }
+.fb-hot i { font-style: normal; margin-left: 1px; color: rgba(125, 185, 255, 0.7); }
+.fb-hot-input { width: 64px; padding: 2px 5px; border-radius: 5px; border: 1px solid #5aa9ff; background: rgba(0, 0, 0, 0.5); color: #fff; font: 600 12px var(--mono); text-align: right; outline: none; }
+.fb-reset { display: grid; place-items: center; width: 26px; height: 26px; margin-left: 4px; border: 0; border-radius: 7px; background: rgba(255, 255, 255, 0.06); color: rgba(236, 233, 226, 0.75); cursor: pointer; }
+.fb-reset:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.fb-reset svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- Settings: pages down the left ---- */
+.modal.settings-modal { width: min(880px, 94vw); height: min(700px, 88vh); }
+.settings-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 180px minmax(0, 1fr); }
+.settings-nav { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-right: 1px solid var(--line-soft); background: var(--panel-2); border-bottom-left-radius: 12px; }
+.settings-nav button { text-align: left; padding: 7px 10px; border: 0; border-radius: 7px; background: none; color: var(--ink-dim); font: inherit; font-size: 13px; cursor: pointer; }
+.settings-nav button:hover { background: var(--panel-3); color: var(--ink); }
+.settings-nav button.on { background: color-mix(in srgb, var(--cyan) 16%, transparent); color: var(--ink); font-weight: 600; }
+.settings-layout .settings { padding: 6px 22px 22px; }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.preset { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel-2); }
+.preset input { width: 64px; }
+.preset.reset span { color: var(--ink-dim); font-size: 12px; }
+.preset kbd { min-width: 46px; text-align: center; }
+.settings-tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--ink-dim); font-size: 12.5px; }
+.settings-tips b { color: var(--ink); font-weight: 600; }
+
+.es-head { align-items: center; }
+.es-hint { padding: 0 6px 6px; margin-top: -4px; }
