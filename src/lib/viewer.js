@@ -13,6 +13,7 @@
 // Keys pressed in it go to the main window, so Space, J/K/L… still work.
 import { player } from './player.js'
 import { seqPlayer } from './seqPlayer.js'
+import { bigPovVideo } from './povPlayer.js'
 import { bus } from './hooks.js'
 import { useStore } from '../state/store.js'
 import { isFramed } from './editModel.js'
@@ -36,6 +37,9 @@ function source(workspace) {
   // While the ghost is up (scrubbing, skimming, a seek landing) it's the
   // picture — even mid-seek, when paint() just keeps its last frame. Falling
   // back to the main video then would flick to its stale frame.
+  // someone's POV is the big view: the other screen shows theirs too
+  const pov = bigPovVideo()
+  if (pov) return pov
   if (player.ghostShown && player.ghost) return player.ghost
   return player.video
 }

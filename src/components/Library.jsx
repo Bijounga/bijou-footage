@@ -210,7 +210,11 @@ export default function Library() {
     let notes = 0
     const text = filter.text.trim().toLowerCase()
     const rows = []
+    // other people's POVs are listed under the recording they belong to, not on their own
+    const povOf = new Set()
+    for (const k in reviews) for (const p of reviews[k].povs || []) povOf.add(p.key)
     for (const c of scope) {
+      if (povOf.has(c.key)) continue
       const r = reviews[c.key]
       const dur = c.probe ? c.probe.duration : 0
       total += dur

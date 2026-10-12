@@ -9,6 +9,8 @@ import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
 import { makeWheelAxis, onFrame, isPinch } from '../lib/wheel.js'
 import ZoomBar from './ZoomBar.jsx'
 
+// the bars showing where each POV has footage (and its dot in the POV menu)
+export const POV_COLORS = ['#4fd1c5', '#f5c542', '#a78bfa', '#fb923c', '#60a5fa', '#f472b6']
 const RULER_H = 40 // tall on purpose: the ruler is the main click-and-drag scrub area
 const MARKER_BAND = 20 // top of the ruler where the note/marker shields sit (clicks there pick a note)
 const MIN_SPAN = 4 // seconds visible at max zoom
@@ -129,7 +131,19 @@ function HoverPreview({ subs, wrapRef, canvasRef }) {
 
 // Also used by the Edit timeline (showReset=false; its own row heights via
 // onResize/onResetHeight; renames there change the default name).
-export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meterRef, height, speechOn, skipOn, showReset = true, onResize, onResetHeight, onRename }) {
+// Their track names live with the POV (e.g. "Loaffy mic").
+function renamePovTrack(pov, i, name) {
+  const st = useStore.getState()
+  const p = ((st.reviews[st.currentKey] && st.reviews[st.currentKey].povs) || []).find((x) => x.key === pov)
+  if (!p) return
+  const names = (p.trackNames || []).slice()
+  names[i] = name || undefined
+  st.updatePov(pov, { trackNames: names })
+}
+
+// pov: the key of someone's POV whose tracks these are (Review, with their
+// view big) — the buttons and fader mix theirs; no speech / rename buttons.
+export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meterRef, height, speechOn, skipOn, showReset = true, onResize, onResetHeight, onRename, pov = null }) {
   const toggleSpeechShow = useStore((s) => s.toggleSpeechShow)
   const toggleSpeechSkip = useStore((s) => s.toggleSpeechSkip)
   const setTrackVol = useStore((s) => s.setTrackVol)
@@ -142,7 +156,7 @@ export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meter
   const setTrackColor = useStore((s) => s.setTrackColor)
   const [editing, setEditing] = useState(false)
   const audible = anySolo ? soloed : !mixer.mute
-  const onVol = useCallback((v) => setTrackVol(i, v), [i, setTrackVol])
+  const onVol = useCallback((v) => (pov ? useStore.getState().setPovTrack(pov, i, { vol: v }) : setTrackVol(i, v)), [i, setTrackVol, pov])
 
   function resizeDown(e) {
     e.preventDefault()
@@ -174,7 +188,7 @@ export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meter
               defaultValue={name}
               placeholder={defaultName}
               title="Name for this recording only · clear it to go back to the default"
-              onBlur={(e) => { onRename ? onRename(e.target.value.trim()) : renameTrackHere(currentKey, i, e.target.value.trim()); setEditing(false) }}
+              onBlur={(e) => { onRename ? onRename(e.target.value.trim()) : pov ? renamePovTrack(pov, i, e.target.value.trim()) : renameTrackHere(currentKey, i, e.target.value.trim()); setEditing(false) }}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.target.blur() }}
             />
           ) : (
@@ -187,11 +201,11 @@ export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meter
           <span className="th-volnum">{Math.round(mixer.vol * 100)}%</span>
         </div>
         <div className="th-buttons">
-          <button className={'th-btn' + (mixer.mute ? ' on-m' : '')} onClick={() => toggleMute(i)} title={`Mute (${i + 1})`}>M</button>
-          <button className={'th-btn' + (soloed ? ' on-s' : '')} onClick={(e) => toggleSolo(i, !e.ctrlKey)} title={`Solo (Shift+${i + 1}) · Ctrl+click to solo several`}>S</button>
-          <button className={'th-btn' + (speechOn ? ' on-a' : '')} onClick={() => toggleSpeechShow(i)} title="A — show where someone's talking on this track">A</button>
-          {showReset && <button className="th-btn" onClick={() => setTrackVol(i, 1)} title="Reset volume to 100%">⟳</button>}
-          <button className={'th-btn' + (skipOn ? ' on-a' : '')} onClick={() => toggleSpeechSkip(i)} title="⇥ — include this track in Skip to next speech (Ctrl+→ / Ctrl+←)">⇥</button>
+          <button className={'th-btn' + (mixer.mute ? ' on-m' : '')} onClick={() => (pov ? useStore.getState().setPovTrack(pov, i, { mute: !mixer.mute }) : toggleMute(i))} title={pov ? 'Mute this track of theirs' : `Mute (${i + 1})`}>M</button>
+          <button className={'th-btn' + (soloed ? ' on-s' : '')} onClick={(e) => (pov ? useStore.getState().togglePovSolo(i, !e.ctrlKey) : toggleSolo(i, !e.ctrlKey))} title={`Solo (Shift+${i + 1}) · Ctrl+click to solo several`}>S</button>
+          {!pov && <button className={'th-btn' + (speechOn ? ' on-a' : '')} onClick={() => toggleSpeechShow(i)} title="A — show where someone's talking on this track">A</button>}
+          {showReset && <button className="th-btn" onClick={() => onVol(1)} title="Reset volume to 100%">⟳</button>}
+          {!pov && <button className={'th-btn' + (skipOn ? ' on-a' : '')} onClick={() => toggleSpeechSkip(i)} title="⇥ — include this track in Skip to next speech (Ctrl+→ / Ctrl+←)">⇥</button>}
           <div className="th-meter"><div ref={meterRef} /></div>
         </div>
       </div>
@@ -204,14 +218,26 @@ export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meter
 export default function Timeline() {
   const clip = useStore((s) => s.clips.find((c) => c.key === s.currentKey) || null)
   const review = useStore((s) => (s.currentKey ? s.reviews[s.currentKey] : null))
-  const wfState = useStore((s) => (s.currentKey ? s.waveforms[s.currentKey] : null))
-  const trackNames = useTrackNames(useStore((s) => s.currentKey))
+  // With someone's POV big, the lanes are THEIR tracks (in your time — shifted
+  // by their offset), and the track heads mix them; notes / markers stay yours.
+  const povEntry = useStore((s) => (s.povFocus && s.currentKey && s.reviews[s.currentKey] ? (s.reviews[s.currentKey].povs || []).find((p) => p.key === s.povFocus) || null : null))
+  const povClip = useStore((s) => (povEntry ? s.clips.find((c) => c.key === povEntry.key) || null : null))
+  const povSolo = useStore((s) => s.povSolo)
+  const wclip = povClip || clip
+  const shift = povClip ? povEntry.off || 0 : 0
+  const wfState = useStore((s) => (wclip ? s.waveforms[wclip.key] : null))
+  const ownNames = useTrackNames(useStore((s) => s.currentKey))
+  const trackNames = povClip ? ((povClip.probe && povClip.probe.audio) || []).map((a, i) => ((povEntry.trackNames || [])[i] || (a && a.title) || 'Track ' + (i + 1))) : ownNames
   const mixerSettings = useStore((s) => s.settings.mixer)
   const autoMuteEmpty = useStore((s) => s.settings.autoMuteEmpty)
   const laneHeightsSetting = useStore((s) => s.settings.laneHeights)
   const height = useStore((s) => s.settings.timelineHeight)
-  const solo = useStore((s) => s.solo)
-  const trackColors = useTrackColors()
+  const ownSolo = useStore((s) => s.solo)
+  const solo = povClip ? povSolo : ownSolo
+  const ownColors = useTrackColors()
+  // their lanes in that POV's colour (the same as its bar on the ruler)
+  const povIndex = povClip && review ? (review.povs || []).findIndex((p) => p.key === povEntry.key) : -1
+  const trackColors = povClip ? Array.from({ length: Math.max(1, ((povClip.probe && povClip.probe.audio) || []).length) }, () => povEntry.color || POV_COLORS[Math.max(0, povIndex) % POV_COLORS.length]) : ownColors
   const beatColors = useStore((s) => s.beatColors)
   const selectedNoteId = useStore((s) => s.selectedNoteId)
   const inPoint = useStore((s) => s.inPoint)
@@ -223,12 +249,14 @@ export default function Timeline() {
   const speechSens = useStore((s) => s.settings.speechSensitivity ?? 0.5)
   const searchHits = useStore((s) => s.searchHits)
 
-  const effMixer = mixerSettings.map((m, i) => {
-    const a = clip && clip.probe && clip.probe.audio[i]
-    return { ...m, mute: m.mute || (autoMuteEmpty && a && a.likelySilent && !m.forceOn) }
-  })
+  const effMixer = povClip
+    ? ((povClip.probe && povClip.probe.audio) || []).map((a, i) => ({ vol: 1, mute: !!(a && a.likelySilent), ...((povEntry.mix || [])[i] || {}) }))
+    : mixerSettings.map((m, i) => {
+        const a = clip && clip.probe && clip.probe.audio[i]
+        return { ...m, mute: m.mute || (autoMuteEmpty && a && a.likelySilent && !m.forceOn) }
+      })
 
-  const nTracks = clip && clip.probe ? Math.max(1, clip.probe.audio.length) : 0
+  const nTracks = wclip && wclip.probe ? Math.max(1, wclip.probe.audio.length) : 0
   const duration = (clip && clip.probe && clip.probe.duration) || 0
   const laneH = Array.from({ length: nTracks }, (_, i) => laneHeightsSetting[i] || DEFAULT_LANE_H)
   const lanesTotal = laneH.reduce((a, b) => a + b, 0)
@@ -253,7 +281,7 @@ export default function Timeline() {
   const drag = useRef(null)
   const size = useRef({ w: 0, h: 0 })
   const latest = useRef({})
-  latest.current = { clip, review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, wfState, laneH, lanesTotal, trackColors, snapOn, speechShow, speechSens, searchHits }
+  latest.current = { clip, review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, wfState, laneH, lanesTotal, trackColors, snapOn, speechShow: povClip ? [] : speechShow, speechSens, searchHits: povClip ? [] : searchHits, shift }
   if (import.meta.env.DEV) window.__tl = { view, scrollRef } // for scripts/cdp.mjs checks
 
   // Reset the view whenever a different clip opens.
@@ -267,16 +295,17 @@ export default function Timeline() {
   useEffect(() => {
     waveRef.current = null
     dirty.current = true
-    if (!clip) return
+    if (!wclip) return
     let cancelled = false
-    window.footage.getWaveform(clip).then((u8) => {
+    window.footage.getWaveform(wclip).then((u8) => {
       if (cancelled) return
       waveRef.current = parseWaveform(u8)
-      setWave(clip.key, waveRef.current) // speech detection works off the same peaks
+      if (wclip === clip) setWave(clip.key, waveRef.current) // speech detection works off the same peaks
+      else if (!u8) window.footage.requestWaveform(wclip, true)
       dirty.current = true
     })
     return () => { cancelled = true }
-  }, [clip && clip.key, wfState && wfState.version, wfState && wfState.status])
+  }, [wclip && wclip.key, wfState && wfState.version, wfState && wfState.status])
 
   // Lane sizes: redraw in the same frame the track headers move, so the
   // waveforms never lag a frame behind them while you drag.
@@ -287,7 +316,7 @@ export default function Timeline() {
 
   useEffect(() => {
     dirty.current = true
-  }, [review, effMixer.map((m) => m.mute + ':' + m.vol).join(), solo.join(), beatColors, selectedNoteId, inPoint, nTracks, laneH.join(), trackColors.join(), themeId, speechShow.join(), speechSens, searchHits, wfState && wfState.status, wfState && Math.round((wfState.progress || 0) * 100)])
+  }, [review, shift, effMixer.map((m) => m.mute + ':' + m.vol).join(), solo.join(), beatColors, selectedNoteId, inPoint, nTracks, laneH.join(), trackColors.join(), themeId, speechShow.join(), speechSens, searchHits, wfState && wfState.status, wfState && Math.round((wfState.progress || 0) * 100)])
 
   // ---- geometry ----
   const xToT = (x) => {
@@ -403,7 +432,7 @@ export default function Timeline() {
   const drawMain = useCallback(() => {
     const c = mainRef.current
     if (!c) return
-    const { review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, clip, wfState, laneH, trackColors, speechShow, speechSens, searchHits } = latest.current
+    const { review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, clip, wfState, laneH, trackColors, speechShow, speechSens, searchHits, shift } = latest.current
     const ctx = c.getContext('2d')
     const dpr = window.devicePixelRatio || 1
     const { w, h } = size.current
@@ -456,13 +485,13 @@ export default function Timeline() {
           // Pyramid lookups (lib/wavePeaks.js) + one path, one fill.
           ctx.beginPath()
           for (let x = 0; x < w; x++) {
-            const t0 = v.start + x * spp
+            const t0 = v.start + x * spp + shift
             const i0 = Math.floor(t0 * pps)
             let i1 = Math.floor((t0 + spp) * pps)
             if (i1 <= i0) i1 = i0 + 1
             if (i0 >= wave.len) break
             if (i1 <= 0) continue
-            const peak = peakBetween(data, i0, Math.min(i1, wave.len))
+            const peak = peakBetween(data, Math.max(0, i0), Math.min(i1, wave.len))
             if (peak < 3) continue
             const bh = Math.max(1, (peak / 255) * half)
             ctx.rect(x, mid - bh, 1, bh * 2)
@@ -570,6 +599,21 @@ export default function Timeline() {
         ctx.fillStyle = line
         ctx.fillRect(Math.round(tToX(t + k * minor)) + 0.5, RULER_H - 4, 1, 4)
       }
+    }
+    // Where each POV (someone else's recording of this session) has footage:
+    // a thin bar per POV, under the note shields.
+    if (review && review.povs && review.povs.length) {
+      const all = useStore.getState().clips
+      review.povs.forEach((p, i) => {
+        const pc = all.find((c) => c.key === p.key)
+        const pd = pc && pc.probe ? pc.probe.duration : 0
+        if (!pd) return
+        const a = Math.max(v.start, -(p.off || 0))
+        const b = Math.min(v.end, pd - (p.off || 0))
+        if (b <= a) return
+        ctx.fillStyle = p.color || POV_COLORS[i % POV_COLORS.length]
+        ctx.fillRect(tToX(a), 21 + i * 3, Math.max(1, tToX(b) - tToX(a)), 2)
+      })
     }
     // Notes on the ruler: small shields in the beat's color; your markers
     // bigger, in their own color. No text (hover one to read it) — so they
@@ -861,11 +905,12 @@ export default function Timeline() {
                   mixer={effMixer[i]}
                   soloed={soloSet.has(i)}
                   anySolo={soloSet.size > 0}
-                  empty={!!(clip.probe && clip.probe.audio[i] && clip.probe.audio[i].likelySilent)}
-                  meterRef={(el) => (meterRefs.current[i] = el)}
+                  empty={!!(wclip.probe && wclip.probe.audio[i] && wclip.probe.audio[i].likelySilent)}
+                  meterRef={povClip ? undefined : (el) => (meterRefs.current[i] = el)}
                   height={laneH[i]}
                   speechOn={!!speechShow[i]}
                   skipOn={!!speechSkip[i]}
+                  pov={povClip ? povEntry.key : null}
                 />
               ))}
             </div>
@@ -892,6 +937,25 @@ export default function Timeline() {
         </div>
       </div>
       <HoverPreview subs={hoverSubs} wrapRef={wrapRef} canvasRef={previewCanvasRef} />
+      {povClip && (
+        <div className="tl-pov-pill" style={{ '--c': trackColors[0] }}>
+          <i /> <b>{povEntry.name}’s tracks</b>
+          <label className="tl-pov-vol" title={'All of ' + povEntry.name + '’s tracks together — double-click for 100%'}>
+            <span className="dim">Volume</span>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              value={povEntry.vol ?? 1}
+              onChange={(e) => useStore.getState().updatePov(povEntry.key, { vol: Number(e.target.value) })}
+              onDoubleClick={() => useStore.getState().updatePov(povEntry.key, { vol: 1 })}
+            />
+            <span className="tl-pov-volnum">{Math.round((povEntry.vol ?? 1) * 100)}%</span>
+          </label>
+          <button className="link-btn" onClick={() => useStore.getState().setPovFocus(null)} title="Back to your own tracks (and your view big)">Back to yours</button>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,6 +10,8 @@ import { useKeyHint } from './Keybinds.jsx'
 import ViewerButton from './ViewerButton.jsx'
 import { useVideoZoom } from '../lib/videoZoom.js'
 import { PlayerHideButton } from './LayoutToggles.jsx'
+import { usePovs, useCamLayout, rectStyle, pipPress, PovCam, PovMenu, PipResize, SideDivider, MainCamLabel, useYou } from './PovStage.jsx'
+import PovSync from './PovSync.jsx'
 
 // A button's key hint, following the user's bindings (hidden if unbound).
 function Kbd({ id }) {
@@ -151,6 +153,7 @@ function ClipHeader({ clip }) {
             </button>
           </>
         )}
+        <PovMenu />
         <button className="btn small ghost" onClick={() => window.footage.showItem(clip.path)} title="Show in Explorer">Show file</button>
         <NotesToggle />
       </div>
@@ -298,7 +301,14 @@ export default function PlayerView() {
   const videoRef = useRef(null)
   const ghostRef = useRef(null)
   const stageRef = useRef(null)
-  const zoom = useVideoZoom(stageRef, 'video', clip && clip.key)
+  const povs = usePovs()
+  const cams = useCamLayout(stageRef, povs)
+  const povFocus = useStore((s) => s.povFocus)
+  const syncing = useStore((s) => !!s.povSync)
+  const zoom = useVideoZoom(stageRef, '.cam-main video', (clip && clip.key) + '|' + povFocus + '|' + povs.length)
+  const mainBig = cams.big === 'main'
+  const you = useYou()
+  const borders = useStore((s) => s.settings.povBorders !== false)
   const [osd, setOsd] = useState(null)
   const [error, setError] = useState(null)
   const st = usePlayerState()
@@ -327,9 +337,22 @@ export default function PlayerView() {
     <div className="player-area">
       {clip ? <ClipHeader clip={clip} /> : <div className="clip-header"><LibraryToggle /><span className="grow" /><NotesToggle /></div>}
       <div className="stage" ref={stageRef} onDoubleClick={() => bus.emit('fullscreen')}>
-        <video ref={videoRef} className="video" onClick={() => player.toggle()} />
-        {/* Instant-seek stand-in, see player.js "ghost". Clicks pass through. */}
-        <video ref={ghostRef} className="video ghost" muted />
+        {/* Your recording. With POVs it's one of several views (PovStage.jsx):
+            big, or small in a corner / column / grid cell. */}
+        <div
+          className={'cam cam-main' + (povs.length ? (mainBig ? ' big' : ' small') + (borders ? ' framed' : '') : ' solo')}
+          style={povs.length ? { ...rectStyle(cams.rects.main), '--cc': you.color } : undefined}
+          onMouseDown={(e) => { if (povs.length && !mainBig) pipPress(e, { stageRef, layout: cams.layout, small: true, onClick: () => useStore.getState().setPovFocus(null) }) }}
+          title={povs.length && !mainBig ? 'Click to watch yours big again (your tracks)' : undefined}
+        >
+          <video ref={videoRef} className="video" onClick={() => (mainBig ? player.toggle() : null)} />
+          {/* Instant-seek stand-in, see player.js "ghost". Clicks pass through. */}
+          <video ref={ghostRef} className="video ghost" muted />
+          {povs.length > 0 && <MainCamLabel />}
+          {povs.length > 0 && !mainBig && cams.layout === 'pip' && <PipResize stageRef={stageRef} />}
+        </div>
+        {povs.length > 0 && cams.layout === 'side' && <SideDivider rect={cams.rects.divider} stageRef={stageRef} />}
+        {clip && povs.map((p, i) => <PovCam key={p.key} pov={p} index={i} rect={cams.rects[p.key]} big={cams.big === p.key} layout={cams.layout} stageRef={stageRef} />)}
         {zoom.scale > 1 && <button className="zoom-badge" onClick={(e) => { e.stopPropagation(); zoom.reset() }} onDoubleClick={(e) => e.stopPropagation()} title="Back to 100% (Ctrl+0) · Ctrl+scroll or pinch to zoom, drag to move">{Math.round(zoom.scale * 100)}% ⟲</button>}
 
         {!clip && (
@@ -346,6 +369,7 @@ export default function PlayerView() {
         {osd && <div className="osd" key={osd.id}>{osd.text}</div>}
       </div>
       {clip && <Transport />}
+      {syncing && <PovSync />}
     </div>
   )
 }

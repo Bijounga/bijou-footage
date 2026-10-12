@@ -275,7 +275,7 @@ class Player {
   applyMixer() {
     if (!this.video) return // Review isn't on screen yet; applied when it attaches
     if (!this.ctx) this.ensureContext()
-    if (this.master) this.master.gain.setTargetAtTime(this.masterVol, this.ctx.currentTime, 0.015)
+    if (this.master) this.master.gain.setTargetAtTime(this.outMuted ? 0 : this.masterVol, this.ctx.currentTime, 0.015)
     const n = this.trackCount
     const track0OnVideo = !this.audioFiles[0]
     this.updateVideoAudio()
@@ -342,6 +342,13 @@ class Player {
     if (!this.clip || this.clip.key !== key) return
     this.audioFiles = files || {}
     this.applyMixer()
+  }
+
+  // While someone else's POV is the main view, you hear theirs, not yours
+  // (lib/povPlayer.js plays it): every one of your tracks goes quiet.
+  setOutputMuted(on) {
+    this.outMuted = !!on
+    if (this.master && this.ctx) this.master.gain.setTargetAtTime(on ? 0 : this.masterVol, this.ctx.currentTime, 0.015)
   }
 
   // ---- sync ----

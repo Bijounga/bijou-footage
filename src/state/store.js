@@ -9,6 +9,7 @@ import { newId, pickDefaultType } from '../lib/beats.js'
 import { player } from '../lib/player.js'
 import { bus } from '../lib/hooks.js'
 import { onEvent as voTxEvent } from '../lib/voTranscripts.js'
+import { guessOffset, overlap } from '../lib/povSync.js'
 import { BUILT_IN_THEMES, fromBijouCustom, applyTheme } from '../lib/themes.js'
 
 const api = window.footage
@@ -38,6 +39,14 @@ export const TRACK_COLORS = ['#4fd1c5', '#f2a65a', '#8b8ff7', '#d46fb0', '#4ade8
 export function useTrackColors() {
   return useStore((s) => s.settings.trackColors || TRACK_COLORS)
 }
+// A POV's name from its file: what's left once the OBS date is taken off
+// ("2026-04-17 19-45-20 Lofit POV.mp4" → "Lofit POV"), else the file name.
+function povName(c) {
+  const base = String(c.name || '').replace(/\.[^.]+$/, '')
+  const rest = base.replace(/\d{4}-\d{2}-\d{2}[ _T]\d{2}-\d{2}-\d{2}/, '').replace(/^[\s_-]+|[\s_-]+$/g, '')
+  return rest || 'POV'
+}
+
 export const VO_TRACK = { vol: 1, mute: false, color: null, h: 56 }
 export const DEFAULT_LANE_H = 64
 export const LANE_H_MIN = 40
@@ -100,6 +109,8 @@ function defaultSettings() {
     editPanelWidth: 380,
     editSkipSilence: false,
     editWatchSpeed: 1, // Edit playback speed (the speed button); shuttling returns here // Edit playback jumps over silences in the cut
+    povLayout: 'pip', // how other people's POVs show beside yours in Review: 'pip' | 'side' | 'grid'
+    povPip: { corner: 'br', size: 0.26 }, // picture-in-picture: which corner, how wide (share of the stage)
     voTrack: null, // the Edit VO lane's track: {vol, mute, color, h} (VO_TRACK when unset)
     editLaneHeights: [44, 44, 44, 44, 44, 44], // audio row heights in the edit timeline
     skipSilence: false, // playback jumps over long silences (lib/skipSilence.js)
@@ -246,6 +257,9 @@ export const useStore = create(
     // Which part of Edit the keys drive, like Premiere's panel focus: 'cut'
     // (the timeline / picture) or 'vosrc' (the Voiceover strip's own player)
     editFocus: 'cut',
+    povFocus: null, // Review: the POV shown big (its key), or null = your own footage
+    povSolo: [], // solo'd tracks of the POV you're listening to
+    povSync: null, // the POV sync window: {main, pov} (keys)
     editRec: null, // recording voiceover over the cut (lib/editRecord.js): {phase, at, start, take, vsId}
     editUndo: [], // [{sectionId, clips}]
     editRedo: [],
@@ -451,6 +465,8 @@ export const useStore = create(
       const start = at != null ? at : rev && rev.lastPos && (!clip.probe || rev.lastPos < clip.probe.duration - 5) ? rev.lastPos : 0
       set((s) => {
         s.currentKey = key
+        s.povFocus = null
+        s.povSolo = []
         s.solo = []
         s.selectedNoteId = null
         s.editingNoteId = null
@@ -473,6 +489,133 @@ export const useStore = create(
       if (clip.probe) api.requestWaveform(clip, true).then((st) => get().setWaveformStatus(key, st))
       get().scheduleSave()
       if (get().settings.autoTranscribeOpen !== false && get().tx.installed) setTimeout(() => get().transcribe([key], { silent: true, front: true }), 1500)
+    },
+    // ---- POVs: other people's recordings of the same session (Review) ----
+    // review.povs = [{key, name, off}] — off = their time − your time at the
+    // same moment (lib/povSync.js). A POV is a recording like any other (it's
+    // probed, its audio prepared) but listed under yours, not on its own.
+    // Each picked file goes with the recording of yours it overlaps in time
+    // (by the start times written inside the files) — pick a whole folder of
+    // someone's parts and every part lands on the right session. One that
+    // overlaps none of yours goes on the open recording.
+    async addPov(paths) {
+      const main = get().currentKey
+      if (!main) return
+      const picked = paths || (await api.pickFiles())
+      if (!picked.length) return
+      set((s) => {
+        if (!s.settings.files) s.settings.files = []
+        for (const p of picked) if (!s.settings.files.includes(p)) s.settings.files.push(p)
+      })
+      get().scheduleSave()
+      await get().rescan()
+      const norm = (p) => (IS_WIN ? p.replace(/\//g, '\\').toLowerCase() : p)
+      const want = new Set(picked.map(norm))
+      // wait for them to be probed (their length and start time)
+      const t0 = Date.now()
+      while (Date.now() - t0 < 30000 && get().clips.some((c) => want.has(norm(c.key)) && !c.probe)) await new Promise((r) => setTimeout(r, 300))
+      const st = get()
+      const povKeys = new Set()
+      for (const k in st.reviews) for (const p of st.reviews[k].povs || []) povKeys.add(p.key)
+      const mine = st.clips.filter((c) => c.probe && !want.has(norm(c.key)) && !povKeys.has(c.key))
+      const placed = [] // {main, key}
+      let stray = 0
+      set((s) => {
+        for (const c of s.clips) {
+          if (!want.has(norm(c.key)) || c.key === main) continue
+          // the recording it overlaps most — the open one wins a tie
+          let target = null
+          let best = 0
+          for (const m of mine) {
+            const o = overlap(m, c) + (m.key === main ? 1 : 0)
+            if (o > best) { best = o; target = m.key }
+          }
+          if (!target) { target = main; stray++ }
+          const r = s.reviews[target] || (s.reviews[target] = emptyReview())
+          if (!r.povs) r.povs = []
+          if (r.povs.some((p) => p.key === c.key) || r.povs.length >= 8) continue
+          const targetClip = s.clips.find((x) => x.key === target)
+          r.povs.push({ key: c.key, name: povName(c), off: guessOffset(targetClip || {}, c), synced: false })
+          placed.push({ main: target, key: c.key })
+        }
+      })
+      get().scheduleSave()
+      if (!placed.length) return get().showToast('Already added')
+      const here = placed.filter((p) => p.main === main)
+      const elsewhere = placed.length - here.length
+      if (elsewhere) {
+        const n = new Set(placed.filter((p) => p.main !== main).map((p) => p.main)).size
+        const plural = placed.length > 1 ? 's' : ''
+        get().showToast(`Added ${placed.length} POV${plural} — ${here.length ? here.length + ' to this recording, ' : ''}${elsewhere} to ${n === 1 ? 'the other recording' : n + ' other recordings'} they were recorded alongside`)
+      }
+      if (stray) get().showToast(`${stray === 1 ? 'One file doesn’t' : stray + ' files don’t'} overlap any of your recordings in time — added here; line ${stray === 1 ? 'it' : 'them'} up by sound or by eye`)
+      // straight into lining up the one on this recording (by sound, on its own)
+      if (here.length) set((s) => { s.povSync = { main, pov: here[0].key, auto: true } })
+    },
+    updatePov(povKey, patch) {
+      const main = get().currentKey
+      set((s) => {
+        const p = ((s.reviews[main] && s.reviews[main].povs) || []).find((x) => x.key === povKey)
+        if (p) Object.assign(p, patch)
+      })
+      get().scheduleSave()
+    },
+    // It belongs to another recording of yours (recorded alongside that one):
+    // take it off this one, put it on that, open that one and line it up.
+    movePov(povKey, toKey) {
+      const from = get().currentKey
+      const pov = ((get().reviews[from] && get().reviews[from].povs) || []).find((p) => p.key === povKey)
+      const toClip = get().clips.find((c) => c.key === toKey)
+      const povClip = get().clips.find((c) => c.key === povKey)
+      if (!pov || !toClip) return
+      set((s) => {
+        s.reviews[from].povs = s.reviews[from].povs.filter((p) => p.key !== povKey)
+        const r = s.reviews[toKey] || (s.reviews[toKey] = emptyReview())
+        if (!r.povs) r.povs = []
+        if (!r.povs.some((p) => p.key === povKey)) r.povs.push({ ...pov, off: guessOffset(toClip, povClip || {}), synced: false })
+        s.povSync = null
+      })
+      get().scheduleSave()
+      get().openClip(toKey)
+      setTimeout(() => set((s) => { s.povSync = { main: toKey, pov: povKey, auto: true } }), 600)
+    },
+    removePov(povKey) {
+      const main = get().currentKey
+      set((s) => {
+        const r = s.reviews[main]
+        if (r && r.povs) r.povs = r.povs.filter((p) => p.key !== povKey)
+        if (s.povFocus === povKey) s.povFocus = null
+      })
+      get().scheduleSave()
+    },
+    setPovFocus(key) {
+      set((s) => { s.povFocus = key || null; s.povSolo = [] })
+      player.setOutputMuted(!!key)
+    },
+    // The POV's own tracks (when it's big, the timeline's track heads are its):
+    // mix = [{vol, mute}] per track, kept with the POV.
+    setPovTrack(povKey, i, patch) {
+      const main = get().currentKey
+      set((s) => {
+        const p = ((s.reviews[main] && s.reviews[main].povs) || []).find((x) => x.key === povKey)
+        if (!p) return
+        if (!p.mix) p.mix = []
+        p.mix[i] = { vol: 1, mute: false, ...(p.mix[i] || {}), ...patch }
+      })
+      get().scheduleSave()
+    },
+    togglePovSolo(i, exclusive = true) {
+      set((s) => {
+        const has = s.povSolo.includes(i)
+        if (exclusive) s.povSolo = has && s.povSolo.length === 1 ? [] : [i]
+        else s.povSolo = has ? s.povSolo.filter((x) => x !== i) : [...s.povSolo, i]
+      })
+    },
+    openPovSync(povKey) {
+      set((s) => { s.povSync = { main: s.currentKey, pov: povKey } })
+    },
+    closePovSync() {
+      set((s) => { s.povSync = null })
     },
     savePosition(key, pos) {
       set((s) => {
@@ -1518,6 +1661,9 @@ export const useStore = create(
         const before = r.notes.filter((n) => n.t <= t).sort((a, b) => a.t - b.t)
         const type = kind === 'note' ? 'NOTE' : kind === 'break' ? 'BREAK' : kind === 'marker' ? 'MARKER' : pickDefaultType(before)
         const note = { id, t: Math.round(t * 100) / 100, type, text: '', star: false, createdAt: Date.now() }
+        // written while watching someone's POV: remember whose (for the edit later)
+        const pov = s.povFocus && (r.povs || []).find((p) => p.key === s.povFocus)
+        if (pov) note.pov = pov.name
         if (type === 'MARKER') note.color = s.settings.markerColor || 'yellow'
         if (opts.end != null) note.end = Math.round(opts.end * 100) / 100
         r.notes.push(note)

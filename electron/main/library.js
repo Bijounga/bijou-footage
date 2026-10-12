@@ -16,7 +16,7 @@ const PROBE_CONCURRENCY = 4
 // decode a single sample.
 const SILENT_BITRATE = 4000
 // Bump when the probe result gains fields, so cached entries get re-probed.
-const PROBE_VERSION = 3
+const PROBE_VERSION = 4 // 4: + created (the recording's own start time)
 
 let cachePath = null
 let probeCache = {} // cacheKey -> probe
@@ -70,9 +70,12 @@ function walk(dir, depth, out) {
 // OBS's default filename format is "YYYY-MM-DD HH-MM-SS". Using that as the
 // recording time is more reliable than file timestamps, which change when
 // footage gets copied between drives.
-function recordedAtFor(name, stat) {
+// Without a date in the name, the time written inside the file (probe.created)
+// beats the file's own dates (a friend's copied recording has the copy date).
+function recordedAtFor(name, stat, probe) {
   const m = /(\d{4})-(\d{2})-(\d{2})[ _T](\d{2})-(\d{2})-(\d{2})/.exec(name)
   if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime()
+  if (probe && probe.created) return probe.created
   return Math.min(stat.birthtimeMs || Infinity, stat.mtimeMs)
 }
 
@@ -157,7 +160,10 @@ function probeStreams(ffprobe, file) {
             width: v ? v.width : null,
             height: v ? v.height : null,
             fps: v ? parseRate(v.avg_frame_rate) || parseRate(v.r_frame_rate) : null,
-            audio
+            audio,
+            // When recording started, as the file itself says (OBS writes it
+            // into the MP4) — it survives copying, unlike the file's dates.
+            created: Date.parse((j.format && j.format.tags && j.format.tags.creation_time) || '') || null
           })
         } catch (e) {
           resolve({ error: 'Could not read ffprobe output' })
@@ -196,7 +202,7 @@ export function scanFolders(folders, ffprobe, onProbed, extraFiles = []) {
       name: path.basename(file),
       folder: path.dirname(file),
       size: stat.size,
-      recordedAt: recordedAtFor(path.basename(file), stat),
+      recordedAt: recordedAtFor(path.basename(file), stat, probe),
       probe
     }
     clips.push(clip)
@@ -213,7 +219,7 @@ export function scanFolders(folders, ffprobe, onProbed, extraFiles = []) {
           probeCache[job.cacheKey] = probe
           saveCacheSoon()
         }
-        onProbed({ ...job.clip, probe })
+        onProbed({ ...job.clip, probe, recordedAt: recordedAtFor(job.clip.name, { mtimeMs: job.clip.recordedAt }, probe) })
       }
     }
     for (let w = 0; w < PROBE_CONCURRENCY; w++) worker()

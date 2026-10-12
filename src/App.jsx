@@ -84,6 +84,11 @@ function onKeyDown(e) {
     return
   }
   if (isTyping(document.activeElement)) return
+  // the POV sync window has its own controls
+  if (st.povSync) {
+    if (e.key === 'Escape') st.closePovSync()
+    return
+  }
   // Range sliders keep focus after a drag; don't let them eat arrow keys.
   if (document.activeElement && document.activeElement.type === 'range') document.activeElement.blur()
   const combo = comboFromEvent(e)
