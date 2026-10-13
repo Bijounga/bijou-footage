@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bijou Footage POV</title>
+<link rel="stylesheet" href="pi.css">
+</head>
+<body>
+	<div class="row">
+		<label for="slot">View</label>
+		<div>
+			<select id="slot"></select>
+			<div class="hint">POVs are numbered in the order you added them to a recording (the POV menu lists them). The key shows whose it is.</div>
+		</div>
+	</div>
+	<div class="howto">
+		<b>Tap</b> to watch that view big — you hear them then<br>
+		<b>Tap</b> the one that's already big to go back to yours<br>
+		Make one key for <b>Your view</b> and one per POV
+	</div>
+<script>
+	let socket = null, contextId = null, settings = {};
+	const $ = (id) => document.getElementById(id);
+
+	window.connectElgatoStreamDeckSocket = (port, uuid, registerEvent, info, actionInfo) => {
+		contextId = uuid;
+		settings = JSON.parse(actionInfo).payload?.settings ?? {};
+		socket = new WebSocket(`ws://127.0.0.1:${port}`);
+		socket.onopen = () => {
+			socket.send(JSON.stringify({ event: registerEvent, uuid }));
+			// a new key starts on POV 1: save that, so the key and the panel agree
+			if (typeof settings.slot !== "number") { settings = { ...settings, slot: 1 }; save(); }
+		};
+		socket.onmessage = (e) => {
+			const m = JSON.parse(e.data);
+			if (m.event === "didReceiveSettings") { settings = m.payload.settings ?? {}; render(); }
+		};
+		render();
+	};
+
+	function save() {
+		socket?.send(JSON.stringify({ event: "setSettings", context: contextId, payload: settings }));
+	}
+
+	function render() {
+		const sel = $("slot");
+		const options = [[0, "Your view"]];
+		for (let i = 1; i <= 8; i++) options.push([i, "POV " + i]);
+		sel.replaceChildren(...options.map(([v, label]) => {
+			const o = document.createElement("option");
+			o.value = String(v);
+			o.textContent = label;
+			return o;
+		}));
+		sel.value = String(typeof settings.slot === "number" ? settings.slot : 1);
+		sel.onchange = () => { settings = { ...settings, slot: Number(sel.value) }; save(); };
+	}
+</script>
+</body>
+</html>

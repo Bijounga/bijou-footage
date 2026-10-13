@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bijou Footage Marker</title>
+<link rel="stylesheet" href="pi.css">
+</head>
+<body>
+	<div class="row">
+		<label>Colour</label>
+		<div>
+			<div class="swatches" id="swatches"></div>
+			<div class="hint" id="name"></div>
+		</div>
+	</div>
+	<div class="howto">
+		<b>Tap</b> to drop a marker of this colour at the playhead<br>
+		In Review it marks the recording; in Edit, the cut. It carries into Premiere in its colour.
+	</div>
+<script>
+	// The app's marker colours (src/lib/beats.js MARKER_COLORS).
+	const COLORS = [
+		["green", "Green", "#5CC45F"], ["red", "Red", "#E2483F"], ["purple", "Purple", "#B15FD0"], ["orange", "Orange", "#F08C2A"],
+		["yellow", "Yellow", "#F2C230"], ["white", "White", "#E8E8E8"], ["blue", "Blue", "#4B8FE8"], ["cyan", "Cyan", "#3FC8D8"]
+	];
+	let socket = null, contextId = null, settings = {};
+	const $ = (id) => document.getElementById(id);
+
+	window.connectElgatoStreamDeckSocket = (port, uuid, registerEvent, info, actionInfo) => {
+		contextId = uuid;
+		settings = JSON.parse(actionInfo).payload?.settings ?? {};
+		socket = new WebSocket(`ws://127.0.0.1:${port}`);
+		socket.onopen = () => socket.send(JSON.stringify({ event: registerEvent, uuid }));
+		socket.onmessage = (e) => {
+			const m = JSON.parse(e.data);
+			if (m.event === "didReceiveSettings") { settings = m.payload.settings ?? {}; render(); }
+		};
+		render();
+	};
+
+	function save() {
+		socket?.send(JSON.stringify({ event: "setSettings", context: contextId, payload: settings }));
+	}
+
+	function render() {
+		const current = settings.color || "yellow";
+		$("swatches").replaceChildren(...COLORS.map(([id, label, hex]) => {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.className = "swatch" + (id === current ? " on" : "");
+			b.style.background = hex;
+			b.title = label;
+			b.onclick = () => { settings = { ...settings, color: id }; save(); render(); };
+			return b;
+		}));
+		$("name").textContent = (COLORS.find((c) => c[0] === current) || COLORS[4])[1] + " marker";
+	}
+</script>
+</body>
+</html>

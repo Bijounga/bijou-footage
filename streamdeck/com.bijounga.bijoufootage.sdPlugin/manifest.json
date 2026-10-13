@@ -1,0 +1,103 @@
+{
+	"$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+	"UUID": "com.bijounga.bijoufootage",
+	"Name": "Bijou Footage",
+	"Version": "1.0.0.0",
+	"Author": "Bijou",
+	"Description": "Bijou Footage on your Stream Deck: record voiceover with a live timer on the key, switch between POVs, drop markers in any colour, and run any action.",
+	"Icon": "imgs/plugin",
+	"Category": "Bijou Footage",
+	"CategoryIcon": "imgs/category",
+	"CodePath": "bin/plugin.js",
+	"SDKVersion": 2,
+	"Software": {
+		"MinimumVersion": "7.1"
+	},
+	"OS": [
+		{
+			"Platform": "windows",
+			"MinimumVersion": "10"
+		},
+		{
+			"Platform": "mac",
+			"MinimumVersion": "12"
+		}
+	],
+	"Nodejs": {
+		"Version": "20",
+		"Debug": "disabled"
+	},
+	"Actions": [
+		{
+			"UUID": "com.bijounga.bijoufootage.record",
+			"Name": "Record Voiceover",
+			"Icon": "imgs/record",
+			"Tooltip": "Records voiceover: over the cut in Edit, a new take in the Voiceover tab. Shows the count-in and how long you've been talking. Tap again to stop.",
+			"Controllers": [
+				"Keypad"
+			],
+			"UserTitleEnabled": false,
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/record-key",
+					"ShowTitle": false
+				}
+			]
+		},
+		{
+			"UUID": "com.bijounga.bijoufootage.pov",
+			"Name": "POV",
+			"Icon": "imgs/pov",
+			"Tooltip": "Your view or one of the POVs of the open recording. Shows whose it is in their colour; tap to watch it big.",
+			"PropertyInspectorPath": "ui/pov.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"UserTitleEnabled": false,
+			"SupportedInMultiActions": false,
+			"States": [
+				{
+					"Image": "imgs/pov-key",
+					"ShowTitle": false
+				}
+			]
+		},
+		{
+			"UUID": "com.bijounga.bijoufootage.marker",
+			"Name": "Marker",
+			"Icon": "imgs/marker",
+			"Tooltip": "Drops a marker of the colour you pick at the playhead (Review or Edit).",
+			"PropertyInspectorPath": "ui/marker.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"UserTitleEnabled": false,
+			"SupportedInMultiActions": true,
+			"States": [
+				{
+					"Image": "imgs/marker-key",
+					"ShowTitle": false
+				}
+			]
+		},
+		{
+			"UUID": "com.bijounga.bijoufootage.action",
+			"Name": "Action",
+			"Icon": "imgs/action",
+			"Tooltip": "Runs any Bijou Footage action — pick it in the key's settings.",
+			"PropertyInspectorPath": "ui/action.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"UserTitleEnabled": false,
+			"SupportedInMultiActions": true,
+			"States": [
+				{
+					"Image": "imgs/action-key",
+					"ShowTitle": false
+				}
+			]
+		}
+	]
+}

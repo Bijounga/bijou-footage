@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bijou Footage Action</title>
+<link rel="stylesheet" href="pi.css">
+</head>
+<body>
+	<div class="banner" id="offline" hidden>
+		Bijou Footage isn't open, so its actions can't load yet.<br>
+		<button type="button" id="launch">Open Bijou Footage</button>
+	</div>
+
+	<div class="row">
+		<label for="pick">Action</label>
+		<div>
+			<select id="pick"></select>
+			<div class="hint" id="pickHint">The handy ones are first; every action from the app's Keybinds window is below them.</div>
+		</div>
+	</div>
+
+	<div class="row">
+		<label for="title">Key text</label>
+		<div>
+			<input type="text" id="title" placeholder="(the action's name)" spellcheck="false" autocomplete="off" maxlength="40">
+			<div class="hint">Optional — a short name to show on the key.</div>
+		</div>
+	</div>
+
+	<div class="howto">
+		<b>Tap</b> to run it — Bijou Footage switches to Review, Edit or Voiceover first if that's where it lives
+	</div>
+<script>
+	let socket = null, contextId = null, actionId = null, settings = {};
+	let catalog = null;
+	const $ = (id) => document.getElementById(id);
+
+	window.connectElgatoStreamDeckSocket = (port, uuid, registerEvent, info, actionInfo) => {
+		contextId = uuid;
+		const a = JSON.parse(actionInfo);
+		actionId = a.action;
+		settings = a.payload?.settings ?? {};
+		socket = new WebSocket(`ws://127.0.0.1:${port}`);
+		socket.onopen = () => {
+			socket.send(JSON.stringify({ event: registerEvent, uuid }));
+			requestCatalog(3);
+		};
+		socket.onmessage = (e) => {
+			const m = JSON.parse(e.data);
+			if (m.event === "sendToPropertyInspector" && m.payload?.event === "catalog") {
+				catalog = m.payload;
+				render();
+			} else if (m.event === "didReceiveSettings") {
+				settings = m.payload.settings ?? {};
+				render();
+			}
+		};
+		$("launch").onclick = () => { sendToPlugin({ event: "launch" }); setTimeout(() => requestCatalog(5), 1500); };
+		$("title").oninput = () => { settings = { ...settings, title: $("title").value }; save(); };
+		render();
+	};
+
+	// The plugin can only answer once Stream Deck has told it this panel is open — ask again
+	// until an answer arrives.
+	function requestCatalog(attempts) {
+		sendToPlugin({ event: "getCatalog" });
+		if (attempts > 1) setTimeout(() => { if (!catalog || !catalog.connected) requestCatalog(attempts - 1); }, 1500);
+	}
+	function sendToPlugin(payload) {
+		socket?.send(JSON.stringify({ event: "sendToPlugin", action: actionId, context: contextId, payload }));
+	}
+	function save() {
+		socket?.send(JSON.stringify({ event: "setSettings", context: contextId, payload: settings }));
+	}
+
+	function option(item) {
+		const o = document.createElement("option");
+		o.value = item.ws + "|" + item.id;
+		o.textContent = item.label;
+		return o;
+	}
+
+	function render() {
+		const sel = $("pick");
+		const connected = !!(catalog && catalog.connected && (catalog.all || []).length);
+		$("offline").hidden = connected || !catalog;
+		const groups = [];
+		if (connected) {
+			const handy = document.createElement("optgroup");
+			handy.label = "Handy";
+			handy.append(...catalog.important.map((i) => { const o = option(i); o.textContent = i.wsLabel + ": " + i.label; return o; }));
+			groups.push(handy);
+			for (const ws of ["review", "edit", "voiceover"]) {
+				const items = catalog.all.filter((i) => i.ws === ws);
+				if (!items.length) continue;
+				const g = document.createElement("optgroup");
+				g.label = items[0].wsLabel;
+				g.append(...items.map(option));
+				groups.push(g);
+			}
+		}
+		const none = document.createElement("option");
+		none.value = "";
+		none.textContent = settings.id ? (settings.label || settings.id) : "Pick an action…";
+		sel.replaceChildren(none, ...groups);
+		if (settings.ws && settings.id && connected) sel.value = settings.ws + "|" + settings.id;
+		sel.onchange = () => {
+			const [ws, id] = sel.value.split("|");
+			if (!id) return;
+			const item = catalog.all.find((i) => i.ws === ws && i.id === id);
+			settings = { ...settings, ws, id, label: item ? item.label : id };
+			save();
+		};
+		if (document.activeElement !== $("title")) $("title").value = settings.title || "";
+	}
+</script>
+</body>
+</html>

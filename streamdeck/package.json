@@ -1,0 +1,25 @@
+{
+  "name": "bijoufootage-streamdeck",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stream Deck plugin for Bijou Footage: record voiceover, switch POVs, drop markers, run actions.",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w",
+    "test": "node test/fake-host.mjs"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^3.0.1"
+  },
+  "devDependencies": {
+    "@elgato/cli": "^1.10.1",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/node": "^20.19.43",
+    "rollup": "^4.64.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  }
+}

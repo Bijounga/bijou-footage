@@ -8,6 +8,10 @@ function on(channel, cb) {
 
 contextBridge.exposeInMainWorld('footage', {
   platform: process.platform,
+  // the Stream Deck (lib/deck.js ↔ electron/main/deckBridge.js)
+  deckState: (state) => ipcRenderer.send('deck:state', state),
+  deckReply: (cid, result) => ipcRenderer.send('deck:reply', cid, result),
+  onDeckCommand: (cb) => on('deck:command', cb),
   appVersion: () => ipcRenderer.invoke('app:version'),
   saveSketch: (id, dataUrl) => ipcRenderer.invoke('sketch:save', id, dataUrl),
   listDisplays: () => ipcRenderer.invoke('displays:list'),

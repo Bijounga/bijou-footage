@@ -15,6 +15,7 @@ import * as bijou from './bijou.js'
 import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
 import { initUpdater } from './updater.js'
 import * as macUpdate from './macUpdate.js'
+import { startDeckBridge, deckReply, deckState, stopDeckBridge } from './deckBridge.js'
 
 const isDev = !app.isPackaged
 const isMac = process.platform === 'darwin'
@@ -650,10 +651,15 @@ else {
     initUpdater(send)
     if (isMac) macMenu()
     createWindow()
+    // the Stream Deck plugin's line in (deckBridge.js)
+    startDeckBridge({ dataDir: userData(), exePath: process.execPath, sendToRenderer: send })
+    ipcMain.on('deck:state', (_e, state) => deckState(state))
+    ipcMain.on('deck:reply', (_e, cid, result) => deckReply(cid, result))
     if (isMac && app.isPackaged) macUpdate.tidyOnLaunch() // eject the install disk image, drop old downloads
   })
   app.on('window-all-closed', () => app.quit())
   app.on('will-quit', () => {
+    stopDeckBridge()
     transcribe.shutdown()
     llm.shutdown()
   })

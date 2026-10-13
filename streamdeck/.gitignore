@@ -1,0 +1,5 @@
+node_modules/
+dist/
+com.bijounga.bijoufootage.sdPlugin/bin/
+com.bijounga.bijoufootage.sdPlugin/logs/
+test/out/

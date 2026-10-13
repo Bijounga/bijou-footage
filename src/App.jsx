@@ -22,6 +22,7 @@ import EditWorkspace from './components/EditWorkspace.jsx'
 import VoiceoverWorkspace, { handleVoKey } from './components/VoiceoverWorkspace.jsx'
 import { editKeymap } from './lib/editKeys.js'
 import { runOnSource } from './lib/voSrcKeys.js'
+import { startDeck } from './lib/deck.js'
 
 function isTyping(el) {
   if (!el) return false
@@ -151,6 +152,8 @@ export default function App() {
   const panelOutside = usePanelOutside()
   // No title bar: the app's top strips become the window's drag handle.
   useEffect(() => { document.body.classList.toggle('frameless', frameless) }, [frameless])
+  // the Stream Deck plugin's keys (lib/deck.js)
+  useEffect(() => startDeck(), [])
   // LCD themes: their dot-matrix grid over the timeline can be switched off.
   const lcdGrid = useStore((s) => s.settings.lcdGrid !== false)
   useEffect(() => { document.documentElement.dataset.lcdGrid = lcdGrid ? 'on' : 'off' }, [lcdGrid])

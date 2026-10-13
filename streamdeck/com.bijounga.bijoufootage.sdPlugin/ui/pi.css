@@ -1,0 +1,108 @@
+:root {
+	--bg: #2d2d2d;
+	--field: #3d3d3d;
+	--field-hover: #454545;
+	--line: #4a4a4a;
+	--ink: #d8d8d8;
+	--muted: #969696;
+	--accent: #33e1ff;
+	--warn: #ffb547;
+	--bad: #ff5c6c;
+}
+* { box-sizing: border-box; }
+html, body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font: 9pt "Segoe UI", system-ui, sans-serif;
+	-webkit-user-select: none;
+	user-select: none;
+}
+body { padding: 8px 12px 14px 0; }
+
+.row {
+	display: grid;
+	grid-template-columns: 96px 1fr;
+	align-items: start;
+	gap: 0 10px;
+	margin: 0 0 8px;
+}
+.row > label {
+	text-align: right;
+	color: var(--muted);
+	padding-top: 5px;
+}
+select, input[type="text"] {
+	width: 100%;
+	height: 26px;
+	padding: 0 8px;
+	background: var(--field);
+	color: var(--ink);
+	border: 1px solid transparent;
+	border-radius: 3px;
+	font: inherit;
+	outline: none;
+}
+select:hover, input[type="text"]:hover { background: var(--field-hover); }
+select:focus, input[type="text"]:focus { border-color: var(--accent); }
+input.invalid { border-color: var(--bad); }
+
+.hint { color: var(--muted); font-size: 8pt; margin-top: 4px; min-height: 1em; }
+.hint.bad { color: var(--bad); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.chip {
+	padding: 3px 8px;
+	background: var(--field);
+	color: var(--ink);
+	border: 1px solid transparent;
+	border-radius: 10px;
+	font: inherit;
+	font-size: 8pt;
+	cursor: pointer;
+}
+.chip:hover { background: var(--field-hover); }
+.chip.on { border-color: var(--accent); color: #fff; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 3px; }
+.swatch {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	cursor: pointer;
+	padding: 0;
+	box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.swatch.on { border-color: #fff; }
+
+.banner {
+	margin: 0 0 10px 106px;
+	padding: 8px 10px;
+	border-radius: 4px;
+	background: rgba(255, 181, 71, 0.12);
+	border: 1px solid rgba(255, 181, 71, 0.35);
+	color: var(--ink);
+	line-height: 1.4;
+}
+.banner button {
+	margin-top: 6px;
+	padding: 3px 10px;
+	background: var(--field);
+	color: var(--ink);
+	border: 1px solid var(--line);
+	border-radius: 3px;
+	font: inherit;
+	cursor: pointer;
+}
+.banner button:hover { background: var(--field-hover); }
+[hidden] { display: none !important; }
+
+.howto {
+	margin: 14px 0 0 106px;
+	color: var(--muted);
+	line-height: 1.5;
+}
+.howto b { color: var(--ink); font-weight: 600; }
+optgroup { color: var(--muted); }
+.swatch { cursor: pointer; }

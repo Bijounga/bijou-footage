@@ -854,10 +854,10 @@ export const useStore = create(
     },
     // Timeline markers (Q in Edit): they sit at a time in the cut, not on a
     // recording, and export as sequence markers.
-    addSeqMarker(t) {
+    addSeqMarker(t, color) {
       const sec = get().currentSection()
       if (!sec) return null
-      const m = { id: 'm' + Date.now().toString(36), t: Math.round(t * 1000) / 1000, color: get().settings.markerColor || 'yellow', text: '' }
+      const m = { id: 'm' + Date.now().toString(36), t: Math.round(t * 1000) / 1000, color: color || get().settings.markerColor || 'yellow', text: '' }
       get().applySection({ markers: [...(sec.markers || []), m].sort((a, b) => a.t - b.t) })
       return m.id
     },
@@ -1664,7 +1664,7 @@ export const useStore = create(
         // written while watching someone's POV: remember whose (for the edit later)
         const pov = s.povFocus && (r.povs || []).find((p) => p.key === s.povFocus)
         if (pov) note.pov = pov.name
-        if (type === 'MARKER') note.color = s.settings.markerColor || 'yellow'
+        if (type === 'MARKER') note.color = opts.color || s.settings.markerColor || 'yellow'
         if (opts.end != null) note.end = Math.round(opts.end * 100) / 100
         r.notes.push(note)
         r.notes.sort((a, b) => a.t - b.t)
