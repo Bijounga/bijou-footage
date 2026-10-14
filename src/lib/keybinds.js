@@ -6,7 +6,7 @@ import { trackNamesFor } from '../state/store.js'
 // Keys are stored as combos like "Shift+M", "Ctrl+Alt+M", "Space", "1",
 // built from the physical key (e.code), so they don't depend on keyboard
 // layout or on what Shift turns a key into ("Shift+1" not "!").
-import { cycleType } from './beats.js'
+import { cycleType, MARKER_COLORS } from './beats.js'
 import { toggleViewer } from './viewer.js'
 import { speechStarts, hasWave } from './speech.js'
 
@@ -158,6 +158,9 @@ export const ACTIONS = [
   { id: 'addNote', label: 'Add plain note', cat: 'Notes', keys: ['N'], needsClip: true, run: ({ st }) => st.addNote('note') },
   { id: 'addMarker', label: 'Add marker (for Premiere) and name it', cat: 'Notes', keys: ['Shift+M'], needsClip: true, run: ({ st }) => st.addNote('marker') },
   { id: 'quickMarker', label: 'Quick marker (no typing, keeps playing)', cat: 'Notes', keys: ['Q'], needsClip: true, run: ({ st, osd }) => { st.addNote('marker', { quick: true }); osd('Marker') } },
+  // One quick marker per Premiere colour (no typing, keeps playing) — bind the
+  // ones you use (e.g. one colour for funny moments, one for the script).
+  ...Object.entries(MARKER_COLORS).map(([color, c]) => ({ id: 'marker_' + color, label: c.label + ' marker (quick)', cat: 'Notes', keys: [], needsClip: true, run: ({ st, osd }) => { st.addNote('marker', { quick: true, color }); osd(c.label + ' marker') } })),
   { id: 'sceneBreak', label: 'Add scene break', cat: 'Notes', keys: ['Shift+B'], needsClip: true, run: ({ st, osd }) => { st.addNote('break'); osd('Scene break') } },
   { id: 'inPoint', label: 'Set in point (for a range beat)', cat: 'Notes', keys: ['I'], needsClip: true, run: ({ st }) => st.setInPoint() },
   { id: 'rangeBeat', label: 'Add range beat (in point → here)', cat: 'Notes', keys: ['O'], needsClip: true, run: ({ st }) => st.addRange() },

@@ -1985,3 +1985,18 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .ps-foot { align-items: center; }
 .ps-note { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; text-align: center; background: rgba(0, 0, 0, 0.72); color: rgba(255, 255, 255, 0.85); font-size: 13px; pointer-events: none; }
 .sw-ms { position: absolute; display: flex; gap: 3px; z-index: 2; } .sw-ms .th-btn { width: 20px; height: 18px; font-size: 9.5px; }
+/* the shortcuts window: sections you can fold, and the coloured-marker row */
+.kb-section { margin-bottom: 4px; }
+.kb-sec-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--line-soft); background: var(--panel); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.kb-sec-head b { font-size: 12.5px; letter-spacing: 0.3px; }
+.kb-sec-head:hover { background: var(--panel-2); }
+.kb-chev { display: inline-block; width: 12px; color: var(--ink-dim); transition: transform 0.12s; }
+.kb-section.shut .kb-chev { transform: rotate(-90deg); }
+.kb-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
+.kb-colors-pick { display: inline-flex; align-items: center; gap: 5px; padding: 2px 6px; border: 1px dashed var(--line); border-radius: 6px; }
+.kb-dot-btn { width: 16px; height: 16px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
+.kb-dot-btn:hover { box-shadow: 0 0 0 2px var(--ink); }
+/* inside a section the category is its heading — drop the column */
+.kb-section .kb-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 28px; padding-left: 24px; }
+.kb-section .kb-cat { display: none; }
+.kb-list { padding-top: 0; }

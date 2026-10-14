@@ -8,6 +8,7 @@ import { editRecToggle, tapPlace } from './editRecord.js'
 import { seqPlayer } from './seqPlayer.js'
 import { toggleViewer } from './viewer.js'
 import { speechStarts, hasWave } from './speech.js'
+import { MARKER_COLORS } from './beats.js'
 
 // Every place someone on the ⇥ tracks starts talking, in timeline time.
 function speechInCut(st) {
@@ -208,6 +209,8 @@ export const EDIT_ACTIONS = [
   { id: 'e.marker', label: 'Marker at the playhead (on the timeline)', cat: 'Edit', keys: ['Q'], run: ({ st, osd }) => {
     if (st.addSeqMarker(T())) osd('Marker')
   } },
+  // one per colour, like Review's
+  ...Object.entries(MARKER_COLORS).map(([color, c]) => ({ id: 'e.marker_' + color, label: c.label + ' marker at the playhead', cat: 'Edit', keys: [], run: ({ st, osd }) => { if (st.addSeqMarker(T(), color)) osd(c.label + ' marker') } })),
   { id: 'e.prevMarker', label: 'Previous marker', cat: 'Playback', keys: ['Shift+['], run: ({ st }) => jumpMarker(st, -1) },
   { id: 'e.nextMarker', label: 'Next marker', cat: 'Playback', keys: ['Shift+]'], run: ({ st }) => jumpMarker(st, 1) },
   { id: 'e.skipSilence', label: 'Toggle skip silence (play only the talking)', cat: 'Playback', keys: ['Shift+X'], run: ({ st }) => st.toggleEditSkipSilence() },
