@@ -2000,3 +2000,9 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .kb-section .kb-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 28px; padding-left: 24px; }
 .kb-section .kb-cat { display: none; }
 .kb-list { padding-top: 0; }
+/* Both, stacked: notes above the transcript (⇅ swaps), a horizontal divider */
+.np-body.both.stack { flex-direction: column; }
+.np-body.both.stack.swap { flex-direction: column-reverse; }
+.np-body.both.stack .np-split { width: auto; height: 5px; margin: -2px 0; cursor: ns-resize; }
+.np-body.both.stack .np-split::after { left: 0; right: 0; top: 2px; bottom: auto; width: auto; height: 1px; }
+.np-body.both.stack .np-split:hover::after, body.resizing-ns .np-body.both.stack .np-split::after { height: 3px; top: 1px; width: auto; left: 0; }

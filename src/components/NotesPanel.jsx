@@ -293,29 +293,37 @@ export default function NotesPanel() {
   const showNotes = sideTab === 'notes' || both
   const showTx = sideTab === 'transcript' || both
   const split = useStore((s) => s.settings.sideSplit ?? 0.5) // notes' share of the width, side by side
-  const swap = useStore((s) => !!s.settings.sideSwap) // transcript on the left
+  const swap = useStore((s) => !!s.settings.sideSwap) // transcript first (left / top)
+  const stack = useStore((s) => !!s.settings.sideStack) // notes above the transcript, not beside it
   const bodyRef = useRef(null)
   function dragSplit(e) {
     if (e.button !== 0) return
     e.preventDefault()
     const box = bodyRef.current.getBoundingClientRect()
     const move = (ev) => {
-      let f = (ev.clientX - box.left) / box.width
+      let f = stack ? (ev.clientY - box.top) / box.height : (ev.clientX - box.left) / box.width
       if (swap) f = 1 - f
       useStore.getState().updateSettings({ sideSplit: Math.max(0.15, Math.min(0.85, f)) })
     }
+    const cls = stack ? 'resizing-ns' : 'resizing-ew'
     const up = () => {
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
-      document.body.classList.remove('resizing-ew')
+      document.body.classList.remove(cls)
     }
-    document.body.classList.add('resizing-ew')
+    document.body.classList.add(cls)
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
   const color = useBeatColor()
   const noteColor = useNoteColor()
-  const [collapsed, setCollapsed] = useState(() => new Set())
+  // which recordings' note groups are folded — remembered between runs
+  const foldedKeys = useStore((s) => s.settings.notesCollapsed)
+  const collapsed = React.useMemo(() => new Set(foldedKeys || []), [foldedKeys])
+  const setCollapsed = (fn) => {
+    const next = fn(new Set(collapsed))
+    useStore.getState().updateSettings({ notesCollapsed: [...next] })
+  }
   const [showFilters, setShowFilters] = useState(false)
   const [types, setTypes] = useState(() => new Set([...TYPES, 'MARKER']))
   const [starred, setStarred] = useState(false)
@@ -465,7 +473,16 @@ export default function NotesPanel() {
               ☑ Project
             </button>
           </div>
-          {both && <button className="icon-btn small np-swap" onClick={() => useStore.getState().updateSettings({ sideSwap: !swap })} title="Swap sides">⇄</button>}
+          {both && <button className="icon-btn small np-swap" onClick={() => useStore.getState().updateSettings({ sideSwap: !swap })} title={stack ? 'Swap: transcript on top / notes on top' : 'Swap sides'}>{stack ? '⇅' : '⇄'}</button>}
+          {both && (
+            <button className="icon-btn small np-stack" onClick={() => useStore.getState().updateSettings({ sideStack: !stack })} title={stack ? 'Side by side' : 'Stack them: notes above, transcript below'}>
+              {stack ? (
+                <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="2" width="11" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" /><path d="M7 2v10" stroke="currentColor" strokeWidth="1.3" /></svg>
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="1.5" y="2" width="11" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.3" /><path d="M1.5 7h11" stroke="currentColor" strokeWidth="1.3" /></svg>
+              )}
+            </button>
+          )}
           {sideTab === 'notes' && <span className="dim small np-scope">{project ? project.name : 'All footage'}</span>}
         </div>
         {!pad && <div className="np-zoom" title="Note text size · Ctrl+scroll over the notes also zooms">
@@ -507,7 +524,7 @@ export default function NotesPanel() {
         <button className="icon-btn small" onClick={toggleNotesPanel} title="Hide notes (Ctrl+Shift+\)">»</button>
       </div>
       {pad && <div className="np-body"><ProjectPad /></div>}
-      <div className={'np-body' + (both ? ' both' : '') + (swap ? ' swap' : '')} ref={bodyRef} style={pad ? { display: 'none' } : undefined}>
+      <div className={'np-body' + (both ? ' both' : '') + (swap ? ' swap' : '') + (both && stack ? ' stack' : '')} ref={bodyRef} style={pad ? { display: 'none' } : undefined}>
       <div className="np-col np-notes-col" style={{ display: showNotes ? undefined : 'none', flexBasis: both ? split * 100 + '%' : undefined }}>
       {showFilters && (
         <div className="all-filters">
