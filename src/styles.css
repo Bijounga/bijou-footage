@@ -1239,7 +1239,7 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .ep-sw { width: 10px; height: 10px; border-radius: 2px; border: 0; background: var(--c); padding: 0; cursor: pointer; opacity: 0.75; }
 .ep-sw.on { outline: 1.5px solid var(--ink); opacity: 1; }
 /* Edit: timeline markers + selection box */
-.et-seqmark { position: absolute; top: 2px; width: 12px; height: 15px; margin-left: -6px; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%); cursor: pointer; z-index: 2; }
+.et-seqmark { position: absolute; top: 2px; width: 12px; height: 15px; margin-left: -6px; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%); cursor: grab; z-index: 2; }
 .et-seqmark:hover { filter: brightness(1.25); }
 .et-seqline { position: absolute; top: 30px; bottom: 0; left: 0; width: 1px; background: var(--c); opacity: 0.55; pointer-events: none; z-index: 1; }
 .et-box { position: absolute; border: 1px solid var(--cyan); background: color-mix(in srgb, var(--cyan) 12%, transparent); pointer-events: none; z-index: 4; }

@@ -642,7 +642,7 @@ export default function EditTimeline({ section }) {
     window.addEventListener('mouseup', up)
   }
 
-  // Timeline markers on the ruler: click = jump · Alt+drag = move ·
+  // Timeline markers on the ruler: click = jump · drag = move ·
   // right-click = colour / delete · double-click = name it (Notes panel).
   const markers = (section && section.markers) || []
   const [mkMenu, setMkMenu] = useState(null) // {id, x, y}
@@ -665,18 +665,29 @@ export default function EditTimeline({ section }) {
   function markerDown(e, m) {
     if (e.button !== 0) return
     e.stopPropagation()
-    if (!e.altKey) {
-      seqPlayer.seek(m.t)
-      return
-    }
     e.preventDefault()
-    const move = (ev) => setMkDrag({ id: m.id, t: snapT(Math.max(0, Math.min(total, xToT(localX(ev))))) })
+    // click: jump to it · drag: move it (snapping to cuts, the other markers…)
+    seqPlayer.seek(m.t)
+    const x0 = e.clientX
+    let moved = false
+    const at = (ev) => snapT(Math.max(0, Math.min(total, xToT(localX(ev)))), { exclude: m.t })
+    const move = (ev) => {
+      if (!moved && Math.abs(ev.clientX - x0) < 4) return
+      moved = true
+      document.body.classList.add('grabbing')
+      setMkDrag({ id: m.id, t: at(ev) })
+    }
     const up = (ev) => {
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
+      document.body.classList.remove('grabbing')
       setMkDrag(null)
-      const t = snapT(Math.max(0, Math.min(total, xToT(localX(ev)))))
-      if (Math.abs(t - m.t) > 1e-3) useStore.getState().updateSeqMarker(m.id, { t })
+      if (!moved) return
+      const t = at(ev)
+      if (Math.abs(t - m.t) > 1e-3) {
+        useStore.getState().updateSeqMarker(m.id, { t })
+        seqPlayer.seek(t)
+      }
     }
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
@@ -951,7 +962,7 @@ export default function EditTimeline({ section }) {
                 key={m.id}
                 className="et-seqmark"
                 style={{ left: tToX(t), '--c': c }}
-                title={(m.text || 'Marker') + ' · ' + fmtTime(m.t) + '\nClick: jump · Alt+drag: move · Right-click: colour / delete · Double-click: name it'}
+                title={(m.text || 'Marker') + ' · ' + fmtTime(m.t) + '\nClick: jump · Drag: move · Right-click: colour / delete · Double-click: name it'}
                 onMouseDown={(e) => markerDown(e, m)}
                 onDoubleClick={(e) => { e.stopPropagation(); useStore.getState().updateSettings({ editPanelTab: 'notes', editPanelHidden: false }) }}
                 onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMkMenu({ id: m.id, x: e.clientX, y: e.clientY }) }}

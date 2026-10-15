@@ -820,13 +820,14 @@ export default function Timeline() {
     const { x, y } = localXY(e, mainRef.current)
     const n = noteAt(x, y)
     follow.current = false
-    if (n && e.altKey) {
+    if (n && !e.altKey) {
+      // Click a marker / note: the playhead lands exactly on it. Drag it: it
+      // moves (snapping to the others and the playhead; Ctrl+Z puts it back).
       selectNote(n.id)
       player.seek(n.t)
       drag.current = { kind: 'note', id: n.id, startX: x, orig: n.t, origEnd: n.end, moved: false }
     } else if (n) {
-      // Clicking a marker lands exactly on it; dragging from there scrubs —
-      // it never moves the marker (that's Alt+drag).
+      // Alt+drag from a marker scrubs instead of moving it.
       selectNote(n.id)
       drag.current = { kind: 'scrub' }
       player.scrubStart(n.t)
@@ -873,7 +874,7 @@ export default function Timeline() {
     const r = el.getBoundingClientRect()
     const wrapR = wrapRef.current.getBoundingClientRect()
     const note = area === 'main' ? noteAt(x, y) : null
-    if (area === 'main' && overlayRef.current) overlayRef.current.style.cursor = note ? (e.altKey ? 'ew-resize' : 'pointer') : y <= RULER_H ? 'col-resize' : 'text'
+    if (area === 'main' && overlayRef.current) overlayRef.current.style.cursor = note ? (e.altKey ? 'col-resize' : drag.current && drag.current.kind === 'note' ? 'grabbing' : 'grab') : y <= RULER_H ? 'col-resize' : 'text'
     const hv = { x, t, area, left: r.left - wrapR.left + x, top: r.top - wrapR.top, note }
     hoverRef.current = hv
     setHover(hv)
