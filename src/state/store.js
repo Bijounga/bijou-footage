@@ -948,6 +948,16 @@ export const useStore = create(
       if (!sec || !ids.length) return false
       return get().applySection({ clips: EM.setMotion(sec.clips, ids, fn) }, { framing: true })
     },
+    // Mute / unmute audio layers on single clips; true = muted. Applied
+    // live, like framing (no reload of the cut).
+    toggleClipMute(ids, tracks) {
+      const sec = get().currentSection()
+      if (!sec || !ids.length) return null
+      const r = EM.toggleMute(sec.clips, ids, tracks)
+      if (!r) return null
+      get().applySection({ clips: r.clips }, { framing: true })
+      return r.muted
+    },
     setEditSel(ids, { keepVo = false } = {}) {
       // Picking video clips drops the voiceover ones — unless you add to the
       // selection (Ctrl / Shift, or a box across both), like Premiere.

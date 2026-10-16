@@ -84,6 +84,7 @@ class Deck {
       el._track = file ? null : i
       el.src = mediaUrl(file || src.path)
     }
+    this.frame() // its muted layers, now its elements exist
     await meta
   }
 
@@ -141,6 +142,15 @@ class Deck {
     const it = this.sp.items && this.sp.items[this._idx]
     const css = motionCss((this === this.sp.active && this.sp.liveMotion) || (it && it.motion))
     if (this.video.style.transform !== css) this.video.style.transform = css
+    // the audio layers muted on this clip
+    const mute = it && it.mute
+    this.audios.forEach((el, i) => {
+      if (!el || !el._g) return
+      const v = mute && mute.includes(i) ? 0 : 1
+      if (el._mv === v) return
+      el._mv = v
+      el._g.gain.setTargetAtTime(v, el._g.context.currentTime, 0.008)
+    })
   }
   show(on) {
     // opacity, not visibility: Chrome keeps an invisible video's frames
@@ -205,7 +215,10 @@ class SequencePlayer {
   }
   connect(el, i) {
     this.ensureCtx()
-    this.ctx.createMediaElementSource(el).connect(this.gains[i])
+    // its own gain first: a layer muted on just the clip this deck holds
+    el._g = this.ctx.createGain()
+    this.ctx.createMediaElementSource(el).connect(el._g)
+    el._g.connect(this.gains[i])
   }
   setMix(mixer, solo, masterVol) {
     this.mixer = mixer || []
@@ -304,6 +317,7 @@ class SequencePlayer {
     for (const it of this.items) {
       const c = byId.get(it.id)
       it.motion = c ? c.motion : undefined
+      it.mute = c ? c.mute : undefined
     }
     this.liveMotion = null
     if (this.decks) for (const d of this.decks) d.frame()

@@ -1255,6 +1255,13 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .et-clipmenu { position: fixed; z-index: 300; width: 196px; }
 .clip-label-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
 .clip-label-grid .mk-swatch { width: 100%; height: 20px; border-radius: 4px; }
+.et-mute-title { margin-top: 12px; }
+.et-mute-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.et-mute-btn { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 7px; border-radius: 5px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11.5px; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.et-mute-btn i { flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.et-mute-btn:hover { border-color: var(--ink-dim); }
+.et-mute-btn.on { color: var(--ink-dim); text-decoration: line-through; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.et-mute-btn.on i { opacity: 0.35; }
 /* Edit transport: never wraps; compacts when the preview gets narrow */
 .edit-upper .em { container-type: inline-size; }
 .em-transport { flex-wrap: nowrap; overflow: hidden; }
@@ -1996,6 +2003,10 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .kb-colors-pick { display: inline-flex; align-items: center; gap: 5px; padding: 2px 6px; border: 1px dashed var(--line); border-radius: 6px; }
 .kb-dot-btn { width: 16px; height: 16px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
 .kb-dot-btn:hover { box-shadow: 0 0 0 2px var(--ink); }
+.kb-layers { margin-left: 6px; padding: 0 5px; border-radius: 4px; font-size: 10.5px; background: color-mix(in srgb, var(--ink) 12%, transparent); color: var(--ink-dim); }
+.kb-layer-btn { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); background: transparent; color: var(--ink-dim); font-size: 11px; cursor: pointer; }
+.kb-layer-btn:hover { color: var(--ink); border-color: var(--ink-dim); }
+.kb-layer-btn.on { background: color-mix(in srgb, var(--cyan) 22%, transparent); border-color: var(--cyan); color: var(--ink); }
 /* inside a section the category is its heading — drop the column */
 .kb-section .kb-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 28px; padding-left: 24px; }
 .kb-section .kb-cat { display: none; }

@@ -47,6 +47,26 @@ export function setMotion(clips, ids, fn) {
   })
 }
 
+// Audio layers muted on single clips — the talking under a voiceover, say:
+// clip.mute = [track indexes]. Mutes the layers on every target clip, or
+// unmutes them when every target already has them all muted.
+export function toggleMute(clips, ids, tracks) {
+  const set = new Set(ids)
+  const targets = clips.filter((c) => set.has(c.id))
+  if (!targets.length || !tracks.length) return null
+  const allOn = targets.every((c) => tracks.every((t) => (c.mute || []).includes(t)))
+  const next = clips.map((c) => {
+    if (!set.has(c.id)) return c
+    const m = new Set(c.mute || [])
+    for (const t of tracks) allOn ? m.delete(t) : m.add(t)
+    const out = { ...c }
+    if (m.size) out.mute = [...m].sort((a, b) => a - b)
+    else delete out.mute
+    return out
+  })
+  return { clips: next, muted: !allOn }
+}
+
 let n = 0
 export const clipId = () => 'c' + Date.now().toString(36) + (n++).toString(36)
 

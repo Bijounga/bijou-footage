@@ -62,9 +62,9 @@ function markersXml(notes, r) {
 // totalExplodedTrackCount 2, with premiereChannelType="stereo" clipitems,
 // and glue each pair back into one stereo track on import. We do the same,
 // one pair per OBS track, so every OBS track arrives as one stereo track.
-// Careful with <sourcetrack><trackindex>: on plain clips it counts
-// CHANNELS (1–4 came in as "Ch. L (1), Ch. R (1), Ch. L (2), Ch. R (2)"),
-// but on stereo-tagged pairs it counts STREAMS.
+// <sourcetrack><trackindex> counts CHANNELS, also on stereo rows (1–4 came
+// in as "Ch. L (1), Ch. R (1), Ch. L (2), Ch. R (2)"), and a stereo row at k
+// plays channels k and k+1 — so a pair points at its track's first channel.
 // Sketch notes → a second video track (V2): each sketch a still image at
 // its moment, a few seconds long, turned off — there to see (and turn on as
 // an overlay guide), never in the render. items: [{t (s), file, text}]
@@ -96,6 +96,16 @@ function audioLayout(audio) {
   return { streams: out, totalChannels: ch - 1 }
 }
 
+// The file's audio, written the way Premiere's own exports write a multi-
+// track recording (checked against one, 2026-10-15): one <audio> per OBS
+// track with its channel count. As one "8 channels" block Premiere made the
+// recording 8 mono clips, and every stereo row then played track 1.
+function fileAudioXml(audio) {
+  return audioLayout(audio).streams
+    .map((s) => `<audio><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics><channelcount>${s.channels}</channelcount></audio>`)
+    .join('')
+}
+
 // clips: [{path, name, probe, notes:[{t,end,type,text,star}]}]
 export function buildXml(clips, binName) {
   let fileN = 0
@@ -105,10 +115,10 @@ export function buildXml(clips, binName) {
     const fileId = 'file-' + ++fileN
     const w = (c.probe && c.probe.width) || 1920
     const h = (c.probe && c.probe.height) || 1080
-    const { streams, totalChannels } = audioLayout((c.probe && c.probe.audio) || [])
+    const { streams } = audioLayout((c.probe && c.probe.audio) || [])
     const markers = markersXml(c.notes, r)
     const fileXml = `<file id="${fileId}"><name>${esc(c.name)}</name><pathurl>${esc(pathUrl(c.path))}</pathurl>${rateXml(r)}<duration>${durF}</duration><media><video><samplecharacteristics>${rateXml(r)}<width>${w}</width><height>${h}</height>${SQUARE}</samplecharacteristics></video>${
-      totalChannels ? `<audio><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics><channelcount>${totalChannels}</channelcount></audio>` : ''
+      fileAudioXml((c.probe && c.probe.audio) || [])
     }</media></file>`
 
     // Every clipitem of this recording, so they can all be linked (video +
@@ -123,7 +133,7 @@ export function buildXml(clips, binName) {
     aItems.forEach((a, i) => (a.track = i + 1))
     const links =
       `<link><linkclipref>${vId}</linkclipref><mediatype>video</mediatype><trackindex>1</trackindex><clipindex>1</clipindex></link>` +
-      aItems.map((a) => `<link><linkclipref>${a.id}</linkclipref><mediatype>audio</mediatype><trackindex>${a.track}</trackindex><clipindex>1</clipindex>${a.stereo ? `<groupindex>${a.group}</groupindex>` : ''}</link>`).join('')
+      aItems.map((a) => `<link><linkclipref>${a.id}</linkclipref><mediatype>audio</mediatype><trackindex>${a.track}</trackindex><clipindex>1</clipindex>${a.stereo ? '<groupindex>1</groupindex>' : ''}</link>`).join('')
 
     const clipitem = (id, extraAttrs, inner, withFile, withMarkers) =>
       `<clipitem id="${id}"${extraAttrs}><name>${esc(c.name)}</name><enabled>TRUE</enabled><duration>${durF}</duration>${rateXml(r)}<start>0</start><end>${durF}</end><in>0</in><out>${durF}</out>${withFile ? fileXml : `<file id="${fileId}"/>`}${inner}${links}${withMarkers ? markers : ''}</clipitem>`
@@ -135,11 +145,12 @@ export function buildXml(clips, binName) {
           ? ` currentExplodedTrackIndex="${a.exploded}" totalExplodedTrackCount="2" premiereTrackType="Stereo"`
           : ` currentExplodedTrackIndex="0" totalExplodedTrackCount="1" premiereTrackType="Mono"`
         const itemAttrs = a.stereo ? ' premiereChannelType="stereo"' : ' premiereChannelType="mono"'
-        // Stereo-tagged pairs: trackindex = which audio STREAM (OBS track).
-        // Untagged/mono: trackindex = which CHANNEL. (Both verified on the
-        // user's imports — a stereo pair pointed at channel 3 came in as OBS
-        // track 3.)
-        const src = `<sourcetrack><mediatype>audio</mediatype><trackindex>${a.stereo ? a.group : a.channel}</trackindex></sourcetrack>`
+        // trackindex counts CHANNELS: a stereo row at k plays channels k and
+        // k+1, so both halves of a pair point at its track's first channel
+        // (1, 3, 5, 7 for four stereo tracks). Checked in Premiere 2026-10-15:
+        // pointing at the track number (1, 2, 3, 4) — what Premiere's own
+        // XML export writes — came back as Game, Game R + Bijou L, Bijou, …
+        const src = `<sourcetrack><mediatype>audio</mediatype><trackindex>${a.channel - a.exploded}</trackindex></sourcetrack>`
         return `<track${trackAttrs}>${clipitem(a.id, itemAttrs, src, false, false)}<enabled>TRUE</enabled><locked>FALSE</locked><outputchannelindex>${a.stereo ? a.exploded + 1 : 1}</outputchannelindex></track>`
       })
       .join('')
@@ -245,9 +256,8 @@ export function buildSequenceXml({ name, clips, markers, vo, voEnabled }) {
     f.defined = true
     const cr = rateFor(c.probe && c.probe.fps)
     const durF = Math.round(((c.probe && c.probe.duration) || 0) * cr.fps)
-    const { totalChannels } = audioLayout((c.probe && c.probe.audio) || [])
     return `<file id="${f.id}"><name>${esc(c.name)}</name><pathurl>${esc(pathUrl(c.path))}</pathurl>${rateXml(cr)}<duration>${durF}</duration><media><video><samplecharacteristics>${rateXml(cr)}<width>${(c.probe && c.probe.width) || w}</width><height>${(c.probe && c.probe.height) || h}</height>${SQUARE}</samplecharacteristics></video>${
-      totalChannels ? `<audio><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics><channelcount>${totalChannels}</channelcount></audio>` : ''
+      fileAudioXml((c.probe && c.probe.audio) || [])
     }</media></file>`
   }
 
@@ -284,14 +294,17 @@ export function buildSequenceXml({ name, clips, markers, vo, voEnabled }) {
     })
     const links =
       `<link><linkclipref>${vId}</linkclipref><mediatype>video</mediatype><trackindex>1</trackindex><clipindex>${vItems.length + 1}</clipindex></link>` +
-      mine.map((a) => `<link><linkclipref>${a.id}</linkclipref><mediatype>audio</mediatype><trackindex>${a.track}</trackindex><clipindex>${a.index}</clipindex>${a.slot.stereo ? `<groupindex>${a.slot.stream + 1}</groupindex>` : ''}</link>`).join('')
+      mine.map((a) => `<link><linkclipref>${a.id}</linkclipref><mediatype>audio</mediatype><trackindex>${a.track}</trackindex><clipindex>${a.index}</clipindex>${a.slot.stereo ? '<groupindex>1</groupindex>' : ''}</link>`).join('')
     const labels = c.color ? `<labels><label2>${esc(c.color)}</label2></labels>` : ''
-    const item = (id, attrs, inner) =>
-      `<clipitem id="${id}"${attrs}><name>${esc(c.name)}</name><enabled>TRUE</enabled><duration>${durF}</duration>${rateXml(r)}<start>${start}</start><end>${end}</end><in>${inF}</in><out>${outF}</out>${fileRef(c)}${inner}${links}${labels}</clipitem>`
+    const item = (id, attrs, inner, on = true) =>
+      `<clipitem id="${id}"${attrs}><name>${esc(c.name)}</name><enabled>${on ? 'TRUE' : 'FALSE'}</enabled><duration>${durF}</duration>${rateXml(r)}<start>${start}</start><end>${end}</end><in>${inF}</in><out>${outF}</out>${fileRef(c)}${inner}${links}${labels}</clipitem>`
     vItems.push(item(vId, '', motionXml(c.motion)))
     for (const a of mine) {
-      const src = `<sourcetrack><mediatype>audio</mediatype><trackindex>${a.slot.stereo ? a.slot.stream + 1 : a.s.firstChannel}</trackindex></sourcetrack>`
-      aTracks[a.track - 1].push(item(a.id, a.slot.stereo ? ' premiereChannelType="stereo"' : ' premiereChannelType="mono"', src))
+      // a stereo row plays channels k and k+1: point at the track's first channel (see buildXml)
+      const src = `<sourcetrack><mediatype>audio</mediatype><trackindex>${a.s.firstChannel}</trackindex></sourcetrack>`
+      // a layer muted on this clip in Edit: there, but switched off
+      const on = !(c.mute && c.mute.includes(a.slot.stream))
+      aTracks[a.track - 1].push(item(a.id, a.slot.stereo ? ' premiereChannelType="stereo"' : ' premiereChannelType="mono"', src, on))
     }
   })
 

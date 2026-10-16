@@ -443,7 +443,7 @@ async function exportSection(opts = {}) {
   for (const it of items) {
     const c = st.clips.find((x) => x.key === it.key)
     if (!c) continue
-    clips.push({ path: c.path, name: c.name, probe: { fps: c.probe.fps, duration: c.probe.duration, width: c.probe.width, height: c.probe.height, audio: c.probe.audio }, in: it.in, out: it.out, color: it.color || null, motion: EM.isFramed(it.motion) ? it.motion : null })
+    clips.push({ path: c.path, name: c.name, probe: { fps: c.probe.fps, duration: c.probe.duration, width: c.probe.width, height: c.probe.height, audio: c.probe.audio }, in: it.in, out: it.out, color: it.color || null, motion: EM.isFramed(it.motion) ? it.motion : null, mute: it.mute || null })
     // The recording's notes & markers that fall inside this cut, moved to
     // where they land in the section.
     const notes = (st.reviews[it.key] && st.reviews[it.key].notes) || []

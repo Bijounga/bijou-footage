@@ -72,10 +72,17 @@ function WaveRow({ track, items, view, width, height, color, byKey, waveMap, wav
     const W = Math.ceil(width)
     const cols = new Uint8Array(W)
     const talk = speech ? new Uint8Array(W) : null
+    const muted = new Path2D() // clips with this layer muted: no wave, hatched
+    let anyMuted = false
     for (const it of items) {
       const x0 = Math.max(0, Math.floor((it.start - view.start) * view.pps))
       const x1 = Math.min(W, Math.ceil((it.start + it.dur - view.start) * view.pps))
       if (x1 <= x0) continue
+      if (it.mute && it.mute.includes(track)) {
+        muted.rect(x0, 0, x1 - x0, height)
+        anyMuted = true
+        continue
+      }
       const w = waveMap.get(it.key)
       const data = w && w.wave && w.wave.tracks[track]
       if (!data) continue
@@ -141,6 +148,21 @@ function WaveRow({ track, items, view, width, height, color, byKey, waveMap, wav
       x = e
     }
     ctx.fill(wave)
+    if (anyMuted) {
+      ctx.save()
+      ctx.clip(muted)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+      ctx.fillRect(0, 0, W, height)
+      ctx.strokeStyle = color
+      ctx.globalAlpha = 0.4
+      ctx.beginPath()
+      for (let x = -height; x < W; x += 7) {
+        ctx.moveTo(x, height)
+        ctx.lineTo(x + height, 0)
+      }
+      ctx.stroke()
+      ctx.restore()
+    }
     // Redraw only when something drawn changed (it's the expensive part).
   }, [items, view, width, height, color, wavesVer, speech, sens, selSet])
   return <canvas ref={ref} className="et-wave" style={{ width, height, transform: `translateX(${shift}px)` }} />
@@ -1013,7 +1035,7 @@ export default function EditTimeline({ section }) {
         <div className="et-playhead" ref={headRef} />
       </div>
       {clipMenu && (
-        <div className="et-clipmenu color-menu" style={{ left: Math.min(clipMenu.x, window.innerWidth - 200), top: Math.min(clipMenu.y, window.innerHeight - 170) }}>
+        <div className="et-clipmenu color-menu" style={{ left: Math.min(clipMenu.x, window.innerWidth - 230), top: Math.min(clipMenu.y, window.innerHeight - 250) }}>
           <div className="color-menu-title">{clipMenu.ids.length > 1 ? `Colour ${clipMenu.ids.length} clips` : 'Clip colour'} <span className="dim">· carries into Premiere</span></div>
           <div className="clip-label-grid">
             {EM.CLIP_LABELS.map(([name, hex]) => (
@@ -1021,6 +1043,18 @@ export default function EditTimeline({ section }) {
             ))}
           </div>
           <button className="link-btn et-mk-del" onClick={() => { const st = useStore.getState(); const sec = st.currentSection(); st.applyEdit(EM.colorClips(sec.clips, clipMenu.ids, null)); setClipMenu(null) }}>No colour</button>
+          <div className="color-menu-title et-mute-title">Mute audio layers <span className="dim">· keys in Shortcuts</span></div>
+          <div className="et-mute-grid">
+            {Array.from({ length: nTracks }, (_, i) => {
+              const targets = clips.filter((c) => clipMenu.ids.includes(c.id))
+              const on = targets.length > 0 && targets.every((c) => (c.mute || []).includes(i))
+              return (
+                <button key={i} className={'et-mute-btn' + (on ? ' on' : '')} style={{ '--c': colors[i] }} title={(on ? 'Unmute ' : 'Mute ') + (trackNames[i] || 'Track ' + (i + 1)) + (clipMenu.ids.length > 1 ? ' on these clips' : ' on this clip')} onClick={() => useStore.getState().toggleClipMute(clipMenu.ids, [i])}>
+                  <i />{trackNames[i] || 'Track ' + (i + 1)}
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
       {mkMenu && (

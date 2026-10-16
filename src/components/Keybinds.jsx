@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store.js'
 import { ACTIONS as REVIEW_ACTIONS, ACTION_BY_ID as REVIEW_BY_ID, bindingsFor as reviewBindingsFor, comboFromEvent, prettyCombo, shortCombo } from '../lib/keybinds.js'
-import { EDIT_ACTIONS, EDIT_BY_ID, editBindingsFor } from '../lib/editKeys.js'
+import { EDIT_ACTIONS, EDIT_BY_ID, editBindingsFor, MUTE_ID } from '../lib/editKeys.js'
 import { SOURCE_KEY_IDS } from '../lib/voSrcKeys.js'
 import { VO_ACTIONS, VO_BY_ID, voBindingsFor } from '../lib/voKeys.js'
 import { MARKER_COLORS } from '../lib/beats.js'
@@ -39,7 +39,7 @@ export default function KeybindsModal() {
   const text = q.trim().toLowerCase()
   const keyMatch = (keys) => keys.some((k) => k.toLowerCase().includes(text) || prettyCombo(k).toLowerCase().includes(text))
   const rows = useMemo(() => {
-    const out = ACTIONS.filter((a) => !COLOR_ID.test(a.id))
+    const out = ACTIONS.filter((a) => !COLOR_ID.test(a.id) && !MUTE_ID.test(a.id))
       .map((a) => ({ a, keys: bindingsFor(a.id, overrides) }))
       .filter(({ a, keys }) => !text || a.label.toLowerCase().includes(text) || a.cat.toLowerCase().includes(text) || keyMatch(keys))
     // the coloured markers, gathered into one row
@@ -52,6 +52,13 @@ export default function KeybindsModal() {
       const hay = (label + ' coloured colored color quick marker ' + colors.map((c) => c.color + ' ' + c.a.label).join(' ')).toLowerCase()
       const hit = !text || hay.includes(text) || colors.some((c) => keyMatch(c.keys))
       if (hit) out.push({ a: { id: '__colors', label, cat: colors[0].a.cat }, colors, keys: [] })
+    }
+    // the per-layer mutes (Edit), gathered into one row too
+    const mutes = ACTIONS.filter((a) => MUTE_ID.test(a.id)).map((a) => ({ a, track: +a.id.match(MUTE_ID)[1] - 1, keys: bindingsFor(a.id, overrides) }))
+    if (mutes.length) {
+      const label = 'Mute audio layers on a clip'
+      const hay = (label + ' mute unmute layer layers track tracks audio voiceover silence talking').toLowerCase()
+      if (!text || hay.includes(text) || mutes.some((m) => keyMatch(m.keys))) out.push({ a: { id: '__mute', label, cat: mutes[0].a.cat }, mutes, keys: [] })
     }
     return out.sort((x, y) => x.a.label.localeCompare(y.a.label, undefined, { numeric: true }))
   }, [q, overrides, mode])
@@ -74,14 +81,36 @@ export default function KeybindsModal() {
     st.updateSettings({ kbFolded: all })
   }
   const [picking, setPicking] = useState(false) // choosing the colour for a new coloured-marker key
+  const [mutePick, setMutePick] = useState(null) // the layers for a new mute key, while choosing them
+  const trackNames = useStore((s) => s.settings.trackNames) || []
+  const layerName = (t) => trackNames[t] || 'Layer ' + (t + 1)
+  const muteIds = () => ACTIONS.filter((a) => MUTE_ID.test(a.id)).map((a) => a.id)
+  const labelOf = (id, tracks) => (id === '__mute' ? 'Mute ' + (tracks || []).map(layerName).join(' + ') : ACTION_BY_ID[id].label)
 
   function owner(combo, exceptId) {
-    const hit = ACTIONS.find((a) => a.id !== exceptId && bindingsFor(a.id, overrides).includes(combo))
+    // a mute key belongs to the whole mute row: re-setting it isn't a clash
+    const skip = (id) => id === exceptId || (exceptId === '__mute' && MUTE_ID.test(id))
+    const hit = ACTIONS.find((a) => !skip(a.id) && bindingsFor(a.id, overrides).includes(combo))
     return hit ? hit.id : null
   }
 
-  function apply(id, index, combo, stealFrom) {
-    if (stealFrom) setKeybinds(stealFrom, bindingsFor(stealFrom, overrides).filter((k) => k !== combo))
+  function apply(id, index, combo, stealFrom, tracks) {
+    const now = () => useStore.getState().settings[overrideKey]
+    // taking a key off a mute takes it off every layer it muted
+    for (const f of stealFrom ? (MUTE_ID.test(stealFrom) ? muteIds() : [stealFrom]) : []) {
+      const ks = bindingsFor(f, now())
+      if (ks.includes(combo)) setKeybinds(f, ks.filter((k) => k !== combo))
+    }
+    if (id === '__mute') {
+      // the key mutes exactly these layers (it may have muted others before)
+      for (const mid of muteIds()) {
+        const ks = bindingsFor(mid, now())
+        const want = tracks.includes(+mid.match(MUTE_ID)[1] - 1)
+        if (want && !ks.includes(combo)) setKeybinds(mid, [...ks, combo])
+        else if (!want && ks.includes(combo)) setKeybinds(mid, ks.filter((k) => k !== combo))
+      }
+      return
+    }
     const keys = [...bindingsFor(id, useStore.getState().settings[overrideKey])]
     if (index == null) { if (!keys.includes(combo)) keys.push(combo) } else keys[index] = combo
     setKeybinds(id, [...new Set(keys)])
@@ -99,7 +128,7 @@ export default function KeybindsModal() {
       if (!combo) return // bare modifier — wait for the real key
       const other = owner(combo, capture.id)
       if (other) setConflict({ ...capture, combo, otherId: other })
-      else apply(capture.id, capture.index, combo)
+      else apply(capture.id, capture.index, combo, null, capture.tracks)
       setCapture(null)
     }
     window.addEventListener('keydown', onKey, true)
@@ -146,6 +175,54 @@ export default function KeybindsModal() {
                 </span>
               </div>
             )
+  }
+
+  // The layer mutes: one row; each key shows the layers it toggles, + picks
+  // the layers first (one or several), then listens for the key.
+  function renderMutes({ a, mutes }) {
+    const byKey = new Map()
+    for (const m of mutes) for (const k of m.keys) {
+      if (!byKey.has(k)) byKey.set(k, [])
+      byKey.get(k).push(m.track)
+    }
+    const capturing = !!capture && capture.id === '__mute'
+    const removeKey = (k) => { for (const mid of muteIds()) { const ks = bindingsFor(mid, useStore.getState().settings[overrideKey]); if (ks.includes(k)) setKeybinds(mid, ks.filter((x) => x !== k)) } }
+    return (
+      <div key="__mute" className={'kb-row kb-colors' + (capturing ? ' capturing' : '')}>
+        <span className="kb-label">
+          {a.label}
+          <span className="dim small"> · the selected clips (or the one at the playhead); press again to unmute</span>
+        </span>
+        <span className="kb-cat">{a.cat}</span>
+        <span className="kb-keys">
+          {[...byKey].map(([k, tracks]) => (
+            <span key={k} className="kb-chip" title={'Mutes ' + tracks.map(layerName).join(' + ')}>
+              {prettyCombo(k)}
+              <span className="kb-layers">{tracks.map((t) => t + 1).join(' + ')}</span>
+              <button className="kb-x" onClick={() => removeKey(k)} title="Remove this key">×</button>
+            </span>
+          ))}
+          {capturing ? (
+            <span className="kb-chip listening">Press a key for {capture.tracks.map(layerName).join(' + ')}… (Esc cancels)</span>
+          ) : mutePick ? (
+            <span className="kb-colors-pick">
+              <span className="dim small">Layers:</span>
+              {mutes.map((m) => (
+                <button key={m.track} className={'kb-layer-btn' + (mutePick.includes(m.track) ? ' on' : '')} title={layerName(m.track)} onClick={() => setMutePick((p) => (p.includes(m.track) ? p.filter((x) => x !== m.track) : [...p, m.track].sort((x, y) => x - y)))}>
+                  {m.track + 1}{trackNames[m.track] ? ' ' + trackNames[m.track] : ''}
+                </button>
+              ))}
+              <button className="btn small primary" disabled={!mutePick.length} onClick={() => { setConflict(null); setCapture({ id: '__mute', index: null, tracks: mutePick }); setMutePick(null) }}>Set key</button>
+              <button className="kb-x" onClick={() => setMutePick(null)} title="Cancel">×</button>
+            </span>
+          ) : (
+            <button className="kb-add" onClick={() => setMutePick([])} title="Add a key — pick the layers it mutes first">＋</button>
+          )}
+          {!byKey.size && !capturing && !mutePick && <span className="dim small">no keys yet</span>}
+        </span>
+        <span className="kb-reset" />
+      </div>
+    )
   }
 
   // The coloured markers: one row, a colour dot on every key; + picks the colour first.
@@ -211,9 +288,9 @@ export default function KeybindsModal() {
         </div>
         {conflict && (
           <div className="kb-conflict">
-            <b>{prettyCombo(conflict.combo)}</b> is already used by <b>{ACTION_BY_ID[conflict.otherId].label}</b>.
-            <button className="btn small primary" onClick={() => { apply(conflict.id, conflict.index, conflict.combo, conflict.otherId); setConflict(null) }}>
-              Use it for “{ACTION_BY_ID[conflict.id].label}” instead
+            <b>{prettyCombo(conflict.combo)}</b> is already used by <b>{labelOf(conflict.otherId)}</b>.
+            <button className="btn small primary" onClick={() => { apply(conflict.id, conflict.index, conflict.combo, conflict.otherId, conflict.tracks); setConflict(null) }}>
+              Use it for “{labelOf(conflict.id, conflict.tracks)}” instead
             </button>
             <button className="btn small ghost" onClick={() => setConflict(null)}>Cancel</button>
           </div>
@@ -221,7 +298,7 @@ export default function KeybindsModal() {
         <div className="kb-list">
           {sections.map(({ cat, list }) => {
             const shut = !text && folded.includes(cat)
-            const changed = list.filter(({ a, colors }) => (colors ? colors.some((c) => Array.isArray(overrides[c.a.id])) : Array.isArray(overrides[a.id]))).length
+            const changed = list.filter(({ a, colors, mutes }) => { const sub = colors || mutes; return sub ? sub.some((c) => Array.isArray(overrides[c.a.id])) : Array.isArray(overrides[a.id]) }).length
             return (
               <div key={cat} className={'kb-section' + (shut ? ' shut' : '')}>
                 <button className="kb-sec-head" onClick={() => toggleFold(cat)} title={shut ? 'Show these' : 'Fold these away'}>
@@ -229,7 +306,7 @@ export default function KeybindsModal() {
                   <b>{cat}</b>
                   <span className="dim small">{list.length}{changed ? ' · ' + changed + ' changed' : ''}</span>
                 </button>
-                {!shut && list.map((row) => (row.colors ? renderColors(row) : renderRow(row)))}
+                {!shut && list.map((row) => (row.colors ? renderColors(row) : row.mutes ? renderMutes(row) : renderRow(row)))}
               </div>
             )
           })}

@@ -46,6 +46,17 @@ function framingTargets(st) {
   const c = clipAtPlayhead(st)
   return c ? [c.id] : []
 }
+// Mute audio layers on the selected clips (or the one at the playhead) —
+// for footage that'll be voiced over. One action per layer; a key bound to
+// several of them toggles those layers together (Keybinds shows one row).
+export const MUTE_ID = /^e\.mute_(\d)$/
+export const MUTE_LAYERS = 6
+function toggleMute({ st, osd }, tracks) {
+  const muted = st.toggleClipMute(framingTargets(st), tracks)
+  if (muted == null) return
+  const names = st.settings.trackNames || []
+  osd((muted ? 'Muted ' : 'Unmuted ') + tracks.map((t) => names[t] || 'layer ' + (t + 1)).join(' + '))
+}
 function zoomPreset({ st, osd }, i) {
   const pct = (st.settings.zoomPresets || DEFAULT_ZOOM_PRESETS)[i]
   if (!pct || !st.setClipMotion(framingTargets(st), (m) => ({ ...m, scale: pct }))) return
@@ -211,6 +222,7 @@ export const EDIT_ACTIONS = [
   } },
   // one per colour, like Review's
   ...Object.entries(MARKER_COLORS).map(([color, c]) => ({ id: 'e.marker_' + color, label: c.label + ' marker at the playhead', cat: 'Edit', keys: [], run: ({ st, osd }) => { if (st.addSeqMarker(T(), color)) osd(c.label + ' marker') } })),
+  ...Array.from({ length: MUTE_LAYERS }, (_, i) => ({ id: 'e.mute_' + (i + 1), label: 'Mute / unmute audio layer ' + (i + 1) + ' on the selected clips (or the one at the playhead)', cat: 'Audio', keys: [], run: (c) => toggleMute(c, [i]) })),
   { id: 'e.prevMarker', label: 'Previous marker', cat: 'Playback', keys: ['Shift+['], run: ({ st }) => jumpMarker(st, -1) },
   { id: 'e.nextMarker', label: 'Next marker', cat: 'Playback', keys: ['Shift+]'], run: ({ st }) => jumpMarker(st, 1) },
   { id: 'e.skipSilence', label: 'Toggle skip silence (play only the talking)', cat: 'Playback', keys: ['Shift+X'], run: ({ st }) => st.toggleEditSkipSilence() },
@@ -239,6 +251,19 @@ export function editKeymap(overrides) {
   if (cache && cacheFor === overrides) return cache
   cache = new Map()
   cacheFor = overrides
-  for (const a of EDIT_ACTIONS) for (const k of editBindingsFor(a.id, overrides)) if (!cache.has(k)) cache.set(k, a)
+  const mutes = new Map() // combo -> the layers it mutes
+  for (const a of EDIT_ACTIONS) {
+    for (const k of editBindingsFor(a.id, overrides)) {
+      const m = a.id.match(MUTE_ID)
+      if (m) {
+        if (!mutes.has(k)) mutes.set(k, [])
+        mutes.get(k).push(+m[1] - 1)
+      } else if (!cache.has(k)) cache.set(k, a)
+    }
+  }
+  for (const [k, tracks] of mutes) {
+    if (cache.has(k)) continue
+    cache.set(k, tracks.length === 1 ? EDIT_BY_ID['e.mute_' + (tracks[0] + 1)] : { id: 'e.mute_' + tracks.map((t) => t + 1).join('+'), label: 'Mute layers', cat: 'Audio', keys: [], run: (c) => toggleMute(c, tracks) })
+  }
   return cache
 }
