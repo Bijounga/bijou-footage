@@ -7,6 +7,7 @@ import { LABEL, noteHex } from '../lib/beats.js'
 import { setWave, speechSegments } from '../lib/speech.js'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
 import { makeWheelAxis, onFrame, isPinch } from '../lib/wheel.js'
+import { playheadColor, clipBlocks, blockFill, blockMuted, blockEmpty, BLOCK_WAVE } from '../lib/themes.js'
 import ZoomBar from './ZoomBar.jsx'
 
 // the bars showing where each POV has footage (and its dot in the POV menu)
@@ -478,8 +479,22 @@ export default function Timeline() {
             ctx.textBaseline = 'top'
           }
         } else {
-          ctx.fillStyle = audible ? trackColors[i] || TRACK_COLORS[i] : 'rgba(150,150,160,0.35)'
-          ctx.globalAlpha = audible ? 0.9 : 1
+          const blocksOn = clipBlocks()
+          if (blocksOn) {
+            // the recording as one solid clip on this track (Premiere theme)
+            const xa = Math.max(-2, tToX(-shift))
+            const xb = Math.min(w + 2, tToX(duration - shift))
+            if (xb > xa) {
+              // an empty (silent) track or a muted one: a dim grey clip
+              const silent = clip.probe && clip.probe.audio[i] && clip.probe.audio[i].likelySilent
+              ctx.fillStyle = silent ? blockEmpty() : audible ? blockFill(trackColors[i] || TRACK_COLORS[i]) : blockMuted()
+              ctx.fillRect(xa, y0 + 1, xb - xa, lh - 3)
+              ctx.fillStyle = 'rgba(255,255,255,0.22)'
+              ctx.fillRect(xa, y0 + 1, xb - xa, 1)
+            }
+          }
+          ctx.fillStyle = blocksOn ? BLOCK_WAVE : audible ? trackColors[i] || TRACK_COLORS[i] : 'rgba(150,150,160,0.35)'
+          ctx.globalAlpha = blocksOn ? 1 : audible ? 0.9 : 1
           const half = lh / 2 - 4
           const pps = wave.pps
           // Pyramid lookups (lib/wavePeaks.js) + one path, one fill.
@@ -690,12 +705,20 @@ export default function Timeline() {
         if (duration) {
           const x = tToX(t)
           if (x >= -1 && x <= w + 1) {
-            ctx.fillStyle = '#ffffff'
+            ctx.fillStyle = playheadColor()
             ctx.fillRect(Math.round(x) - 0.5, 0, 1.5, h)
             ctx.beginPath()
-            ctx.moveTo(x - 5, 0)
-            ctx.lineTo(x + 5, 0)
-            ctx.lineTo(x, 7)
+            if (clipBlocks()) {
+              ctx.moveTo(x - 6, 0)
+              ctx.lineTo(x + 6, 0)
+              ctx.lineTo(x + 6, 9)
+              ctx.lineTo(x, 14)
+              ctx.lineTo(x - 6, 9)
+            } else {
+              ctx.moveTo(x - 5, 0)
+              ctx.lineTo(x + 5, 0)
+              ctx.lineTo(x, 7)
+            }
             ctx.fill()
           }
           const hv = hoverRef.current

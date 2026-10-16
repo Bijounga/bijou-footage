@@ -31,6 +31,7 @@ import { bus, onTick } from '../lib/hooks.js'
 import { Fader } from './Timeline.jsx'
 import { VO_MIME } from '../lib/voLane.js'
 import { editRecToggle } from '../lib/editRecord.js'
+import { clipBlocks, blockFill, BLOCK_WAVE } from '../lib/themes.js'
 
 export const VO_DEFAULT_COLOR = '#4fd1c5'
 const SNAP_PX = 8
@@ -218,15 +219,16 @@ export default function VoLane({ vo, view, width, folder, snapCands, tool, onEmp
       const hex = v.color ? CLIP_LABEL_HEX[v.color] : trackHex
       const w = Math.max(1, x1 - x0)
       // the body, like an audio clip in Premiere: tinted, a darker label strip on top
-      ctx.fillStyle = rgba(hex, on ? 0.42 : 0.22)
+      const blocks = clipBlocks() // Premiere theme: a solid clip, dark waveform
+      ctx.fillStyle = blocks ? blockFill(hex, on ? 0.45 : 0.25) : rgba(hex, on ? 0.42 : 0.22)
       ctx.fillRect(x0, 1, w, H - 2)
       if (labelH) {
-        ctx.fillStyle = rgba(hex, on ? 0.75 : 0.5)
+        ctx.fillStyle = blocks ? 'rgba(0, 0, 0, 0.18)' : rgba(hex, on ? 0.75 : 0.5)
         ctx.fillRect(x0, 1, w, labelH)
       }
       const pk = peaksOf(v.take)
       if (pk) {
-        ctx.fillStyle = on ? '#ffffff' : rgba(hex, 0.95)
+        ctx.fillStyle = blocks ? BLOCK_WAVE : on ? '#ffffff' : rgba(hex, 0.95)
         ctx.beginPath()
         const g = v.gain ? Math.pow(10, v.gain / 20) : 1
         for (let x = Math.max(0, Math.floor(x0)); x < Math.min(width, Math.ceil(x1)); x++) {
@@ -241,7 +243,7 @@ export default function VoLane({ vo, view, width, folder, snapCands, tool, onEmp
         }
         ctx.fill()
       }
-      ctx.strokeStyle = on ? '#fff' : rgba(hex, 0.95)
+      ctx.strokeStyle = on ? '#fff' : blocks ? 'rgba(0, 0, 0, 0.55)' : rgba(hex, 0.95)
       ctx.lineWidth = on ? 1.5 : 1
       ctx.strokeRect(x0 + 0.5, 1.5, w - 1, H - 3)
       if (labelH && w > 28) {

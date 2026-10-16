@@ -18,6 +18,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store.js'
 import { useVo } from '../state/voStore.js'
+import { clipBlocks, blockFill, BLOCK_WAVE } from '../lib/themes.js'
 import * as VM from '../lib/voModel.js'
 import { CLIP_LABEL_HEX } from '../lib/editModel.js'
 import { voPlayer } from '../lib/voPlayer.js'
@@ -253,16 +254,17 @@ export default function VoTimeline({ section }) {
       const on = selSet.has(it.id)
       const hex = it.clip.color ? CLIP_LABEL_HEX[it.clip.color] : null
       const base = hex || accent
-      ctx.fillStyle = hex ? rgba(hex, on ? 0.34 : 0.2) : on ? 'rgba(120, 190, 255, 0.22)' : 'rgba(120, 190, 255, 0.09)'
+      const blocks = clipBlocks()
+      ctx.fillStyle = blocks ? blockFill(base, on ? 0.5 : 0.28) : hex ? rgba(hex, on ? 0.34 : 0.2) : on ? 'rgba(120, 190, 255, 0.22)' : 'rgba(120, 190, 255, 0.09)'
       ctx.fillRect(x0, y0 + 2, Math.max(1, x1 - x0), laneH - 4)
       const tk = VM.takeOf(it.clip)
       const pk = peaksOf(it.take)
-      drawWave(pk, tk.pps || 200, it.in, x0, x1, on ? '#e6f2ff' : base)
-      ctx.strokeStyle = on ? '#ffffff' : hex ? rgba(hex, 0.85) : 'rgba(150, 200, 255, 0.45)'
+      drawWave(pk, tk.pps || 200, it.in, x0, x1, blocks ? BLOCK_WAVE : on ? '#e6f2ff' : base)
+      ctx.strokeStyle = on ? '#ffffff' : blocks ? 'rgba(0, 0, 0, 0.55)' : hex ? rgba(hex, 0.85) : 'rgba(150, 200, 255, 0.45)'
       ctx.lineWidth = on ? 1.5 : 1
       ctx.strokeRect(x0 + 0.5, y0 + 2.5, Math.max(1, x1 - x0) - 1, laneH - 5)
       if (x1 - x0 > 46) {
-        ctx.fillStyle = on ? '#fff' : ink
+        ctx.fillStyle = blocks ? '#0f1626' : on ? '#fff' : ink
         ctx.font = '600 10px Inter, sans-serif'
         ctx.textBaseline = 'top'
         ctx.fillText('Clip ' + (i + 1) + (it.clip.gain ? '  ' + (it.clip.gain > 0 ? '+' : '') + it.clip.gain + ' dB' : ''), Math.max(x0, 0) + 5, y0 + 6)

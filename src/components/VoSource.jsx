@@ -17,6 +17,7 @@ import { fmtTime } from '../lib/time.js'
 import { CLIP_LABEL_HEX } from '../lib/editModel.js'
 import { ensurePeaks, peaksOf, onPeaks } from '../lib/voPeaks.js'
 import { VO_MIME } from '../lib/voLane.js'
+import { clipBlocks, BLOCK_WAVE } from '../lib/themes.js'
 import { voSrc } from '../lib/voPlayer.js'
 import { onTick, bus } from '../lib/hooks.js'
 
@@ -41,7 +42,7 @@ function SrcClip({ it, x, w, h, placed, said, tall, onGo, onDragStart, ver }) {
     const pk = peaksOf(it.take)
     if (!pk) return
     const css = getComputedStyle(document.documentElement)
-    ctx.fillStyle = hex || css.getPropertyValue('--cyan').trim() || '#4fd1c5'
+    ctx.fillStyle = clipBlocks() ? BLOCK_WAVE : hex || css.getPropertyValue('--cyan').trim() || '#4fd1c5'
     const mid = h / 2
     const half = h / 2 - 4
     const per = it.dur / W // seconds per drawn pixel

@@ -3,7 +3,7 @@
 // custom themes (settings.json → customThemes) can be applied as-is.
 // A theme is applied by setting these CSS variables on <html>.
 
-export const TOKENS = ['--bg', '--panel', '--panel-2', '--panel-3', '--ink', '--ink-dim', '--ink-faint', '--line', '--line-soft', '--cyan', '--amber', '--pink', '--danger', '--green']
+export const TOKENS = ['--bg', '--panel', '--panel-2', '--panel-3', '--ink', '--ink-dim', '--ink-faint', '--line', '--line-soft', '--cyan', '--amber', '--pink', '--danger', '--green', '--playhead']
 
 export const BUILT_IN_THEMES = [
   {
@@ -156,6 +156,49 @@ export const BUILT_IN_THEMES = [
     font: "'Inter', 'Segoe UI Variable Display', 'Segoe UI', sans-serif",
     colors: { '--bg': '#0a0c16', '--panel': '#121527', '--panel-2': '#181c33', '--panel-3': '#20253f', '--ink': '#e9ebf5', '--ink-dim': '#9aa0bd', '--ink-faint': '#7d83a3', '--line': '#262b45', '--line-soft': '#1b1f35', '--cyan': '#8b7bff', '--amber': '#ffad5c', '--pink': '#e66bd0', '--danger': '#ff5d6c', '--green': '#3ddc97' }
   },
+  // ---- Premiere: a professional editing suite, after Adobe Premiere Pro ----
+  {
+    id: 'premiere',
+    name: 'Premiere',
+    note: 'Editing suite',
+    dark: true,
+    font: "'Adobe Clean', 'Segoe UI', system-ui, sans-serif",
+    clips: 'blocks', // timelines draw solid clips with dark waveforms, like Premiere
+    colors: { '--bg': '#0c0c0c', '--panel': '#1e1e1e', '--panel-2': '#232323', '--panel-3': '#2e2e2e', '--ink': '#d7d7d7', '--ink-dim': '#a2a2a2', '--ink-faint': '#717171', '--line': '#2f2f2f', '--line-soft': '#262626', '--cyan': '#2d8ceb', '--amber': '#e6a23c', '--pink': '#c972d9', '--danger': '#e34850', '--green': '#2d9d78', '--playhead': '#2d8ceb' }
+  },
+  {
+    id: 'premiereDarker',
+    name: 'Premiere Darker',
+    note: 'Editing suite',
+    base: 'premiere',
+    variant: 'darker',
+    dark: true,
+    font: "'Adobe Clean', 'Segoe UI', system-ui, sans-serif",
+    clips: 'blocks',
+    colors: { '--bg': '#060606', '--panel': '#161616', '--panel-2': '#1a1a1a', '--panel-3': '#252525', '--ink': '#d4d4d4', '--ink-dim': '#9c9c9c', '--ink-faint': '#6a6a6a', '--line': '#272727', '--line-soft': '#1e1e1e', '--cyan': '#2d8ceb', '--amber': '#e6a23c', '--pink': '#c972d9', '--danger': '#e34850', '--green': '#2d9d78', '--playhead': '#2d8ceb' }
+  },
+  {
+    id: 'premiereBlack',
+    name: 'Premiere Black',
+    note: 'Editing suite',
+    base: 'premiere',
+    variant: 'black',
+    dark: true,
+    font: "'Adobe Clean', 'Segoe UI', system-ui, sans-serif",
+    clips: 'blocks',
+    colors: { '--bg': '#000000', '--panel': '#0c0c0c', '--panel-2': '#111111', '--panel-3': '#1b1b1b', '--ink': '#d0d0d0', '--ink-dim': '#969696', '--ink-faint': '#646464', '--line': '#1f1f1f', '--line-soft': '#161616', '--cyan': '#2d8ceb', '--amber': '#e6a23c', '--pink': '#c972d9', '--danger': '#e34850', '--green': '#2d9d78', '--playhead': '#2d8ceb' }
+  },
+  {
+    id: 'premiereLight',
+    name: 'Premiere Light',
+    note: 'Editing suite',
+    base: 'premiere',
+    variant: 'light',
+    dark: false,
+    font: "'Adobe Clean', 'Segoe UI', system-ui, sans-serif",
+    clips: 'blocks',
+    colors: { '--bg': '#a6a6a6', '--panel': '#d6d6d6', '--panel-2': '#cdcdcd', '--panel-3': '#c0c0c0', '--ink': '#1b1b1b', '--ink-dim': '#474747', '--ink-faint': '#6b6b6b', '--line': '#b3b3b3', '--line-soft': '#c6c6c6', '--cyan': '#1473e6', '--amber': '#a3620a', '--pink': '#9b3fb0', '--danger': '#c9252d', '--green': '#12805c', '--playhead': '#1473e6' }
+  },
   // ---- Bijou Doodle's own theme ----
   {
     id: 'doodleClub',
@@ -183,10 +226,49 @@ export function fromBijouCustom(list) {
     .map((t) => ({ id: 'bijou:' + t.id, name: t.name || 'Custom', note: 'BijouDocs custom', dark: isDarkHex(t.colors['--bg']), colors: t.colors }))
 }
 
+// The playhead's colour, for the timelines drawn on canvas (white, or the
+// theme's own: Premiere's is blue).
+let playhead = '#ffffff'
+export const playheadColor = () => playhead
+
+// "Clip blocks" (Premiere): the timelines draw each clip as a solid, light
+// block in its track's colour with a dark waveform inside, instead of a
+// bright waveform on the dark lane.
+let blocks = false
+export const clipBlocks = () => blocks
+export const BLOCK_WAVE = 'rgba(12, 20, 36, 0.66)'
+// A muted / an empty track's clip: grey, darker or lighter than the panel.
+let lightUi = false
+export const blockMuted = () => (lightUi ? '#a9a9a9' : '#4a4a4a')
+export const blockEmpty = () => (lightUi ? '#c2c2c2' : '#2c2c2c')
+// The block's fill: the track colour lifted toward white, like Premiere's
+// pastel clip labels.
+export function blockFill(hex, lift = 0.25) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
+  if (!m) return '#8aa4dc'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  // a third of the way to grey first: Premiere's labels are muted, not neon
+  const y = 0.3 * r + 0.59 * g + 0.11 * b
+  const ch = (v) => Math.round((v + (y - v) * 0.35) * (1 - lift) + 255 * lift)
+  return `rgb(${ch(r)}, ${ch(g)}, ${ch(b)})`
+}
+
 export function applyTheme(theme) {
   const root = document.documentElement
   const colors = (theme && theme.colors) || BUILT_IN_THEMES[0].colors
-  for (const k of TOKENS) if (colors[k]) root.style.setProperty(k, colors[k])
+  // A token this theme doesn't set goes back to the stylesheet's default —
+  // otherwise the last theme's (e.g. Premiere's blue playhead) would stay.
+  for (const k of TOKENS) {
+    if (colors[k]) root.style.setProperty(k, colors[k])
+    else root.style.removeProperty(k)
+  }
+  playhead = colors['--playhead'] || '#ffffff'
+  blocks = !!(theme && theme.clips === 'blocks')
+  lightUi = !!(theme && theme.dark === false)
+  root.dataset.clips = blocks ? 'blocks' : ''
   // Some themes bring their own UI font (BijouDocs' MS-DOS → Tahoma…).
   if (theme && theme.font) root.style.setProperty('--sans', theme.font)
   else root.style.removeProperty('--sans')

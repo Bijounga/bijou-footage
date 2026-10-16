@@ -1,6 +1,7 @@
 /* Same token names/values as BijouDocs' default dark theme, so the two apps
    read as one family side by side. */
 :root {
+  --playhead: #ffffff;
   --bg: #0f1014;
   --panel: #17181e;
   --panel-2: #1d1f26;
@@ -1201,8 +1202,8 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .et-aclip.empty { background: transparent; border-style: dashed; opacity: 0.45; }
 .et-aclip.sel { border-color: #fff; }
 .et-empty { position: absolute; left: 20px; top: 20px; font-size: 12px; pointer-events: none; }
-.et-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 1.5px; background: #fff; pointer-events: none; z-index: 3; }
-.et-playhead::before { content: ''; position: absolute; top: 0; left: -5px; border: 5px solid transparent; border-top: 7px solid #fff; }
+.et-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 1.5px; background: var(--playhead); pointer-events: none; z-index: 3; }
+.et-playhead::before { content: ''; position: absolute; top: 0; left: -5px; border: 5px solid transparent; border-top: 7px solid var(--playhead); }
 .et-drop { position: absolute; top: 30px; bottom: 0; left: -1px; width: 3px; background: var(--cyan); pointer-events: none; z-index: 4; box-shadow: 0 0 8px var(--cyan); }
 .et-razor { display: none; position: absolute; top: 30px; bottom: 0; left: 0; width: 1px; background: var(--amber); pointer-events: none; z-index: 2; }
 /* waveforms in the edit timeline: drawn under the (see-through) audio clips */
@@ -1566,7 +1567,7 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .vo-tl-bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--line-soft); }
 .vo-tl-body { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: default; }
 .vo-tl-body canvas { display: block; }
-.vo-head { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: #fff; box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4); pointer-events: none; z-index: 3; }
+.vo-head { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: var(--playhead); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4); pointer-events: none; z-index: 3; }
 .vo-lane-resize { position: absolute; left: 0; right: 0; height: 7px; cursor: ns-resize; z-index: 2; }
 .vo-lane-resize:hover { background: color-mix(in srgb, var(--cyan) 35%, transparent); }
 .vo-empty { position: absolute; left: 0; right: 0; top: 70px; text-align: center; pointer-events: none; font-size: 13px; }
@@ -1613,7 +1614,7 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .vo-menu.vo-colors button.none { background: var(--panel-3); color: var(--ink-dim); font-size: 16px; }
 .vo-menu.vo-colors button:hover { outline: 2px solid var(--ink); }
 .vo-tl-body canvas { user-select: none; }
-.vo-head::before { content: ''; position: absolute; top: 0; left: -6px; width: 13px; height: 11px; background: #fff; clip-path: polygon(0 0, 100% 0, 100% 45%, 50% 100%, 0 45%); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
+.vo-head::before { content: ''; position: absolute; top: 0; left: -6px; width: 13px; height: 11px; background: var(--playhead); clip-path: polygon(0 0, 100% 0, 100% 45%, 50% 100%, 0 45%); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
 .vo-marquee { position: absolute; z-index: 4; pointer-events: none; border: 1px solid rgba(110, 180, 255, 0.9); background: rgba(110, 180, 255, 0.14); }
 .vo-zoom { position: absolute; right: 12px; bottom: 10px; width: 150px; z-index: 5; opacity: 0.55; transition: opacity 0.15s; }
 .vo-zoom:hover { opacity: 1; }

@@ -11,6 +11,7 @@ import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
 import { makeWheelAxis, onFrame, isPinch } from '../lib/wheel.js'
 import { trimTip } from '../lib/trimUi.js'
 import VoLane, { VoTrackHead, useVoTrack } from './VoLane.jsx'
+import { clipBlocks, blockFill, BLOCK_WAVE } from '../lib/themes.js'
 import * as VL from '../lib/voLane.js'
 import ZoomBar from './ZoomBar.jsx'
 import { setWave, speechSegments } from '../lib/speech.js'
@@ -52,7 +53,7 @@ function useWaves(keys, byKey) {
 // its recording's waveform for that track, mirrored around the middle.
 // It also draws the audio clips' boxes (a rough cut can have hundreds;
 // one element each made panning crawl) — clicks find the clip by position.
-function WaveRow({ track, items, view, width, height, color, byKey, waveMap, wavesVer, speech, sens, selSet, shift }) {
+function WaveRow({ track, items, view, width, height, color, byKey, waveMap, wavesVer, speech, sens, selSet, shift, blocks }) {
   const ref = useRef(null)
   useEffect(() => {
     const cv = ref.current
@@ -147,6 +148,7 @@ function WaveRow({ track, items, view, width, height, color, byKey, waveMap, wav
       wave.closePath()
       x = e
     }
+    if (blocks) ctx.fillStyle = BLOCK_WAVE // dark, inside the solid clips
     ctx.fill(wave)
     if (anyMuted) {
       ctx.save()
@@ -164,7 +166,7 @@ function WaveRow({ track, items, view, width, height, color, byKey, waveMap, wav
       ctx.restore()
     }
     // Redraw only when something drawn changed (it's the expensive part).
-  }, [items, view, width, height, color, wavesVer, speech, sens, selSet])
+  }, [items, view, width, height, color, wavesVer, speech, sens, selSet, blocks])
   return <canvas ref={ref} className="et-wave" style={{ width, height, transform: `translateX(${shift}px)` }} />
 }
 
@@ -223,6 +225,30 @@ function drawAudioClips(ctx, track, items, view, width, height, color, byKey, se
     while (e < W && col[e] === k) e++
     ;(k === 3 ? selBody : k === 2 ? body : faint).rect(x, 4, e - x, height - 8)
     x = e - 1
+  }
+  if (clipBlocks()) {
+    // Premiere: solid pastel clips, a dark seam between them
+    ctx.fillStyle = blockFill(color)
+    ctx.fill(body)
+    ctx.fillStyle = blockFill(color, 0.5)
+    ctx.fill(selBody)
+    ctx.globalAlpha = 0.5
+    ctx.fill(faint)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+    ctx.fill(seams)
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)'
+    ctx.lineWidth = 1
+    ctx.stroke(line)
+    ctx.strokeStyle = blockFill(color)
+    ctx.globalAlpha = 0.6
+    ctx.setLineDash([3, 3])
+    ctx.stroke(empty)
+    ctx.setLineDash([])
+    ctx.globalAlpha = 1
+    ctx.strokeStyle = '#fff'
+    ctx.stroke(selLine)
+    return
   }
   ctx.fillStyle = color
   ctx.globalAlpha = 0.1
@@ -371,6 +397,8 @@ export default function EditTimeline({ section }) {
   const reviews = useStore((s) => s.reviews)
   const beatColors = useStore((s) => s.beatColors)
   const trackNames = useStore((s) => s.settings.trackNames)
+  useStore((s) => s.settings.themeId) // redraw the clips when the theme (their look) changes
+  const blocks = clipBlocks()
   const colors = useTrackColors()
   const mixer = useStore((s) => s.settings.mixer)
   const solo = useStore((s) => s.solo)
@@ -1017,7 +1045,7 @@ export default function EditTimeline({ section }) {
           </div>
           {Array.from({ length: nTracks }, (_, i) => (
             <div key={i} className="et-row a" style={{ height: laneH[i] || A_H, '--c': colors[i] }} onMouseDown={(e) => rowDown(e, i)} onContextMenu={(e) => rowContext(e, i)}>
-              <WaveRow track={i} items={items} view={drawView} width={drawW} shift={slide} height={laneH[i] || A_H} color={colors[i]} byKey={byKey} waveMap={waveMap} wavesVer={wavesVer} speech={!!speechShow[i]} sens={sens} selSet={selSet} />
+              <WaveRow track={i} items={items} view={drawView} width={drawW} shift={slide} height={laneH[i] || A_H} color={colors[i]} byKey={byKey} waveMap={waveMap} wavesVer={wavesVer} speech={!!speechShow[i]} sens={sens} selSet={selSet} blocks={blocks} />
             </div>
           ))}
           <VoLane vo={(section && section.vo) || NO_VO} view={view} width={width} folder={project && project.folder} snapCands={snapCands} tool={tool} onEmptyDown={(e) => rowsDown(e, true)} />

@@ -554,3 +554,140 @@
 }
 /* Settings → "Pixel grid over the LCD timeline" off: the screen stays, the grid goes. */
 [data-variant='lcd'][data-lcd-grid='off'] :is(.tl-main-body, .et-rows)::after { display: none; }
+
+/* ---- Premiere: a professional editing suite, after Adobe Premiere Pro ----
+   Grey panels on near-black seams, tab-style panel headers, flat compact
+   lists, one blue accent. The timelines draw solid pastel clips with dark
+   waveforms (themes.js clips: 'blocks'). Controls stay quiet until hovered. */
+[data-theme='premiere'] {
+  /* the greys the rules below use; the variants set their own */
+  --pp-seam: #111111; --pp-hi: #ffffff; --pp-hover: #333333; --pp-btn-hover: #3a3a3a; --pp-row-hover: #262626;
+  --pp-sel: #2b4a70; --pp-field: #161616; --pp-thumb: #3d3d3d; --pp-thumb-hover: #4d4d4d; --pp-soft: #c8c8c8; --pp-tc: #5aa9f5;
+  & body { background: var(--bg); }
+  & #root > .app { gap: 4px; padding: 4px; box-sizing: border-box; }
+  & .app > .library,
+  & .app > .notes-panel,
+  & .app > .center > .upper > .notes-panel { background: var(--panel); border-radius: 3px; overflow: hidden; }
+  & .app > .center { background: transparent; gap: 4px; }
+  & .app > .center > .upper,
+  & .app > .center > .edit-upper { gap: 4px; background: transparent; }
+  & .player-area, & .edit-upper > .em, & .timeline, & .et { border-radius: 3px; }
+  & .player-area, & .edit-upper > .em { overflow: hidden; }
+  & .timeline, & .et { border-top: 0; }
+  & .splitter { background: transparent; border: 0; }
+  & .splitter:hover { background: rgba(45, 140, 235, 0.35); }
+
+  /* Panel headers: a slim strip, like Premiere's panel tab rows. */
+  & .clip-header, & .np-head, & .lib-top, & .tl-ruler-head { background: var(--panel); border-bottom: 1px solid var(--pp-seam); }
+  & .clip-header { padding-top: 6px; padding-bottom: 0; align-items: flex-end; }
+  & .ch-title { padding-bottom: 6px; }
+  & .ch-name { font: 400 12px var(--sans); color: var(--pp-hi); align-self: flex-start; box-shadow: inset 0 -2px 0 var(--cyan); padding-bottom: 5px; margin-bottom: -6px; }
+  & .ch-name::before { content: 'Source: '; color: var(--ink-dim); }
+  & .ch-title .dim.small { display: none; }
+  & .ch-actions { padding-bottom: 6px; }
+  & .np-head { padding-top: 6px; padding-bottom: 0; }
+  & .lib-top { padding-top: 8px; padding-bottom: 6px; }
+
+  /* Buttons: flat, a step lighter on hover; the primary one Premiere blue. */
+  & .btn { background: var(--panel-3); border-color: transparent; border-radius: 3px; font-weight: 400; }
+  & .btn:hover:not(:disabled) { background: var(--pp-btn-hover); border-color: transparent; }
+  & .btn.ghost { background: transparent; border-color: var(--pp-btn-hover); }
+  & .btn.ghost:hover:not(:disabled) { background: var(--panel-3); }
+  & .btn.primary { background: var(--cyan); border-color: var(--cyan); color: #fff; }
+  & .btn.primary:hover:not(:disabled) { background: #4b9cf5; border-color: #4b9cf5; }
+  & .btn.accent { border-color: rgba(45, 140, 235, 0.55); color: #5aa9f5; }
+  & .icon-btn, & .t-btn, & .mini-btn { border-radius: 2px; }
+  & .icon-btn:hover, & .t-btn:hover { background: var(--pp-hover); color: var(--pp-hi); }
+  & .t-btn { color: var(--pp-soft); }
+  & .t-btn.play { background: transparent; color: var(--pp-hi); }
+  & .t-btn.play:hover { background: var(--pp-hover); }
+  & .snap-btn { border-radius: 2px; }
+  & .snap-btn.on { border-color: rgba(45, 140, 235, 0.6); color: #5aa9f5; }
+  & .transport { background: var(--panel); border-top: 1px solid var(--pp-seam); }
+
+  /* Tabs: plain text; the open one white, underlined blue. */
+  & .np-tabs { background: transparent; border-radius: 0; padding: 0; gap: 2px; }
+  & .np-tabs button { border-radius: 0; padding: 4px 7px 8px; font-weight: 400; }
+  & .np-tabs button:hover { color: var(--ink); }
+  & .np-tabs button.on { background: transparent; color: var(--pp-hi); box-shadow: inset 0 -2px 0 var(--cyan); }
+  & .ws-switch { background: transparent; border: 0; border-bottom: 1px solid var(--pp-seam); border-radius: 0; padding: 0; margin: 0 0 8px; }
+  & .ws-switch button { border-radius: 0; padding: 7px 0 8px; font-weight: 400; }
+  & .ws-switch button.on { background: transparent; color: var(--pp-hi); box-shadow: inset 0 -2px 0 var(--cyan); }
+  & .seg button { border-radius: 2px; }
+  & .seg button.on { background: var(--panel-3); color: var(--pp-hi); }
+
+  /* Lists: flat, compact rows like the Project panel; blue selection. */
+  & .lib-row { border-radius: 0; border: 0; border-bottom: 1px solid var(--line-soft); margin: 0; padding-top: 5px; padding-bottom: 5px; }
+  & .lib-row:hover { background: var(--pp-row-hover); }
+  & .lib-row.active, & .bin-row.active { background: var(--pp-sel); border-color: transparent; }
+  & .note { border-radius: 0; border-left: 0; border-right: 0; border-top: 0; border-bottom: 1px solid var(--line-soft); background: transparent; margin: 0; }
+  & .note:hover { background: var(--pp-row-hover); border-color: var(--line-soft); }
+  & .note.active { background: var(--pp-row-hover); }
+  & .note.selected { background: var(--pp-sel); border-color: transparent; box-shadow: none; }
+
+  /* Track headers: plain lettered toggles; Mute green and Solo yellow when on. */
+  & .track-head { background: var(--panel); }
+  & .track-head::before { width: 2px; border-radius: 0; top: 0; bottom: 0; }
+  & .th-name { font-weight: 400; color: var(--ink); }
+  & .th-btn { background: transparent; border-color: transparent; border-radius: 2px; color: var(--ink-dim); font-weight: 600; }
+  & .th-btn:hover { background: var(--pp-hover); border-color: transparent; color: var(--pp-hi); }
+  & .th-btn.on-m { background: #2d9d5b; border-color: #2d9d5b; color: #fff; }
+  & .th-btn.on-s { background: #e0b830; border-color: #e0b830; color: #1b1500; }
+  & .th-btn.on-a { background: #2d8ceb; border-color: #2d8ceb; color: #fff; }
+
+  /* V1 clips: Premiere's pastel blue, dark label; coloured ones in their label. */
+  & .et-clip { background: #8aa4dc; border: 1px solid rgba(0, 0, 0, 0.55); border-radius: 2px; color: #0f1626; }
+  & .et-clip:hover { border-color: rgba(0, 0, 0, 0.75); }
+  & .et-clip.sel { background: #aac0ee; border-color: #fff; box-shadow: 0 0 0 1px #fff inset; }
+  & .et-clip.colored { background: color-mix(in srgb, var(--lc) 74%, #ffffff); border-color: rgba(0, 0, 0, 0.55); }
+  & .et-clip.colored.sel { background: color-mix(in srgb, var(--lc) 55%, #ffffff); border-color: #fff; }
+  & .et-clip-label { color: #0f1626; font-weight: 600; }
+  & .et-clip-label .dim { color: rgba(15, 22, 38, 0.6); }
+
+  /* Voiceover strip clips: solid pastel, dark text (the waveform is dark too). */
+  & .vo-src-clip { background: color-mix(in srgb, var(--cc) 55%, #d4d4d4); border-color: rgba(0, 0, 0, 0.55); border-radius: 2px; color: #0f1626; }
+  & .vo-src-clip:hover { border-color: rgba(0, 0, 0, 0.8); background: color-mix(in srgb, var(--cc) 45%, #e4e4e4); }
+  & .vo-src-clip * { color: #0f1626; text-shadow: none; }
+
+  /* The playhead's head: Premiere's blue tab. */
+  & .et-playhead::before { left: -6px; width: 13px; height: 14px; border: 0; background: var(--playhead); clip-path: polygon(0 0, 100% 0, 100% 64%, 50% 100%, 0 64%); }
+
+  /* Fields: square-ish, a blue ring when focused. */
+  & .lib-search, & input[type='text'], & input[type='search'], & textarea, & select { border-radius: 2px; }
+  & .lib-search { background: var(--pp-field); }
+  & .lib-search:focus { border-color: var(--cyan); }
+  & .modal { border-radius: 4px; }
+
+  /* The playhead timecode in Premiere blue (the total after it stays grey). */
+  & .t-time { color: var(--pp-tc); }
+  & .t-time .dim { color: var(--ink-faint); }
+
+  /* Thin grey scrollbars with round thumbs. */
+  & ::-webkit-scrollbar { width: 10px; height: 10px; }
+  & ::-webkit-scrollbar-track { background: transparent; }
+  & ::-webkit-scrollbar-thumb { background: var(--pp-thumb); border-radius: 5px; border: 2px solid var(--panel); }
+  & ::-webkit-scrollbar-thumb:hover { background: var(--pp-thumb-hover); }
+}
+
+/* Premiere variants: the same look at other brightnesses (colours in themes.js). */
+[data-theme='premiere'][data-variant='darker'] {
+  --pp-seam: #000000; --pp-hover: #2a2a2a; --pp-btn-hover: #303030; --pp-row-hover: #1f1f1f; --pp-sel: #24405f;
+  --pp-field: #0e0e0e; --pp-thumb: #333333; --pp-thumb-hover: #424242;
+}
+[data-theme='premiere'][data-variant='black'] {
+  --pp-seam: #000000; --pp-hover: #222222; --pp-btn-hover: #262626; --pp-row-hover: #161616; --pp-sel: #1f3756;
+  --pp-field: #060606; --pp-thumb: #2a2a2a; --pp-thumb-hover: #383838;
+}
+/* Light: Premiere with its brightness turned up, dark text on light grey. */
+[data-theme='premiere'][data-variant='light'] {
+  --pp-seam: #8f8f8f; --pp-hi: #000000; --pp-hover: #b5b5b5; --pp-btn-hover: #b0b0b0; --pp-row-hover: #c9c9c9;
+  --pp-sel: #9fc3ee; --pp-field: #ececec; --pp-thumb: #a3a3a3; --pp-thumb-hover: #8c8c8c; --pp-soft: #333333; --pp-tc: #0d5fc4;
+  & .btn.primary { color: #ffffff; }
+  & .btn.accent { border-color: rgba(20, 115, 230, 0.55); color: #0d5fc4; }
+  & .snap-btn.on { border-color: rgba(20, 115, 230, 0.6); color: #0d5fc4; }
+  /* coloured text made for dark panels: darkened so it reads on light grey */
+  & .type-pill.marker-pill { background: color-mix(in srgb, var(--c) 30%, transparent); color: color-mix(in srgb, var(--c) 45%, #000); }
+  & .type-pill { filter: saturate(1.1); }
+  & .note .tc { color: #0f6e45; }
+  & .tag { color: #333; }
+}
