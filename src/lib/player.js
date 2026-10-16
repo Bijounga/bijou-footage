@@ -149,6 +149,13 @@ class Player {
       this.emitState()
     })
     v.addEventListener('error', () => this.emit('error', v.error ? v.error.message || 'Playback error ' + v.error.code : 'Playback error'))
+    // load() switches every track off and forgets the extracted track files,
+    // trusting store.openClip to push the mixer right after. Coming back to
+    // Review (or opening there after starting in Edit / Voiceover) nobody
+    // does: only the video's own track 1 played. Keep this recording's files
+    // and put its mixer back on.
+    const key = this.clip && this.clip.key
+    const files = this.audioFiles
     if (this.pendingLoad) {
       const p = this.pendingLoad
       this.pendingLoad = null
@@ -156,6 +163,10 @@ class Player {
     } else if (this.clip && resumeAt != null) {
       // … and carry on from there on the new element.
       this.load(this.clip, resumeAt)
+    }
+    if (this.clip && this.clip.key === key) {
+      this.audioFiles = files
+      this.applyMixer()
     }
   }
 
