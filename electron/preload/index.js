@@ -59,6 +59,8 @@ contextBridge.exposeInMainWorld('footage', {
   },
   setOverlayColors: (colors) => ipcRenderer.invoke('window:overlayColors', colors),
   toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
+  viewerFill: (on) => ipcRenderer.invoke('viewer:fill', on),
+  viewerCaption: (action) => ipcRenderer.invoke('viewer:caption', action),
   recreateWindow: () => ipcRenderer.invoke('window:recreate'),
   transcriptState: () => ipcRenderer.invoke('transcript:state'),
   transcriptDoneMap: (clips) => ipcRenderer.invoke('transcript:doneMap', clips),

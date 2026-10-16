@@ -160,7 +160,17 @@ export default function VoTimeline({ section }) {
   }, [])
 
   // ---- drawing ----
-  const [box, setBox] = useState(null) // the selection box being dragged (body px)
+  const boxRef = useRef(null) // the selection box being dragged: moved directly, no re-render per move
+  const setBox = (b) => {
+    const el = boxRef.current
+    if (!el) return
+    if (!b) { el.style.display = 'none'; return }
+    el.style.display = 'block'
+    el.style.left = b.x0 + 'px'
+    el.style.top = b.y0 + 'px'
+    el.style.width = b.x1 - b.x0 + 'px'
+    el.style.height = b.y1 - b.y0 + 'px'
+  }
   const gesture = useRef(false) // a mouse gesture is under way: don't scroll the view
   const [hoverEdge, setHoverEdge] = useState(null) // {id, side}: the edge the mouse is on (or is dragging)
   const clickSeek = useStore((s) => s.settings.voClickSeek !== false)
@@ -200,22 +210,38 @@ export default function VoTimeline({ section }) {
     const y0 = LANE_TOP
     const mid = y0 + laneH / 2
     const half = laneH / 2 - 8
+    // One outline per loud stretch, not a 1px rect per column: a path of
+    // thousands of rects is slow for the GPU to fill, and this redraws on
+    // every frame while recording (the Edit timeline does the same).
+    const hs = new Float32Array(Math.ceil(W) + 1)
     const drawWave = (pk, pps, tIn, x0, x1, color) => {
       if (!pk || !pk.length) return
-      ctx.fillStyle = color
-      ctx.beginPath()
-      for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) {
+      const xa = Math.max(0, Math.floor(x0))
+      const xb = Math.min(Math.ceil(W), Math.ceil(x1))
+      let n = 0
+      for (let x = xa; x < xb; x++) {
         const a = tIn + (x - x0) / v.pps
         const b = a + 1 / v.pps
         const i0 = Math.floor(a * pps)
         const i1 = Math.max(i0 + 1, Math.floor(b * pps))
-        if (i0 >= pk.length) break
         let m = 0
-        for (let i = Math.max(0, i0); i < Math.min(i1, pk.length); i++) if (pk[i] > m) m = pk[i]
-        if (m < 3) continue
+        if (i0 < pk.length) for (let i = Math.max(0, i0); i < Math.min(i1, pk.length); i++) if (pk[i] > m) m = pk[i]
         // stored as sqrt(peak): that is already the shape the eye likes
-        const hgt = Math.max(1, (m / 255) * half)
-        ctx.rect(x, mid - hgt, 1, hgt * 2)
+        hs[x] = m < 3 ? 0 : Math.max(1, (m / 255) * half)
+        if (i0 >= pk.length) { n = x + 1; break }
+        n = x + 1
+      }
+      ctx.fillStyle = color
+      ctx.beginPath()
+      for (let x = xa; x < n; ) {
+        if (!hs[x]) { x++; continue }
+        let e = x
+        while (e < n && hs[e]) e++
+        ctx.moveTo(x, mid - hs[x])
+        for (let k = x; k < e; k++) { ctx.lineTo(k, mid - hs[k]); ctx.lineTo(k + 1, mid - hs[k]) }
+        for (let k = e - 1; k >= x; k--) { ctx.lineTo(k + 1, mid + hs[k]); ctx.lineTo(k, mid + hs[k]) }
+        ctx.closePath()
+        x = e
       }
       ctx.fill()
     }
@@ -554,7 +580,7 @@ export default function VoTimeline({ section }) {
       <div className="vo-tl-body" ref={bodyRef} onPointerDown={onDown} onPointerMove={onMove} onPointerLeave={onLeave}>
         <canvas ref={canvasRef} data-peaks={peaksVer} />
         <div className="vo-head" ref={headRef} />
-        {box && <div className="vo-marquee" style={{ left: box.x0, top: box.y0, width: box.x1 - box.x0, height: box.y1 - box.y0 }} />}
+        <div className="vo-marquee" ref={boxRef} style={{ display: 'none' }} />
         <div className="vo-lane-resize" style={{ top: LANE_TOP + laneH - 3 }} onPointerDown={(e) => { e.stopPropagation(); onResize(e) }} onDoubleClick={() => useStore.getState().updateSettings({ voLaneH: null })} title="Drag to make the waveform taller or shorter · double-click to reset" />
         {!items.length && !rec && <div className="vo-empty dim">Press <kbd>R</kbd> (or the red button) to record. Each recording lands at the playhead.</div>}
         {(txHidden || notesHidden) && (

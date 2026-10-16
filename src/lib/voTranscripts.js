@@ -10,6 +10,7 @@ import { layoutVo } from './voModel.js'
 const api = window.footage
 const cache = new Map() // take id -> segments [[start, end, text, words]] | null (none)
 const asked = new Set()
+const pending = new Map() // take id -> its stand-in, while it's being transcribed
 const subs = new Set()
 const notify = () => subs.forEach((fn) => fn())
 
@@ -28,14 +29,17 @@ export function standIn(folder, take) {
   }
 }
 
-export const transcriptOf = (takeId) => cache.get(takeId) || null
+export const transcriptOf = (takeId) => {
+  const segs = cache.get(takeId)
+  return Array.isArray(segs) ? segs : null
+}
 
 // Read a take's saved transcript, if it has one.
 export async function loadTx(folder, take) {
   if (cache.has(take.id)) return
   cache.set(take.id, null)
   const d = await api.readTranscript(standIn(folder, take), 0).catch(() => null)
-  if (d && d.segments) {
+  if (d && Array.isArray(d.segments)) {
     cache.set(take.id, d.segments)
     notify()
   } else cache.delete(take.id)
@@ -47,7 +51,9 @@ export function requestTx(folder, takes, language, front = true) {
   for (const t of takes) {
     if (!t || t.dur < 0.3 || asked.has(t.id) || cache.get(t.id)) continue
     asked.add(t.id)
-    jobs.push({ clip: standIn(folder, t), track: 0 })
+    const clip = standIn(folder, t)
+    pending.set(t.id, clip)
+    jobs.push({ clip, track: 0 })
   }
   if (jobs.length) api.requestTranscripts(jobs, language, front)
   return jobs.length
@@ -57,10 +63,25 @@ export function requestTx(folder, takes, language, front = true) {
 export function onEvent(ev) {
   const id = String(ev.key).slice(3)
   if (ev.type === 'done') {
-    cache.set(id, ev.segments)
-    notify()
+    // The transcriber reports only how many lines it saved (a number), not
+    // the lines: read them back from the file, as Review does.
+    if (Array.isArray(ev.segments)) {
+      cache.set(id, ev.segments)
+      notify()
+      return
+    }
+    const clip = pending.get(id)
+    pending.delete(id)
+    if (!clip) return
+    api.readTranscript(clip, 0).then((d) => {
+      if (d && Array.isArray(d.segments)) {
+        cache.set(id, d.segments)
+        notify()
+      }
+    }).catch(() => {})
   } else if (ev.type === 'error') {
     asked.delete(id) // try again next time
+    pending.delete(id)
     notify()
   }
 }

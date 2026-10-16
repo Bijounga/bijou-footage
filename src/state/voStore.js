@@ -164,6 +164,9 @@ export const useVo = create(
       })
     },
     setSel(ids) {
+      // the same clips again (every move of a drag box): no update, no redraw
+      const cur = get().sel
+      if (cur.length === ids.length && ids.every((id, i) => cur[i] === id)) return
       set((s) => { s.sel = ids })
     },
     setRange(r) {

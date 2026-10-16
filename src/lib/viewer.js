@@ -73,17 +73,44 @@ export function openViewer() {
     body.show-hint .hint { opacity: 1; }
     body.idle { cursor: none; }
     body.zoomed { cursor: grab; }
-    .zbadge { position: fixed; top: 12px; right: 12px; display: none; padding: 4px 10px; border: 0; border-radius: 7px;
-      background: rgba(10, 11, 14, 0.75); color: #fff; font: 600 12px Menlo, Consolas, monospace; cursor: pointer; }`
+    .zbadge { position: fixed; top: 40px; right: 12px; display: none; padding: 4px 10px; border: 0; border-radius: 7px;
+      background: rgba(10, 11, 14, 0.75); color: #fff; font: 600 12px Menlo, Consolas, monospace; cursor: pointer; }
+    /* its own title bar (the window is frameless): shows near the top */
+    .vbar { position: fixed; top: 0; left: 0; right: 0; height: 30px; display: flex; align-items: center; gap: 2px; padding-left: 12px;
+      background: linear-gradient(rgba(10, 11, 14, 0.85), rgba(10, 11, 14, 0.6)); color: #cfccc5;
+      font: 12px/1 'Inter', -apple-system, 'Segoe UI', sans-serif; opacity: 0; transition: opacity 0.2s; -webkit-app-region: drag; }
+    body.show-bar .vbar { opacity: 1; }
+    body.filled .vbar { -webkit-app-region: no-drag; }
+    .vbar .t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vbar button { -webkit-app-region: no-drag; width: 40px; height: 30px; border: 0; background: transparent; color: inherit; font: 14px/1 'Segoe UI Symbol', sans-serif; cursor: pointer; }
+    .vbar button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+    .vbar button.x:hover { background: #c42b1c; }`
   doc.head.appendChild(style)
   const canvas = doc.createElement('canvas')
   const hint = doc.createElement('div')
   hint.className = 'hint'
-  hint.textContent = 'Double-click: full screen · Ctrl+scroll / pinch to zoom, drag to move · keys work here too · Ctrl+Shift+V closes'
+  const HINT = 'Double-click: fill the screen · Ctrl+scroll / pinch to zoom, drag to move · keys work here too · Ctrl+Shift+V closes'
+  hint.textContent = HINT
   const badge = doc.createElement('button')
   badge.className = 'zbadge'
   badge.title = 'Back to 100% (Ctrl+0)'
-  doc.body.append(canvas, hint, badge)
+  const bar = doc.createElement('div')
+  bar.className = 'vbar'
+  bar.innerHTML = '<span class="t">Bijou Footage — Viewer</span><button class="fill" title="Fill the monitor (double-click the picture)">⛶</button><button class="min" title="Minimize">—</button><button class="max" title="Maximize">☐</button><button class="x" title="Close (Ctrl+Shift+V)">✕</button>'
+  doc.body.append(canvas, hint, badge, bar)
+  // Filling the monitor (double-click / ⛶ / Esc): the main process sizes the
+  // window to cover it; not true full screen, which stuttered (index.js).
+  let filled = false
+  const setFill = async (on) => {
+    filled = !!(await window.footage.viewerFill(on))
+    doc.body.classList.toggle('filled', filled)
+    hint.textContent = filled ? 'Double-click or Esc: back to a window · Ctrl+scroll to zoom' : HINT
+  }
+  bar.querySelector('.fill').addEventListener('click', () => setFill(!filled))
+  bar.querySelector('.min').addEventListener('click', () => window.footage.viewerCaption('minimize'))
+  bar.querySelector('.max').addEventListener('click', () => { if (filled) setFill(false); else window.footage.viewerCaption('maximize') })
+  bar.querySelector('.x').addEventListener('click', () => win.close())
+  bar.addEventListener('dblclick', (e) => e.stopPropagation())
 
   // Zoom into the picture: Ctrl+scroll or a pinch at the mouse, drag to
   // move, Ctrl+0 / the badge back to 100%. In canvas pixels.
@@ -135,24 +162,24 @@ export function openViewer() {
 
   // The hint (and the pointer) show while the mouse moves, then hide.
   let idleTimer = null
-  const wake = () => {
+  const wake = (e) => {
+    doc.body.classList.toggle('show-bar', !!(e && e.clientY < 64))
     doc.body.classList.add('show-hint')
     doc.body.classList.remove('idle')
     clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
       doc.body.classList.remove('show-hint')
+      if (!bar.matches(':hover')) doc.body.classList.remove('show-bar')
       doc.body.classList.add('idle')
     }, 1800)
   }
   win.addEventListener('mousemove', wake)
   wake()
-  win.addEventListener('dblclick', () => {
-    if (doc.fullscreenElement) doc.exitFullscreen()
-    else doc.documentElement.requestFullscreen().catch(() => {})
-  })
+  win.addEventListener('mouseleave', () => doc.body.classList.remove('show-bar'))
+  win.addEventListener('dblclick', () => setFill(!filled))
   // Keys → the main window's shortcuts (Esc leaves full screen first).
   win.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && doc.fullscreenElement) return
+    if (e.key === 'Escape' && filled && !e.ctrlKey && !e.shiftKey && !e.altKey) { e.preventDefault(); setFill(false); return }
     if ((e.ctrlKey || e.metaKey) && (e.key === '0' || e.code === 'Digit0')) { e.preventDefault(); resetZoom(); return }
     const copy = new KeyboardEvent('keydown', {
       key: e.key, code: e.code, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey, repeat: e.repeat, bubbles: true, cancelable: true,

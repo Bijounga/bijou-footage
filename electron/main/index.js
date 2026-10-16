@@ -73,15 +73,6 @@ app.commandLine.appendSwitch('enable-blink-features', 'AudioVideoTracks')
 app.commandLine.appendSwitch('disable-background-media-suspend')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
-// Windows: don't pace drawing to one monitor's refresh. With the viewer full
-// screen on a 60 Hz monitor and the app on a faster one, every window waited
-// on the wrong display's vsync — both froze for seconds and stuttered, while
-// the frames themselves were ready on time (checked 2026-10-15). Redraws
-// still run at the display rate (requestAnimationFrame stayed ~60–70/s).
-if (process.platform === 'win32') {
-  app.commandLine.appendSwitch('disable-gpu-vsync')
-  app.commandLine.appendSwitch('disable-frame-rate-limit')
-}
 if (isDev) app.commandLine.appendSwitch('remote-debugging-port', '9223')
 // Dev only: extra Chromium switches to try ("a;b=c"), e.g. for GPU issues.
 if (isDev && process.env.BIJOU_CHROMIUM_FLAGS) {
@@ -256,6 +247,8 @@ function copySketches(xmlPath, notes) {
 const viewerFile = () => path.join(userData(), 'viewer-window.json')
 let viewerMaximized = false
 let viewerBounds = null
+let viewerWin = null
+let viewerFill = null // the viewer's own bounds while it fills its monitor
 function viewerOptions() {
   let saved = null
   try { saved = JSON.parse(fs.readFileSync(viewerFile(), 'utf8')) } catch { /* first time */ }
@@ -281,6 +274,9 @@ function viewerOptions() {
     minWidth: 240,
     minHeight: 135,
     title: 'Bijou Footage — Viewer',
+    // Frameless: its "full screen" is the window filling its monitor (see
+    // viewer:fill), and the page draws its own little title bar.
+    frame: false,
     backgroundColor: '#000000',
     autoHideMenuBar: true,
     show: true,
@@ -290,7 +286,7 @@ function viewerOptions() {
 }
 function saveViewerState(w) {
   try {
-    if (w.isDestroyed() || w.isFullScreen()) return
+    if (w.isDestroyed() || w.isFullScreen() || (w === viewerWin && viewerFill)) return
     fs.writeFileSync(viewerFile(), JSON.stringify({ bounds: w.getNormalBounds(), maximized: w.isMaximized() }))
   } catch { /* not important */ }
 }
@@ -407,6 +403,9 @@ function createWindow() {
     }
     if (frameName !== 'bijou-viewer') return
     child.removeMenu()
+    viewerWin = child
+    viewerFill = null
+    child.on('closed', () => { if (viewerWin === child) { viewerWin = null; viewerFill = null } })
     // Placed again once it exists: created straight onto a monitor with other
     // display scaling, Windows scales its size a second time (it opened at
     // double size on a 200% monitor).
@@ -624,6 +623,38 @@ function registerIpc() {
   ipcMain.handle('window:state', () => (win ? { maximized: win.isMaximized(), fullscreen: win.isFullScreen() } : { maximized: false, fullscreen: false }))
   ipcMain.handle('window:overlayColors', (_e, colors) => {
     if (frameless && !isMac && win && win.setTitleBarOverlay) win.setTitleBarOverlay({ ...colors, height: OVERLAY_H })
+  })
+  // The viewer "full screen": the window covers its whole monitor (taskbar
+  // too) but stays an ordinary window. True full screen there made Windows
+  // flip that monitor on its own, and with the app on a faster monitor both
+  // windows' frames came out uneven or stuck for seconds (2026-10-16:
+  // 25 fps with 180 ms gaps; covering the monitor instead: an even 165).
+  ipcMain.handle('viewer:fill', (_e, on) => {
+    const w = viewerWin
+    if (!w || w.isDestroyed()) return false
+    const want = on == null ? !viewerFill : !!on
+    if (want && !viewerFill) {
+      viewerFill = { bounds: w.getBounds(), maximized: w.isMaximized() }
+      const d = screen.getDisplayMatching(viewerFill.bounds)
+      if (w.isMaximized()) w.unmaximize()
+      w.setAlwaysOnTop(true, 'screen-saver') // over the taskbar
+      // 1px short: covering the monitor exactly counts as full screen to
+      // Windows, and stuttered just the same (measured).
+      w.setBounds({ ...d.bounds, height: d.bounds.height - 1 })
+    } else if (!want && viewerFill) {
+      const back = viewerFill
+      viewerFill = null
+      w.setAlwaysOnTop(false)
+      w.setBounds(back.bounds)
+      if (back.maximized) w.maximize()
+    }
+    return !!viewerFill
+  })
+  ipcMain.handle('viewer:caption', (_e, action) => {
+    const w = viewerWin
+    if (!w || w.isDestroyed()) return
+    if (action === 'minimize') w.minimize()
+    else if (action === 'maximize') w.isMaximized() ? w.unmaximize() : w.maximize()
   })
   ipcMain.handle('window:toggleFullscreen', () => {
     if (win) win.setFullScreen(!win.isFullScreen())
