@@ -73,7 +73,23 @@ app.commandLine.appendSwitch('enable-blink-features', 'AudioVideoTracks')
 app.commandLine.appendSwitch('disable-background-media-suspend')
 app.commandLine.appendSwitch('disable-renderer-backgrounding')
 app.commandLine.appendSwitch('disable-backgrounding-occluded-windows')
+// Windows: don't pace drawing to one monitor's refresh. With the viewer full
+// screen on a 60 Hz monitor and the app on a faster one, every window waited
+// on the wrong display's vsync — both froze for seconds and stuttered, while
+// the frames themselves were ready on time (checked 2026-10-15). Redraws
+// still run at the display rate (requestAnimationFrame stayed ~60–70/s).
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('disable-gpu-vsync')
+  app.commandLine.appendSwitch('disable-frame-rate-limit')
+}
 if (isDev) app.commandLine.appendSwitch('remote-debugging-port', '9223')
+// Dev only: extra Chromium switches to try ("a;b=c"), e.g. for GPU issues.
+if (isDev && process.env.BIJOU_CHROMIUM_FLAGS) {
+  for (const f of process.env.BIJOU_CHROMIUM_FLAGS.split(';').filter(Boolean)) {
+    const [k, ...v] = f.split('=')
+    app.commandLine.appendSwitch(k, v.join('='))
+  }
+}
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'footage', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, bypassCSP: true } }
