@@ -220,6 +220,7 @@ const useVoStore = () => (_voStore ? _voStore.getState() : { sections: [] })
 export const useStore = create(
   immer((set, get) => ({
     loaded: false,
+    libraryReady: false, // the library is scanned and the last recording reopened
     settings: defaultSettings(),
     reviews: {}, // clipKey -> review
     projects: [],
@@ -324,6 +325,7 @@ export const useStore = create(
       await get().rescan()
       const last = get().settings.lastClipKey
       if (last && get().clips.some((c) => c.key === last)) get().openClip(last)
+      set((s) => { s.libraryReady = true })
     },
 
     // ---- persistence ----

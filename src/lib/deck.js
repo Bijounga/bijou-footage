@@ -140,6 +140,37 @@ async function command(msg) {
     case 'workspace':
       if (WS_LABEL[msg.ws]) st.setWorkspace(msg.ws)
       return { ok: true }
+    // BijouDocs' Footage tab: open a recording at a note (Review).
+    case 'open': {
+      // Until startup has reopened the last recording, that reopen would
+      // land on top of this one (at its saved position).
+      if (!st.libraryReady) return { error: 'not-ready' }
+      // An edit section: Edit, that project and section, at the cut's time.
+      if (msg.sectionId) {
+        if (!st.projects.some((p) => p.id === msg.projectId)) return { error: 'That project isn’t in Bijou Footage' }
+        if (st.settings.currentProjectId !== msg.projectId) st.setCurrentProject(msg.projectId)
+        if (st.settings.workspace !== 'edit') st.setWorkspace('edit')
+        await useStore.getState().loadSections()
+        if (!useStore.getState().sections.some((x) => x.id === msg.sectionId)) return { error: 'That section isn’t in Bijou Footage anymore' }
+        useStore.getState().setCurrentSection(msg.sectionId)
+        if (typeof msg.t === 'number') seqPlayer.seek(msg.t)
+        return { ok: true }
+      }
+      if (!st.clips.length) return { error: 'No recordings in the library' }
+      const clip = st.clips.find((c) => c.key === msg.key)
+      if (!clip) return { error: 'That recording isn’t in Bijou Footage’s library' }
+      if (ws !== 'review') st.setWorkspace('review')
+      const t = typeof msg.t === 'number' ? msg.t : undefined
+      if (st.currentKey === msg.key && t != null) player.seek(t)
+      else st.openClip(msg.key, t)
+      if (msg.noteId) {
+        useStore.setState((s) => {
+          s.selectedNoteId = msg.noteId
+          s.settings.notesHidden = false
+        })
+      }
+      return { ok: true }
+    }
     default:
       return { error: 'Unknown request' }
   }

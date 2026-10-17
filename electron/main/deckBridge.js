@@ -21,7 +21,7 @@ let lastState = null
 let nextCmd = 1
 const waiting = new Map() // command id -> {socket, id}
 
-export function startDeckBridge({ dataDir, exePath, sendToRenderer }) {
+export function startDeckBridge({ dataDir, exePath, sendToRenderer, focusWindow }) {
   try {
     fs.writeFileSync(path.join(dataDir, 'deck-bridge.json'), JSON.stringify({ port: DECK_PORT, exePath }, null, 1))
   } catch { /* the data folder is read-only? the plugin falls back to the default port */ }
@@ -39,7 +39,7 @@ export function startDeckBridge({ dataDir, exePath, sendToRenderer }) {
         if (!line) continue
         let msg
         try { msg = JSON.parse(line) } catch { continue }
-        handle(socket, msg, sendToRenderer)
+        handle(socket, msg, sendToRenderer, focusWindow)
       }
     })
     socket.on('close', () => clients.delete(socket))
@@ -55,8 +55,10 @@ function write(socket, obj) {
   if (!socket.destroyed) socket.write(JSON.stringify(obj) + '\n')
 }
 
-function handle(socket, msg, sendToRenderer) {
+function handle(socket, msg, sendToRenderer, focusWindow) {
   if (msg.type === 'state') return write(socket, { type: 'reply', id: msg.id, ...(lastState || { ready: false }) })
+  // BijouDocs' Footage tab opening a note: come to the front for it.
+  if (msg.type === 'open' && focusWindow) focusWindow()
   // anything else is something for the app to do (or a list it knows)
   const cid = nextCmd++
   waiting.set(cid, { socket, id: msg.id })

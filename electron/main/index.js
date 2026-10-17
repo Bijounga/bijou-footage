@@ -699,7 +699,17 @@ else {
     if (isMac) macMenu()
     createWindow()
     // the Stream Deck plugin's line in (deckBridge.js)
-    startDeckBridge({ dataDir: userData(), exePath: process.execPath, sendToRenderer: send })
+    startDeckBridge({
+      dataDir: userData(),
+      exePath: process.execPath,
+      sendToRenderer: send,
+      focusWindow: () => {
+        if (!win || win.isDestroyed()) return
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+      }
+    })
     ipcMain.on('deck:state', (_e, state) => deckState(state))
     ipcMain.on('deck:reply', (_e, cid, result) => deckReply(cid, result))
     if (isMac && app.isPackaged) macUpdate.tidyOnLaunch() // eject the install disk image, drop old downloads
