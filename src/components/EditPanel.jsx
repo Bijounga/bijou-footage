@@ -40,12 +40,32 @@ function useCurrentIndex(times) {
 }
 
 // ---- Notes: timeline markers + the recordings' notes inside the cut ----
+
+// The list's filter (settings.editNoteFilter): only rows with words, and/or
+// only some colours. A row's "colour" is its marker colour, or its note type.
+const NO_FILTER = { text: false, colors: [] }
+const rowKind = (r) => (r.kind === 'seq' ? r.color || 'yellow' : r.n.type === 'MARKER' ? r.n.color || 'yellow' : 'type:' + r.n.type)
+const rowHasText = (r) => (r.kind === 'seq' ? !!(r.text && r.text.trim()) : !!((r.n.text && r.n.text.trim()) || r.n.sketch))
+function kindInfo(k, beatColors) {
+  if (k.startsWith('type:')) {
+    const type = k.slice(5)
+    return { label: LABEL[type] || type, hex: noteHex({ type }, beatColors) }
+  }
+  const c = MARKER_COLORS[k] || MARKER_COLORS.yellow
+  return { label: c.label, hex: c.hex }
+}
+const setFilter = (patch) => {
+  const st = useStore.getState()
+  st.updateSettings({ editNoteFilter: { ...NO_FILTER, ...(st.settings.editNoteFilter || {}), ...patch } })
+}
+
 function NotesList({ section }) {
   const reviews = useStore((s) => s.reviews)
   const clips = useStore((s) => s.clips)
   const beatColors = useStore((s) => s.beatColors)
   const zoom = useStore((s) => s.settings.notesZoom || 1)
   const [editing, setEditing] = useState(null)
+  const filter = useStore((s) => s.settings.editNoteFilter) || NO_FILTER
   const rows = useMemo(() => {
     const out = (section.markers || []).map((m) => ({ kind: 'seq', id: m.id, t: m.t, color: m.color, text: m.text }))
     // Each recording's notes sorted once; each clip takes its slice (a cut
@@ -74,7 +94,22 @@ function NotesList({ section }) {
     }
     return out.sort((a, b) => a.t - b.t)
   }, [section, reviews, clips])
-  const times = useMemo(() => rows.map((r) => r.t), [rows])
+  // the colours (and note types) in this cut, with how many of each
+  const kinds = useMemo(() => {
+    const m = new Map()
+    for (const r of rows) {
+      const k = rowKind(r)
+      m.set(k, (m.get(k) || 0) + 1)
+    }
+    return [...m]
+  }, [rows])
+  const shown = useMemo(() => {
+    const cols = filter.colors || []
+    if (!filter.text && !cols.length) return rows
+    return rows.filter((r) => (!filter.text || rowHasText(r)) && (!cols.length || cols.includes(rowKind(r))))
+  }, [rows, filter])
+  const filtering = shown !== rows
+  const times = useMemo(() => shown.map((r) => r.t), [shown])
   const cur = useCurrentIndex(times)
   const listRef = useRef(null)
   useEffect(() => {
@@ -85,9 +120,32 @@ function NotesList({ section }) {
   if (!rows.length) {
     return <div className="ep-empty dim small">No markers or notes in this cut yet. Press <kbd>Q</kbd> to drop a marker on the timeline — notes and markers from Review show up here too, wherever those moments are in the cut.</div>
   }
+  const cols = filter.colors || []
   return (
     <div className="ep-list" ref={listRef} style={{ zoom }}>
-      {rows.map((r, i) => {
+      <div className="ep-filter">
+        <button className={'ep-fchip' + (filter.text ? ' on' : '')} onClick={() => setFilter({ text: !filter.text })} title="Only markers and notes you wrote something on">
+          With text
+        </button>
+        <span className="ep-fsep" />
+        {kinds.map(([k, n]) => {
+          const info = kindInfo(k, beatColors)
+          const on = cols.includes(k)
+          return (
+            <button key={k} className={'ep-fchip' + (on ? ' on' : '')} style={{ '--c': info.hex }} onClick={() => setFilter({ colors: on ? cols.filter((x) => x !== k) : [...cols, k] })} title={(on ? 'Stop showing only ' : 'Show only ') + info.label + (cols.length && !on ? ' (as well)' : '')}>
+              <i />{info.label} <span className="dim">{n}</span>
+            </button>
+          )
+        })}
+        {filtering && (
+          <span className="ep-fcount dim small">
+            {shown.length} of {rows.length}
+            <button className="link-btn" onClick={() => useStore.getState().updateSettings({ editNoteFilter: NO_FILTER })}>Clear</button>
+          </span>
+        )}
+      </div>
+      {!shown.length && <div className="ep-empty dim small">Nothing here matches the filter.</div>}
+      {shown.map((r, i) => {
         const color = r.kind === 'seq' ? (MARKER_COLORS[r.color] || MARKER_COLORS.yellow).hex : noteHex(r.n, beatColors)
         return (
           <div key={r.id} className={'ep-note' + (i === cur ? ' now' : '')} style={{ '--c': color }} onClick={() => seqPlayer.seek(r.t)}>
@@ -123,7 +181,7 @@ function NotesList({ section }) {
                 />
               ) : (
                 <span className="ep-words" onDoubleClick={(e) => { e.stopPropagation(); setEditing(r.id) }} title="Double-click to edit">
-                  {r.kind === 'seq' ? r.text || <span className="dim">double-click to name</span> : r.n.text || <span className="dim">double-click to add a note</span>}
+                  {(r.kind === 'seq' ? r.text : r.n.text) || <span className="ep-ph">—</span>}
                 </span>
               )}
               {r.kind === 'rec' && <span className="ep-from dim"> · {r.from}</span>}
