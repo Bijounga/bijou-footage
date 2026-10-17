@@ -96,19 +96,34 @@ function NotesList({ section }) {
               {r.kind === 'seq' ? <><span className="mk-shield" /> Marker</> : r.n.type === 'MARKER' ? <><span className="mk-shield" /> Rec. marker</> : LABEL[r.n.type] || r.n.type}
             </span>
             <span className="ep-text">
-              {r.kind === 'seq' && editing === r.id ? (
-                <input
+              {editing === r.id ? (
+                // any marker or note: its whole text, in a box that grows with it
+                <textarea
                   autoFocus
                   className="ep-input"
-                  defaultValue={r.text}
-                  placeholder="Name this marker…"
+                  rows={1}
+                  defaultValue={r.kind === 'seq' ? r.text : r.n.text}
+                  placeholder={r.kind === 'seq' ? 'Name this marker…' : 'What happened here…'}
+                  ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
+                  onInput={(e) => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+                  onFocus={(e) => { const v = e.target.value; e.target.setSelectionRange(v.length, v.length) }}
                   onClick={(e) => e.stopPropagation()}
-                  onBlur={(e) => { st().updateSeqMarker(r.id, { text: e.target.value.trim() }); setEditing(null) }}
-                  onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur() }}
+                  onBlur={(e) => {
+                    const text = e.target.value.trim()
+                    if (r.kind === 'seq') st().updateSeqMarker(r.id, { text })
+                    else if (text !== (r.n.text || '')) st().updateNote(r.n.id, { text }, r.key)
+                    setEditing(null)
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation()
+                    // Enter saves; Shift+Enter is a new line; Esc leaves it as it was
+                    if (e.key === 'Escape') { e.target.value = r.kind === 'seq' ? r.text || '' : r.n.text || ''; e.target.blur() }
+                    else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.target.blur() }
+                  }}
                 />
               ) : (
-                <span onDoubleClick={(e) => { if (r.kind === 'seq') { e.stopPropagation(); setEditing(r.id) } }}>
-                  {r.kind === 'seq' ? r.text || <span className="dim">double-click to name</span> : r.n.text || <span className="dim">—</span>}
+                <span className="ep-words" onDoubleClick={(e) => { e.stopPropagation(); setEditing(r.id) }} title="Double-click to edit">
+                  {r.kind === 'seq' ? r.text || <span className="dim">double-click to name</span> : r.n.text || <span className="dim">double-click to add a note</span>}
                 </span>
               )}
               {r.kind === 'rec' && <span className="ep-from dim"> · {r.from}</span>}
