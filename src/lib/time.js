@@ -19,6 +19,13 @@ export function fmtDuration(t) {
   return m + 'm'
 }
 
+// "12h 24m" / "45m" — a reviewed / left amount.
+export function fmtHM(t) {
+  const m = Math.round(t / 60)
+  const h = Math.floor(m / 60)
+  return h ? h + 'h ' + String(m % 60).padStart(2, '0') + 'm' : m + 'm'
+}
+
 export function fmtHours(t) {
   const h = t / 3600
   return h >= 10 ? Math.round(h) + 'h' : h.toFixed(1) + 'h'

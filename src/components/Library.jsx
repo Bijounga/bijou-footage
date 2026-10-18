@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore, useTrackColors } from '../state/store.js'
-import { fmtDuration, fmtDay, fmtClock, fmtHours } from '../lib/time.js'
+import { fmtDuration, fmtDay, fmtClock, fmtHours, fmtHM } from '../lib/time.js'
 import { WorkspaceSwitch } from './EditWorkspace.jsx'
 import { Brand } from './Updates.jsx'
 import { bus } from '../lib/hooks.js'
@@ -208,6 +208,7 @@ export default function Library() {
     const scope = project ? project.clipKeys.map((k) => clips.find((c) => c.key === k)).filter(Boolean) : clips
     let total = 0
     let notes = 0
+    let reviewed = 0 // done: all of it; started: as far as you've watched
     const text = filter.text.trim().toLowerCase()
     const rows = []
     // other people's POVs are listed under the recording they belong to, not on their own
@@ -219,6 +220,8 @@ export default function Library() {
       const dur = c.probe ? c.probe.duration : 0
       total += dur
       const p = clipProgress(c, r)
+      if (p.status === 'done') reviewed += dur
+      else if (p.status === 'started') reviewed += Math.min(dur, Math.max(r.maxPos || 0, r.lastPos || 0))
       notes += r ? r.notes.filter((n) => n.type !== 'BREAK').length : 0
       if (filter.status !== 'all' && p.status !== filter.status) continue
       if (text) {
@@ -239,7 +242,7 @@ export default function Library() {
       g.rows.push(row)
       g.dur += row.c.probe ? row.c.probe.duration : 0
     }
-    return { groups, stats: { total, notes, count: scope.length }, visibleCount: rows.length, scopeCount: scope.length }
+    return { groups, stats: { total, notes, reviewed, count: scope.length }, visibleCount: rows.length, scopeCount: scope.length }
   }, [clips, reviews, filter, project])
 
   const missing = project ? project.clipKeys.filter((k) => !clips.some((c) => c.key === k)).length : 0
@@ -266,6 +269,16 @@ export default function Library() {
           <div className="lib-stat-text">
             {stats.count} recording{stats.count === 1 ? '' : 's'} · {fmtHours(stats.total)} · {stats.notes} notes
           </div>
+          {stats.total > 0 && (
+            <div className="lib-progress" title="Reviewed: recordings marked done, plus how far you've got into the started ones">
+              <div className="lib-progress-bar"><i style={{ width: Math.min(100, (stats.reviewed / stats.total) * 100) + '%' }} /></div>
+              <div className="lib-progress-text">
+                <span><b>{fmtHM(stats.reviewed)}</b> reviewed</span>
+                <span><b>{fmtHM(Math.max(0, stats.total - stats.reviewed))}</b> left</span>
+                <span className="lib-progress-pct">{Math.round((stats.reviewed / stats.total) * 100)}%</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

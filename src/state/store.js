@@ -621,7 +621,12 @@ export const useStore = create(
     },
     savePosition(key, pos) {
       set((s) => {
-        if (s.reviews[key]) s.reviews[key].lastPos = pos
+        const r = s.reviews[key]
+        if (!r) return
+        r.lastPos = pos
+        // the furthest you've watched (lastPos goes back when you rewind):
+        // how much of this recording is reviewed, for the sidebar's totals
+        if (!(r.maxPos >= pos)) r.maxPos = pos
       })
       get().scheduleSave()
     },

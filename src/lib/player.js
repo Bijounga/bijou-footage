@@ -194,11 +194,14 @@ class Player {
   }
 
   load(clip, startAt = 0) {
+    // Where we were in the recording we're leaving — only when it IS another
+    // recording. Reloading the same one (Review re-attaching after Edit /
+    // Voiceover) saved the new element's 0:00 and lost your place.
+    if (this.clip && this.clip.key !== clip.key) this.savePosition()
     // Remember where this load is headed until the video gets there (a
     // re-attach mid-load resumes here, not at 0).
     this.wantAt = startAt
     this.stopSkim()
-    this.savePosition() // where we were in the recording we're leaving
     this.scrub = null
     this.clip = clip
     this.rate = this.baseRate
@@ -795,6 +798,8 @@ class Player {
   // at natural stop points (pause, end, switching recordings, closing) —
   // not continuously while playing.
   savePosition() {
+    // not while the video is still on its way to where it's going (it reads 0)
+    if (this.wantAt != null && this.wantAt > 0) return
     if (this.clip && this.video) this.emit('position', { key: this.clip.key, t: this.getTime() })
   }
 
