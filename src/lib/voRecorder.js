@@ -1,7 +1,13 @@
 // The microphone, for the Voiceover tab. open() starts it (and the level
-// meter); start(file) / stop() record a take: the worklet's chunks go
-// straight to the WAV on disk (main: voiceover.js), and their peaks are
-// kept here too, so the timeline can draw the take while it's recorded.
+// meter); start(file) / stop() record a take.
+//
+// The take itself is recorded by a MediaRecorder (lossless PCM) straight
+// from the microphone's stream, and written to the WAV when it stops
+// (main: voiceover.js). The worklet only feeds the meter and the live
+// waveform: its input goes through WebAudio's render clock, which was
+// measured (2026-10-18) dropping ~37% of the input at times — on every
+// microphone, hardware or virtual — and the takes came out short, choppy
+// and fast. A MediaRecorder on the same stream got every sample.
 // Raw input: no echo cancellation, noise suppression or auto gain — a
 // voiceover wants the microphone as it is.
 import workletUrl from './voWorklet.js?url' // emitted as a file (electron.vite.config.js)
@@ -22,8 +28,11 @@ export const voRec = {
   peaksPerSec: 200,
   // the take being recorded
   file: null,
-  peaks: [], // Uint8Array chunks
-  samples: 0,
+  peaks: [], // Uint8Array chunks (live: the worklet's; after stop: the take's own)
+  samples: 0, // the finished take's length in samples (after stop)
+  startedAt: 0, // performance.now() when the take started
+  mr: null, // the MediaRecorder making the take
+  parts: [],
   stopWait: null,
 
   on(fn) {
@@ -33,8 +42,10 @@ export const voRec = {
   get recording() {
     return !!this.file
   },
-  // Seconds recorded so far.
+  // Seconds recorded so far (while recording: the time since it started —
+  // the worklet's sample count runs short when its input drops).
   get dur() {
+    if (this.file) return Math.max(0, (performance.now() - this.startedAt) / 1000)
     return this.samples / this.sampleRate
   },
 
@@ -107,11 +118,8 @@ export const voRec = {
       if (d.level >= 0.99) this.clipped = performance.now()
       emit()
     }
-    if (d.samples && this.file) {
-      api.voRecChunk(this.file, d.samples.buffer, d.peaks.buffer)
-      this.peaks.push(d.peaks)
-      this.samples += d.samples.length
-    }
+    // the live waveform only; the take is the MediaRecorder's
+    if (d.peaks && this.file) this.peaks.push(d.peaks)
     if (d.stopped && this.stopWait) {
       this.stopWait()
       this.stopWait = null
@@ -123,20 +131,67 @@ export const voRec = {
     this.file = await api.voRecStart(folder, take, this.sampleRate, 1)
     this.peaks = []
     this.samples = 0
-    this.node.port.postMessage({ recording: true })
+    this.parts = []
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=pcm') ? 'audio/webm;codecs=pcm' : 'audio/webm;codecs=opus'
+    this.mr = new MediaRecorder(this.stream, { mimeType: mime, audioBitsPerSecond: 510000 })
+    const parts = this.parts
+    this.mr.ondataavailable = (e) => { if (e.data && e.data.size) parts.push(e.data) }
+    this.mr.start(1000)
+    this.startedAt = performance.now()
+    this.node.port.postMessage({ recording: true }) // the live waveform
     emit()
   },
   // Stop: the last samples are flushed, then the WAV is finished.
   async stop() {
     if (!this.file) return null
-    const done = new Promise((r) => { this.stopWait = r })
-    this.node.port.postMessage({ recording: false })
-    await Promise.race([done, new Promise((r) => setTimeout(r, 1000))])
     const file = this.file
+    this.node.port.postMessage({ recording: false })
+    const mr = this.mr
+    const parts = this.parts
+    this.mr = null
+    if (mr && mr.state !== 'inactive') await new Promise((r) => { mr.onstop = r; mr.stop() })
     this.file = null
+    try {
+      await this.writeTake(file, new Blob(parts, { type: (mr && mr.mimeType) || 'audio/webm' }))
+    } catch (e) {
+      console.error('voiceover: could not save the take', e)
+    }
     const res = await api.voRecStop(file)
     emit()
     return res
+  },
+  // The recorded take → mono samples (with the input gain) and their peaks,
+  // written to the WAV in pieces; the peaks replace the live ones.
+  async writeTake(file, blob) {
+    const ac = new OfflineAudioContext(1, 1, this.sampleRate) // decodes at the WAV's rate
+    const ab = await ac.decodeAudioData(await blob.arrayBuffer())
+    const n = ab.length
+    const out = new Float32Array(n)
+    for (let c = 0; c < ab.numberOfChannels; c++) {
+      const d = ab.getChannelData(c)
+      for (let i = 0; i < n; i++) out[i] += d[i]
+    }
+    const k = (this.gain ?? 1) / ab.numberOfChannels
+    if (k !== 1) for (let i = 0; i < n; i++) out[i] *= k
+    const pe = Math.round(this.sampleRate / 200) // as the worklet: one peak per 5 ms
+    const pk = new Uint8Array(Math.ceil(n / pe))
+    for (let j = 0; j < pk.length; j++) {
+      let m = 0
+      const end = Math.min(n, (j + 1) * pe)
+      for (let i = j * pe; i < end; i++) {
+        const a = out[i] < 0 ? -out[i] : out[i]
+        if (a > m) m = a
+      }
+      pk[j] = Math.min(255, Math.round(Math.sqrt(Math.min(1, m)) * 255))
+    }
+    const step = pe * 1000 // ~5 s of samples per piece
+    for (let i = 0; i < n; i += step) {
+      const s = out.slice(i, i + step)
+      const p = pk.slice(i / pe, Math.ceil(Math.min(n, i + step) / pe))
+      api.voRecChunk(file, s.buffer, p.buffer)
+    }
+    this.peaks = [pk]
+    this.samples = n
   },
   // All the take's peaks so far, as one array.
   livePeaks() {
