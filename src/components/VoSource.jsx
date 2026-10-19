@@ -65,7 +65,7 @@ function SrcClip({ it, x, w, h, placed, said, tall, onGo, onDragStart, ver }) {
       style={{ left: x, width: Math.max(3, w), '--cc': hex || 'var(--cyan)' }}
       draggable
       onDragStart={onDragStart}
-      onDragEnd={() => { window.__voDragLen = null }}
+      onDragEnd={() => { window.__voDragLen = null; window.__voDrag = null }}
       onDoubleClick={onGo}
       title={(said ? said + '\n\n' : '') + fmtTime(it.dur, true) + " · click: put the playhead here · drag: onto the voiceover track · double-click: drop at the cut's playhead"}
     >
@@ -209,6 +209,7 @@ export default function VoSource({ src, items, said, placedOf, folder, height: a
                   e.dataTransfer.setData(VO_MIME, JSON.stringify({ src: src.id, clip: it.id }))
                   e.dataTransfer.effectAllowed = 'copy'
                   window.__voDragLen = it.dur
+                  window.__voDrag = { take: it.take, in: it.in, out: it.out, color: it.clip.color || null }
                 }}
               />
             ))}

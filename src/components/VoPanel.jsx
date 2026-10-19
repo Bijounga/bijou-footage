@@ -225,8 +225,10 @@ export default function VoPanel({ section }) {
                     e.dataTransfer.setData(VO_MIME, JSON.stringify({ src: src.id, clip: l.clip, a: l.a, b: l.b }))
                     e.dataTransfer.effectAllowed = 'copy'
                     window.__voDragLen = Math.max(0.05, l.b - l.a + 0.2)
+                    // the same window placeClip will take (a hair either side of the words)
+                    window.__voDrag = { take: l.take, in: Math.max(0, l.a - 0.08), out: l.b + 0.12, color: null }
                   }}
-                  onDragEnd={() => { window.__voDragLen = null }}
+                  onDragEnd={() => { window.__voDragLen = null; window.__voDrag = null }}
                   onClick={() => useStore.getState().placeVoClip(src.id, l.clip, seqPlayer.getTime(), { a: l.a, b: l.b })}
                   title="Click: drop this sentence at the playhead · drag: onto the voiceover track"
                 >

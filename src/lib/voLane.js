@@ -25,6 +25,29 @@ export function layoutLane(vo) {
 export const endOf = (v) => v.at + (v.out - v.in)
 export const laneEnd = (vo) => vo.reduce((a, v) => Math.max(a, endOf(v)), 0)
 
+// Overwrite, like Premiere: the clips put on top cut away whatever else is
+// under them (a clip across their edge keeps its outside part). Stacked
+// voiceover played both at once and doubled up in the export.
+export function overwrite(rest, onTop) {
+  let out = rest
+  for (const c of onTop) out = clearRange(out, c.at, endOf(c))
+  return [...out, ...onTop]
+}
+
+// Lanes saved before overwrite existed can have clips stacked on each other:
+// resolve them as if each had overwritten the ones placed before it (the
+// list is in the order they were placed). null if there's nothing to fix.
+export function resolveOverlaps(vo) {
+  if (!vo || vo.length < 2) return null
+  const s = [...vo].sort((a, b) => a.at - b.at)
+  let any = false
+  for (let i = 1; i < s.length && !any; i++) if (s[i].at < endOf(s[i - 1]) - 1e-3) any = true
+  if (!any) return null
+  let out = []
+  for (const v of vo) out = overwrite(out, [v])
+  return out
+}
+
 // A whole voiceover section, back to back from \`at\`: the cleaned-up take
 // as one run, in order, ready to slide into place.
 export function layIn(vo, vs, at) {
@@ -40,7 +63,7 @@ export function layIn(vo, vs, at) {
     src: vs.id,
     srcClip: it.id
   }))
-  return { vo: [...vo, ...fresh], ids: fresh.map((f) => f.id) }
+  return { vo: overwrite(vo, fresh), ids: fresh.map((f) => f.id) }
 }
 
 // One clip of a voiceover section, put at `at`.
@@ -57,7 +80,7 @@ export function placeClip(vo, vs, clipId, at, span) {
     if (outT - inT < 0.05) return null
   }
   const item = { id: voId(), take: it.take, in: inT, out: outT, at: Math.max(0, at), gain: it.gain, color: it.clip.color, src: vs.id, srcClip: it.id }
-  return { vo: [...vo, item], id: item.id }
+  return { vo: overwrite(vo, [item]), id: item.id }
 }
 
 // Move clips by dt seconds. ripple: everything that starts at or after the
@@ -67,7 +90,10 @@ export function moveClips(vo, ids, dt, ripple) {
   const set = new Set(ids)
   const first = Math.min(...vo.filter((v) => set.has(v.id)).map((v) => v.at))
   const dtc = Math.max(dt, -Math.min(...vo.filter((v) => set.has(v.id) || (ripple && v.at >= first - 1e-6)).map((v) => v.at)))
-  return vo.map((v) => (set.has(v.id) || (ripple && v.at >= first - 1e-6) ? { ...v, at: v.at + dtc } : v))
+  const goes = (v) => set.has(v.id) || (ripple && v.at >= first - 1e-6)
+  if (!dtc) return vo
+  // what moves lands on top of what stays (overwrite)
+  return overwrite(vo.filter((v) => !goes(v)), vo.filter(goes).map((v) => ({ ...v, at: v.at + dtc })))
 }
 
 export function removeClips(vo, ids) {
@@ -158,7 +184,7 @@ export function pasteClips(vo, copied, at) {
   if (!copied || !copied.length) return null
   const first = Math.min(...copied.map((c) => c.at))
   const fresh = copied.map((c) => ({ ...c, id: voId(), at: Math.max(0, at + (c.at - first)) }))
-  return { vo: [...vo, ...fresh], ids: fresh.map((f) => f.id) }
+  return { vo: overwrite(vo, fresh), ids: fresh.map((f) => f.id) }
 }
 
 // Edges (for snapping): every clip's start and end.

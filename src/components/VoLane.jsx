@@ -439,7 +439,7 @@ export default function VoLane({ vo, view, width, folder, snapCands, tool, onEmp
         e.dataTransfer.dropEffect = 'copy'
         setDropAt(snapDrop(at(e), window.__voDragLen || 1))
       }}
-      onDragLeave={() => setDropAt(null)}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDropAt(null) }}
       onDrop={(e) => {
         const raw = e.dataTransfer.getData(VO_MIME)
         if (!raw) return
@@ -455,8 +455,54 @@ export default function VoLane({ vo, view, width, folder, snapCands, tool, onEmp
       <canvas ref={canvasRef} />
       {!items.length && <div className="et-vo-empty dim">Voiceover — drag lines here from the Voiceover strip above (or click one to drop it at the playhead)</div>}
       {dropAt != null && <div className="et-vo-drop" style={{ left: (dropAt - view.start) * view.pps }} />}
+      {dropAt != null && window.__voDrag && <DropGhost drag={window.__voDrag} x={(dropAt - view.start) * view.pps} pps={view.pps} h={H} color={trackHex} />}
       <RecBlock view={view} />
       {menu && <VoClipMenu menu={menu} onClose={() => setMenu(null)} />}
+    </div>
+  )
+}
+
+// While a voiceover clip / line is dragged over the track: where it would
+// land, how long it is and what it sounds like (its waveform), like Premiere.
+// See-through: what it would overwrite shows under it.
+function DropGhost({ drag, x, pps, h, color }) {
+  const ref = useRef(null)
+  const len = Math.max(0.05, drag.out - drag.in)
+  const w = Math.max(3, len * pps)
+  const hex = drag.color ? CLIP_LABEL_HEX[drag.color] : color
+  useEffect(() => {
+    const c = ref.current
+    if (!c) return
+    const dpr = window.devicePixelRatio || 1
+    const W = Math.max(1, Math.min(4000, Math.round(w)))
+    c.width = Math.round(W * dpr)
+    c.height = Math.round(h * dpr)
+    const ctx = c.getContext('2d')
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, W, h)
+    const pk = peaksOf(drag.take)
+    if (!pk) return
+    ctx.fillStyle = '#ffffff'
+    const mid = h / 2
+    const half = h / 2 - 5
+    const per = len / W
+    ctx.beginPath()
+    for (let px = 0; px < W; px++) {
+      const a = drag.in + px * per
+      const i0 = Math.floor(a * 200)
+      const i1 = Math.max(i0 + 1, Math.floor((a + per) * 200))
+      let m = 0
+      for (let i = Math.max(0, i0); i < Math.min(i1, pk.length); i++) if (pk[i] > m) m = pk[i]
+      if (m < 3) continue
+      const hh = Math.max(1, (m / 255) * half)
+      ctx.rect(px, mid - hh, 1, hh * 2)
+    }
+    ctx.fill()
+  }, [drag, w, h, len])
+  return (
+    <div className="et-vo-ghost" style={{ left: x, width: w, height: h, '--gc': hex }}>
+      <canvas ref={ref} style={{ width: '100%', height: h }} />
+      {w > 40 && <span className="et-vo-ghost-len">{fmtTime(len, true)}</span>}
     </div>
   )
 }

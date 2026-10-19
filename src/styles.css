@@ -1776,6 +1776,10 @@ body.trim-out, body.trim-out * { cursor: var(--cur-trim-out, ew-resize) !importa
 .vo-card-dur { flex: none; font: 500 calc(11px * var(--vz, 1)) var(--mono); color: var(--ink-faint); padding-top: 2px; }
 .vo-panel-foot { padding: 6px 12px 10px; border-top: 1px solid var(--line-soft); }
 .et-vo-drop { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); pointer-events: none; z-index: 3; }
+/* the clip being dragged in, where it would land (see-through: what it overwrites shows under it) */
+.et-vo-ghost { position: absolute; top: 0; box-sizing: border-box; border: 1.5px solid var(--gc); border-radius: 3px; background: color-mix(in srgb, var(--gc) 38%, transparent); opacity: 0.85; pointer-events: none; z-index: 4; overflow: hidden; }
+.et-vo-ghost canvas { display: block; opacity: 0.9; }
+.et-vo-ghost-len { position: absolute; left: 5px; top: 3px; font: 600 10px var(--mono); color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7); }
 
 /* ---- the voiceover panel: clips and transcript side by side ---- */
 .vo-panel-cols { flex: 1; min-height: 0; display: flex; }

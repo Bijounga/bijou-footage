@@ -723,6 +723,15 @@ export const useStore = create(
       }
       const list = await api.listSections(p.folder)
       markSectionsSaved(list)
+      // voiceover clips stacked on each other (from before placing overwrote):
+      // the later one wins, as Premiere would have done — saved right after
+      let fixedAny = false
+      for (const d of list) {
+        const fixed = VL.resolveOverlaps(d.vo)
+        if (fixed) { d.vo = fixed; fixedAny = true }
+      }
+      // (the change watcher may not be running yet on the first load)
+      if (fixedAny) setTimeout(syncToDisk, 800)
       set((s) => {
         // Same project already in memory (e.g. back from Review): memory is
         // never older than disk — the save runs a moment after each change —
