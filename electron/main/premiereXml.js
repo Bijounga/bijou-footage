@@ -45,11 +45,12 @@ function markersXml(notes, r) {
     .map((n) => {
       const inF = Math.round(n.t * r.fps)
       const outF = n.end != null ? Math.round(n.end * r.fps) : -1
-      // The color goes in <pproColor> (below) where it's known, and in the
-      // name too ("Yellow marker"), in case the import drops the tag.
+      // The color goes in <pproColor> (below); Premiere keeps it (the
+      // Markers panel's colour filter works on it). The words go in the
+      // comment too — the panel cuts names short but shows the whole comment.
       const color = MARKER_LABEL[n.color] || 'Yellow'
-      const name = n.type === 'MARKER' ? (n.text ? `${n.text} (${color})` : `${color} marker`) : (LABEL[n.type] || n.type)
-      const comment = n.type === 'MARKER' ? `${color} marker` : n.text
+      const name = n.type === 'MARKER' ? n.text || `${color} marker` : (LABEL[n.type] || n.type)
+      const comment = n.text || ''
       const ppro = n.type === 'MARKER' && MARKER_PPRO[n.color] ? `<pproColor>${MARKER_PPRO[n.color]}</pproColor>` : ''
       return `<marker><name>${esc(name)}${n.star ? ' ★' : ''}</name><comment>${esc(comment)}</comment><in>${inF}</in><out>${outF}</out>${ppro}</marker>`
     })
