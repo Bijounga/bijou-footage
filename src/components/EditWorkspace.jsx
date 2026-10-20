@@ -151,6 +151,19 @@ function Bin() {
     () => (project ? project.clipKeys.map((k) => clips.find((c) => c.key === k)).filter(Boolean).sort((a, b) => a.recordedAt - b.recordedAt) : []),
     [project, clips]
   )
+  // which recordings are already in this section's cut (and how much of each)
+  const section = useStore((s) => s.currentSection())
+  const sectionClips = section ? section.clips : null
+  const inCut = useMemo(() => {
+    const m = new Map()
+    for (const c of sectionClips || []) {
+      const e = m.get(c.key) || { n: 0, dur: 0 }
+      e.n++
+      e.dur += c.out - c.in
+      m.set(c.key, e)
+    }
+    return m
+  }, [sectionClips])
   if (!project) return null
   return (
     <div className="es-block es-bin">
@@ -166,7 +179,7 @@ function Bin() {
         {list.map((c, i) => (
           <div
             key={c.key}
-            className="bin-row"
+            className={'bin-row' + (inCut.has(c.key) ? ' in-cut' : '')}
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData('text/x-bijou-clip', c.key)
@@ -177,6 +190,9 @@ function Bin() {
             <span className="bin-idx dim">{i + 1}</span>
             <span className="bin-name">
               <b>{clipTitle(c)}</b> <span className="dim">{fmtShortDay(c.recordedAt)}</span>
+              {inCut.has(c.key) && (
+                <span className="bin-incut" title={'In “' + section.name + '”: ' + inCut.get(c.key).n + (inCut.get(c.key).n === 1 ? ' part, ' : ' parts, ') + fmtTime(inCut.get(c.key).dur)}>✓</span>
+              )}
             </span>
             <span className="bin-dots">
               {((c.probe && c.probe.audio) || []).map((a, k) => (
@@ -388,11 +404,12 @@ function Monitor({ section }) {
         <RecBadge />
       </div>
       <div className="transport em-transport">
-        <button className="t-btn em-jump" onClick={() => seqPlayer.seek(0)} title="Start (Home)"><IconSkipStart /></button>
+        <button className="t-btn em-jump" onClick={(e) => (e.shiftKey ? seqPlayer.seek(0) : bus.emit('editNextCut', -1))} title="Previous cut (↑) · Shift+click: the start (Home)"><IconSkipStart /></button>
         <button className="t-btn" onClick={() => runEditKey('e.slower')} title="Slower / reverse (J)">◀◀</button>
         <button className="t-btn play" onClick={() => seqPlayer.toggle()} title="Play / pause (Space) · K stops">{playing ? '❚❚' : '▶'}</button>
         <button className="t-btn" onClick={() => runEditKey('e.faster')} title="Faster (L)">▶▶</button>
-        <button className="t-btn em-jump" onClick={() => bus.emit('editNextCut', 1)} title="Next cut (↓)"><IconSkipEnd /></button>
+        <button className="t-btn em-jump" onClick={(e) => (e.shiftKey ? seqPlayer.seek(seqPlayer.total) : bus.emit('editNextCut', 1))} title="Next cut (↓) · Shift+click: the end (End)"><IconSkipEnd /></button>
+        <span className="t-sep" />
         <button className="t-btn em-speech" onClick={() => runEditKey('e.prevSpeech')} title="Back to the previous time someone starts talking (Ctrl+←)">‹<SpeechIcon /></button>
         <button className="t-btn em-speech" onClick={() => runEditKey('e.nextSpeech')} title="Next time someone starts talking (Ctrl+→)"><SpeechIcon />›</button>
         <div className="t-time">
@@ -400,6 +417,7 @@ function Monitor({ section }) {
           <span className="dim"> / {fmtTime(total)}</span>
         </div>
         <EditSpeed />
+        <span className="t-sep" />
         <div className="tool-seg" title="Tools">
           <button className={tool === 'select' ? 'on' : ''} onClick={() => setEditTool('select')} title="Move tool (V) — select and drag clips">
             <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5l9.5 7-4.2.6 2.4 4.9-1.9.9-2.4-4.9L3 13z" fill="currentColor" /></svg>
@@ -421,6 +439,7 @@ function Monitor({ section }) {
         <ViewerButton />
         <PlayerHideButton />
         {panelHidden && <button className="btn small ghost" onClick={() => useStore.getState().toggleEditPanel()} title="Show Notes & Transcript (Ctrl+Shift+\)">Notes &amp; transcript</button>}
+        <span className="t-sep" />
         <ToolsMenu />
         <span className="em-name dim">{section ? section.name : ''}</span>
         <button className="btn small" disabled={!section || !section.clips.length} onClick={() => bus.emit('exportSection')} title="Export this section as a Premiere sequence (Ctrl+E)"><span className="ex-long">Export to Premiere</span><span className="ex-short">Export</span></button>

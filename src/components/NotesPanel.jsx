@@ -460,7 +460,7 @@ export default function NotesPanel() {
       <div className="np-head">
         <div className="np-title">
           <div className="np-tabs">
-            <button className={sideTab === 'notes' ? 'on' : ''} onClick={() => setSideTab('notes')} title="Notes (Shift+T switches)">
+            <button className={sideTab === 'notes' ? 'on' : ''} onClick={() => setSideTab('notes')} title="Notes and markers (Shift+T switches)">
               Notes <span className="count">{totalNotes}</span>
             </button>
             <button className={sideTab === 'transcript' ? 'on' : ''} onClick={() => setSideTab('transcript')} title="Transcript + search (Shift+T switches · Ctrl+F searches)">

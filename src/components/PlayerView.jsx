@@ -147,7 +147,7 @@ function ClipHeader({ clip }) {
           <button className="btn small accent" onClick={() => setStarted(clip.key, true)} title="Mark this recording as one you're reviewing">▶ Start review</button>
         ) : (
           <>
-            {p.status === 'started' && <button className="btn small ghost" onClick={() => setStarted(clip.key, false)} title="Back to not started">Not started</button>}
+            {p.status === 'started' && <button className="btn small ghost" onClick={() => setStarted(clip.key, false)} title="Back to not started (you haven't reviewed this one yet)">Mark not started</button>}
             <button className={'btn small' + (p.status === 'done' ? ' done' : '')} onClick={() => toggleDone(clip.key)} title="Mark reviewed (D)">
               {p.status === 'done' ? '✓ Reviewed' : 'Mark reviewed'}
             </button>

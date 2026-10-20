@@ -60,6 +60,12 @@ export default function KeybindsModal() {
       const hay = (label + ' mute unmute layer layers track tracks audio voiceover silence talking').toLowerCase()
       if (!text || hay.includes(text) || mutes.some((m) => keyMatch(m.keys))) out.push({ a: { id: '__mute', label, cat: mutes[0].a.cat }, mutes, keys: [] })
     }
+    // a mouse binding: which modifier + click drops a strip clip at the playhead
+    if (edit) {
+      const label = 'Drop a voiceover clip at the playhead'
+      const hay = (label + ' click modifier ctrl shift alt voiceover strip place put').toLowerCase()
+      if (!text || hay.includes(text)) out.push({ a: { id: '__voDrop', label, cat: 'Voiceover' }, voDrop: true, keys: [] })
+    }
     return out.sort((x, y) => x.a.label.localeCompare(y.a.label, undefined, { numeric: true }))
   }, [q, overrides, mode])
   const sections = useMemo(() => {
@@ -82,6 +88,7 @@ export default function KeybindsModal() {
   }
   const [picking, setPicking] = useState(false) // choosing the colour for a new coloured-marker key
   const [mutePick, setMutePick] = useState(null) // the layers for a new mute key, while choosing them
+  const voDropMod = useStore((s) => s.settings.voDropMod) || 'ctrl'
   const trackNames = useStore((s) => s.settings.trackNames) || []
   const layerName = (t) => trackNames[t] || 'Layer ' + (t + 1)
   const muteIds = () => ACTIONS.filter((a) => MUTE_ID.test(a.id)).map((a) => a.id)
@@ -175,6 +182,29 @@ export default function KeybindsModal() {
                 </span>
               </div>
             )
+  }
+
+  // Modifier + click on a clip in the Voiceover strip: pick the modifier.
+  function renderVoDrop({ a }) {
+    return (
+      <div key="__voDrop" className="kb-row">
+        <span className="kb-label">
+          {a.label}
+          <span className="dim small"> · hold it and click a clip in the Voiceover strip (double-click works too)</span>
+        </span>
+        <span className="kb-cat">{a.cat}</span>
+        <span className="kb-keys">
+          <span className="seg kb-mod">
+            {Object.entries({ ctrl: 'Ctrl', shift: 'Shift', alt: 'Alt' }).map(([m, label]) => (
+              <button key={m} className={voDropMod === m ? 'on' : ''} onClick={() => useStore.getState().updateSettings({ voDropMod: m })}>
+                {label} + click
+              </button>
+            ))}
+          </span>
+        </span>
+        <span className="kb-reset" />
+      </div>
+    )
   }
 
   // The layer mutes: one row; each key shows the layers it toggles, + picks
@@ -306,7 +336,7 @@ export default function KeybindsModal() {
                   <b>{cat}</b>
                   <span className="dim small">{list.length}{changed ? ' · ' + changed + ' changed' : ''}</span>
                 </button>
-                {!shut && list.map((row) => (row.colors ? renderColors(row) : row.mutes ? renderMutes(row) : renderRow(row)))}
+                {!shut && list.map((row) => (row.colors ? renderColors(row) : row.mutes ? renderMutes(row) : row.voDrop ? renderVoDrop(row) : renderRow(row)))}
               </div>
             )
           })}

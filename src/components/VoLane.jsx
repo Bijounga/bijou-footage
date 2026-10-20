@@ -140,6 +140,7 @@ export function VoTrackHead({ count }) {
 
 // ---- the lane ----
 export default function VoLane({ vo, view, width, folder, snapCands, tool, onEmptyDown }) {
+  const stripShown = useStore((s) => s.settings.editVoStrip !== false)
   const sel = useStore((s) => s.voSel)
   const snapOn = useStore((s) => s.settings.editSnap !== false)
   const track = useVoTrack()
@@ -453,7 +454,12 @@ export default function VoLane({ vo, view, width, folder, snapCands, tool, onEmp
       }}
     >
       <canvas ref={canvasRef} />
-      {!items.length && <div className="et-vo-empty dim">Voiceover — drag lines here from the Voiceover strip above (or click one to drop it at the playhead)</div>}
+      {!items.length && (
+        <div className="et-vo-empty dim">
+          {stripShown ? 'Voiceover — drag lines here from the Voiceover strip above (or click one to drop it at the playhead)' : 'Voiceover — your recorded lines are in the Voiceover strip'}
+          {!stripShown && <button className="link-btn" onMouseDown={(e) => e.stopPropagation()} onClick={() => useStore.getState().updateSettings({ editVoStrip: true })}>Show the strip</button>}
+        </div>
+      )}
       {dropAt != null && <div className="et-vo-drop" style={{ left: (dropAt - view.start) * view.pps }} />}
       {dropAt != null && window.__voDrag && <DropGhost drag={window.__voDrag} x={(dropAt - view.start) * view.pps} pps={view.pps} h={H} color={trackHex} />}
       <RecBlock view={view} />

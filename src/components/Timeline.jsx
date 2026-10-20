@@ -204,9 +204,9 @@ export function TrackHead({ i, name, color, mixer, soloed, anySolo, empty, meter
         <div className="th-buttons">
           <button className={'th-btn' + (mixer.mute ? ' on-m' : '')} onClick={() => (pov ? useStore.getState().setPovTrack(pov, i, { mute: !mixer.mute }) : toggleMute(i))} title={pov ? 'Mute this track of theirs' : `Mute (${i + 1})`}>M</button>
           <button className={'th-btn' + (soloed ? ' on-s' : '')} onClick={(e) => (pov ? useStore.getState().togglePovSolo(i, !e.ctrlKey) : toggleSolo(i, !e.ctrlKey))} title={`Solo (Shift+${i + 1}) · Ctrl+click to solo several`}>S</button>
-          {!pov && <button className={'th-btn' + (speechOn ? ' on-a' : '')} onClick={() => toggleSpeechShow(i)} title="A — show where someone's talking on this track">A</button>}
+          {!pov && <button className={'th-btn' + (speechOn ? ' on-a' : '')} onClick={() => toggleSpeechShow(i)} title="Show talking (A): tint the stretches where someone's talking on this track">A</button>}
           {showReset && <button className="th-btn" onClick={() => onVol(1)} title="Reset volume to 100%">⟳</button>}
-          {!pov && <button className={'th-btn' + (skipOn ? ' on-a' : '')} onClick={() => toggleSpeechSkip(i)} title="⇥ — include this track in Skip to next speech (Ctrl+→ / Ctrl+←)">⇥</button>}
+          {!pov && <button className={'th-btn' + (skipOn ? ' on-a' : '')} onClick={() => toggleSpeechSkip(i)} title="Follow this track's talking (⇥): Ctrl+→ / Ctrl+← jump to where someone on it starts talking, and Skip silence keeps the bits where they talk">⇥</button>}
           <div className="th-meter"><div ref={meterRef} /></div>
         </div>
       </div>

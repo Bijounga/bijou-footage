@@ -16,7 +16,7 @@ import { seqPlayer } from '../lib/seqPlayer.js'
 import { fmtTime } from '../lib/time.js'
 import { CLIP_LABEL_HEX } from '../lib/editModel.js'
 import { ensurePeaks, peaksOf, onPeaks } from '../lib/voPeaks.js'
-import { VO_MIME } from '../lib/voLane.js'
+import { VO_MIME, dropModHeld, DROP_MODS } from '../lib/voLane.js'
 import { clipBlocks, BLOCK_WAVE } from '../lib/themes.js'
 import { voSrc } from '../lib/voPlayer.js'
 import { onTick, bus } from '../lib/hooks.js'
@@ -25,6 +25,7 @@ const RULER_H = 20
 const STEPS = [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600]
 
 function SrcClip({ it, x, w, h, placed, said, tall, onGo, onDragStart, ver }) {
+  const dropMod = useStore((s) => s.settings.voDropMod) || 'ctrl'
   const cv = useRef(null)
   const hex = it.clip.color ? CLIP_LABEL_HEX[it.clip.color] : null
   useEffect(() => {
@@ -67,7 +68,8 @@ function SrcClip({ it, x, w, h, placed, said, tall, onGo, onDragStart, ver }) {
       onDragStart={onDragStart}
       onDragEnd={() => { window.__voDragLen = null; window.__voDrag = null }}
       onDoubleClick={onGo}
-      title={(said ? said + '\n\n' : '') + fmtTime(it.dur, true) + " · click: put the playhead here · drag: onto the voiceover track · double-click: drop at the cut's playhead"}
+      onClick={(e) => { if (dropModHeld(e, dropMod)) { e.stopPropagation(); onGo() } }}
+      title={(said ? said + '\n\n' : '') + fmtTime(it.dur, true) + " · click: put the playhead here · drag: onto the voiceover track · " + DROP_MODS[dropMod] + "+click or double-click: drop at the cut's playhead"}
     >
       <canvas ref={cv} />
       {w > 34 && <span className="vo-src-n">{placed ? '✓ ' : ''}{it.n}</span>}
@@ -134,6 +136,7 @@ export default function VoSource({ src, items, said, placedOf, folder, height: a
   // drag to scrub. On a clip a drag is the clip being dragged out instead.
   function seekDown(e) {
     if (e.button !== 0 || e.target.closest('.vo-src-bar')) return
+    if (e.target.closest('.vo-src-clip') && dropModHeld(e, useStore.getState().settings.voDropMod)) return
     const inner = e.currentTarget.querySelector('.vo-src-inner')
     const tAt = (ev) => Math.max(0, Math.min(voSrc.total, (ev.clientX - inner.getBoundingClientRect().left) / pRef.current))
     voSrc.seek(tAt(e))

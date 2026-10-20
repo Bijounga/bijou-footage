@@ -256,6 +256,8 @@ kbd {
 .t-time { font: 500 13px var(--mono); margin: 0 10px 0 8px; white-space: nowrap; }
 .t-cur { color: var(--ink); }
 .t-spacer { flex: 1; }
+/* between groups of transport controls (playback · tools · view · export) */
+.t-sep { flex: none; width: 1px; height: 18px; margin: 0 5px; background: var(--line); }
 .transport .btn { margin-left: 4px; }
 .t-vol { display: flex; align-items: center; gap: 4px; margin: 0 6px 0 10px; font-size: 12px; }
 .t-vol input { width: 80px; }
@@ -1162,6 +1164,9 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .bin-row { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: 6px; font-size: 12px; cursor: grab; }
 .bin-row:hover { background: var(--panel-2); }
 .bin-row:active { cursor: grabbing; }
+/* recordings already in the section's cut */
+.bin-row.in-cut { box-shadow: inset 2px 0 0 var(--cyan); }
+.bin-incut { margin-left: 4px; color: var(--cyan); font-size: 11px; font-weight: 700; cursor: help; }
 .bin-idx { font: 10.5px var(--mono); width: 16px; text-align: right; }
 .bin-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bin-name .dim { font-size: 11px; }
@@ -1189,7 +1194,8 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .et-heads { width: 232px; flex: none; border-right: 1px solid var(--line); background: var(--panel); }
 .et-head-ruler { display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; border-bottom: 1px solid var(--line-soft); }
 .et-head { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 11px; font-weight: 600; color: var(--ink-dim); border-bottom: 1px solid var(--line-soft); white-space: nowrap; overflow: hidden; }
-.et-head.v { color: var(--ink); }
+.et-head.v { color: var(--ink); position: relative; }
+body.row-resizing, body.row-resizing * { cursor: ns-resize !important; }
 .et-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c); flex: none; }
 .et-body { flex: 1; position: relative; overflow: hidden; min-width: 0; }
 .et-body.razor .et-clip, .et-body.razor .et-aclip { cursor: crosshair; }
@@ -1345,6 +1351,9 @@ body.frameless .ws-switch { -webkit-app-region: no-drag; }
 .tx-selbar { flex-wrap: wrap; row-gap: 6px; }
 /* space under the tracks — the selection box starts here too */
 .et-body { display: flex; flex-direction: column; }
+/* never squeezed when the tracks are taller than the panel (the ruler shrank
+   to 8px and every row slid up past its header) — the panel scrolls instead */
+.et-body > .et-ruler, .et-body > .et-row, .et-body > * { flex-shrink: 0; }
 .et-fill { flex: 1; min-height: 60px; cursor: crosshair; }
 
 /* ---- project notes (ProjectPad) ---- */
@@ -1757,6 +1766,7 @@ body.trim-out, body.trim-out * { cursor: var(--cur-trim-out, ew-resize) !importa
 .et-row.vo { position: relative; border-top: 1px solid var(--line-soft); background: color-mix(in srgb, var(--cyan) 4%, transparent); overflow: hidden; }
 .et-row.vo canvas { position: absolute; left: 0; top: 0; }
 .et-vo-empty { position: absolute; left: 12px; top: 0; bottom: 0; display: flex; align-items: center; font-size: 12px; pointer-events: none; }
+.et-vo-empty .link-btn { pointer-events: auto; margin-left: 8px; color: var(--cyan); }
 .vo-bin-row { cursor: default; }
 .vo-bin-row .btn { flex: none; }
 
@@ -2029,6 +2039,8 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .kb-layers { margin-left: 6px; padding: 0 5px; border-radius: 4px; font-size: 10.5px; background: color-mix(in srgb, var(--ink) 12%, transparent); color: var(--ink-dim); }
 .kb-layer-btn { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); background: transparent; color: var(--ink-dim); font-size: 11px; cursor: pointer; }
 .kb-layer-btn:hover { color: var(--ink); border-color: var(--ink-dim); }
+.seg.kb-mod { display: inline-flex; width: auto; }
+.seg.kb-mod button { flex: none; padding: 3px 9px; }
 .kb-layer-btn.on { background: color-mix(in srgb, var(--cyan) 22%, transparent); border-color: var(--cyan); color: var(--ink); }
 /* inside a section the category is its heading — drop the column */
 .kb-section .kb-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) 28px; padding-left: 24px; }

@@ -13,6 +13,16 @@ import { layoutVo, takeOf, MIN_CLIP } from './voModel.js'
 // What a voiceover clip / sentence dragged from the Voiceover panel carries.
 export const VO_MIME = 'application/x-bijou-vo'
 
+// Modifier + click on a clip in Edit's Voiceover strip drops it at the cut's
+// playhead (Keybinds: Ctrl, Shift or Alt; Ctrl is also Cmd on a Mac).
+export const DROP_MODS = { ctrl: 'Ctrl', shift: 'Shift', alt: 'Alt' }
+export function dropModHeld(e, mod) {
+  const m = mod || 'ctrl'
+  if (m === 'shift') return e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+  if (m === 'alt') return e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+  return (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey
+}
+
 let n = 0
 export const voId = () => 'p' + Date.now().toString(36) + (n++).toString(36)
 

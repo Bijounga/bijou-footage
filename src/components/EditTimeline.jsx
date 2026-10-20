@@ -352,7 +352,7 @@ const VClip = React.memo(function VClip({ it, x, pps, sel, c, notes, tool, beatC
       onMouseDown={(e) => h.current.clipDown(e, it)}
       onContextMenu={(e) => h.current.clipContext(e, it)}
       onDoubleClick={(e) => h.current.matchFrame(e, it)}
-      title={(c ? clipTitle(c) + ' · ' + c.name : 'Missing recording') + `\n${fmtTime(it.in)}–${fmtTime(it.out)} of the recording · ${fmtTime(it.dur, true)} long`}
+      title={(c ? clipTitle(c) + ' · ' + c.name : 'Missing recording') + `\n${fmtTime(it.in)}–${fmtTime(it.out)} of the recording · ${fmtTime(it.dur, true)} long\nDrag: move · edges: trim · right-click: colour, mute audio layers · double-click: this moment in Review`}
     >
       {w > 14 && tool === 'select' && (
         <>
@@ -397,6 +397,23 @@ export default function EditTimeline({ section }) {
   const reviews = useStore((s) => s.reviews)
   const beatColors = useStore((s) => s.beatColors)
   const trackNames = useStore((s) => s.settings.trackNames)
+  // V1's height: drag the bottom edge of its header, like the audio tracks
+  const vH = useStore((s) => s.settings.editVHeight) || V_H
+  const vResizeDown = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const y0 = e.clientY
+    const h0 = vH
+    document.body.classList.add('row-resizing')
+    const move = (ev) => useStore.getState().updateSettings({ editVHeight: Math.round(Math.max(34, Math.min(260, h0 + ev.clientY - y0))) })
+    const up = () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+      document.body.classList.remove('row-resizing')
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
   useStore((s) => s.settings.themeId) // redraw the clips when the theme (their look) changes
   const blocks = clipBlocks()
   const colors = useTrackColors()
@@ -960,7 +977,10 @@ export default function EditTimeline({ section }) {
         <div className="et-head-ruler" style={{ height: RULER_H }}>
           <ZoomBar get={zoomGet} set={zoomSet} onFit={fit} onStep={(dir) => bus.emit('editZoom', dir)} fitTitle="Fit the whole section (\)" />
         </div>
-        <div className="et-head v" style={{ height: V_H }}>V1</div>
+        <div className="et-head v" style={{ height: vH }} title="Video — the section's clips. Drag recordings here from the sidebar (or press ＋ on one)">
+          V1
+          <div className="th-resize" onMouseDown={vResizeDown} onDoubleClick={() => useStore.getState().updateSettings({ editVHeight: null })} title="Drag to resize the video track · double-click to reset" />
+        </div>
         {Array.from({ length: nTracks }, (_, i) => {
           const m = mixer[i] || { vol: 1, mute: false }
           // "empty" only if this track is silent in every recording in the cut
@@ -1021,8 +1041,8 @@ export default function EditTimeline({ section }) {
           })}
         </div>
         <div className="et-rows" onMouseDown={rowsDown}>
-          <div className="et-row v" style={{ height: V_H }} onMouseDown={(e) => rowDown(e, null)} onContextMenu={(e) => rowContext(e, null)}>
-            <ThinClips items={items} view={drawView} width={drawW} shift={slide} height={V_H} selSet={selSet} byKey={byKey} />
+          <div className="et-row v" style={{ height: vH }} onMouseDown={(e) => rowDown(e, null)} onContextMenu={(e) => rowContext(e, null)}>
+            <ThinClips items={items} view={drawView} width={drawW} shift={slide} height={vH} selSet={selSet} byKey={byKey} />
             {/* Clips sit in a strip that slides as you pan: they're placed from
                 an anchor that only moves every half screen, so panning moves
                 one element instead of re-rendering every clip. */}

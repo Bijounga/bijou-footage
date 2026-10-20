@@ -483,7 +483,7 @@ export default function EditPanel({ section }) {
       <div className="np-head">
         <div className="np-title">
           <div className="np-tabs">
-            <button className={tab === 'notes' ? 'on' : ''} onClick={() => set({ editPanelTab: 'notes' })}>Notes &amp; markers</button>
+            <button className={tab === 'notes' ? 'on' : ''} onClick={() => set({ editPanelTab: 'notes' })} title="Notes and markers in this cut — the timeline's markers and the recordings' notes">Notes</button>
             <button className={tab === 'transcript' ? 'on' : ''} onClick={() => set({ editPanelTab: 'transcript' })}>Transcript</button>
             <button className={tab === 'both' ? 'on' : ''} onClick={() => set({ editPanelTab: 'both', ...(width < 620 ? { editPanelWidth: 680 } : {}) })} title="Notes and transcript side by side — drag the line between them">◫ Both</button>
             <button className={'np-pad-tab' + (tab === 'pad' ? ' on' : '')} onClick={() => set({ editPanelTab: 'pad' })} title="Project notes — checklists and notes for the whole project, shared with Review">☑ Project</button>
