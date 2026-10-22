@@ -594,6 +594,14 @@ export const useStore = create(
       set((s) => { s.povFocus = key || null; s.povSolo = [] })
       player.setOutputMuted(!!key)
     },
+    // Hide the other people's POVs for a while (H): just yours shows, big.
+    togglePovsHidden(force) {
+      const hide = force != null ? !!force : !get().settings.povsHidden
+      if (hide && get().povFocus) get().setPovFocus(null) // back to your view and your sound
+      set((s) => { s.settings.povsHidden = hide })
+      get().scheduleSave()
+      return hide
+    },
     // The POV's own tracks (when it's big, the timeline's track heads are its):
     // mix = [{vol, mute}] per track, kept with the POV.
     setPovTrack(povKey, i, patch) {

@@ -149,6 +149,11 @@ export const ACTIONS = [
   { id: 'fullscreen', label: 'Fullscreen video', cat: 'View', keys: ['F'], needsClip: true, run: ({ bus }) => bus.emit('fullscreen') },
   { id: 'sketch', label: 'Sketch note — draw on the frame', cat: 'Notes', keys: ['P'], needsClip: true, run: ({ st }) => st.openSketch() },
   { id: 'viewer', label: 'Viewer window (for a second monitor)', cat: 'View', keys: ['Ctrl+Shift+V'], run: () => toggleViewer() },
+  { id: 'togglePovs', label: "Hide / show the POVs (other people's recordings) for a while", cat: 'View', keys: ['H'], run: ({ st, osd }) => {
+    const r = st.currentKey && st.reviews[st.currentKey]
+    if (!r || !(r.povs || []).length) return osd('No POVs on this recording')
+    osd(st.togglePovsHidden() ? 'POVs hidden — H brings them back' : 'POVs shown')
+  } },
   { id: 'appFullscreen', label: 'Full screen (whole app, covers the taskbar)', cat: 'View', keys: ['F11'], global: true, run: () => window.footage.toggleFullscreen() },
   { id: 'prevRecording', label: 'Previous recording', cat: 'Library', keys: ['Ctrl+Up'], run: ({ bus }) => bus.emit('neighbourClip', -1) },
   { id: 'nextRecording', label: 'Next recording', cat: 'Library', keys: ['Ctrl+Down'], run: ({ bus }) => bus.emit('neighbourClip', 1) },

@@ -197,6 +197,11 @@ export function PovCam({ pov, index, rect, big, layout, stageRef }) {
       {(!clip || failed) && <div className="cam-note">Can’t find {pov.name}’s recording</div>}
       {clip && !failed && !inRange && <OutOfRange pov={pov} clip={clip} />}
       {small && layout === 'pip' && <PipResize stageRef={stageRef} />}
+      {small && (
+        <button className="cam-hide" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); useStore.getState().togglePovsHidden(true) }} title="Hide the POVs for a while (H brings them back)">
+          Hide
+        </button>
+      )}
     </div>
   )
 }
@@ -256,6 +261,7 @@ export function PovMenu() {
   const layout = useStore((s) => s.settings.povLayout) || 'pip'
   const you = useYou()
   const borders = useStore((s) => s.settings.povBorders !== false)
+  const hidden = useStore((s) => !!s.settings.povsHidden)
   const [open, setOpen] = useState(false)
   const [renaming, setRenaming] = useState(null)
   const ref = useRef(null)
@@ -275,11 +281,14 @@ export function PovMenu() {
   }
   return (
     <div className="pov-menu-wrap" ref={ref}>
-      <button className={'btn small' + (open ? ' on' : '')} onClick={() => setOpen((o) => !o)} title="Other people's POVs of this session">
-        {povs.length === 1 ? '1 POV' : povs.length + ' POVs'} ▾
+      <button className={'btn small' + (open ? ' on' : '') + (hidden ? ' pov-hidden' : '')} onClick={() => setOpen((o) => !o)} title={"Other people's POVs of this session" + (hidden ? ' — hidden for now (H shows them)' : '')}>
+        {povs.length === 1 ? '1 POV' : povs.length + ' POVs'}{hidden ? ' · hidden' : ''} ▾
       </button>
       {open && (
         <div className="pov-menu">
+          <button className="btn small block pov-hide-btn" onClick={() => { st().togglePovsHidden(); setOpen(false) }} title="Hide / show them for a while (H)">
+            {hidden ? 'Show the POVs' : 'Hide the POVs for now'} <span className="dim">H</span>
+          </button>
           <div className="pov-menu-seg seg">
             {[['pip', 'Corner'], ['side', 'Side by side'], ['grid', 'Grid']].map(([id, label]) => (
               <button key={id} className={layout === id ? 'on' : ''} onClick={() => st().updateSettings({ povLayout: id })}>{label}</button>

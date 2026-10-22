@@ -256,6 +256,12 @@ kbd {
 .t-time { font: 500 13px var(--mono); margin: 0 10px 0 8px; white-space: nowrap; }
 .t-cur { color: var(--ink); }
 .t-spacer { flex: 1; }
+/* POVs: hide them for a while (H) */
+.cam-hide { position: absolute; right: 8px; top: 8px; z-index: 3; padding: 3px 9px; border: 0; border-radius: 6px; background: rgba(10, 11, 14, 0.78); color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+.cam:hover .cam-hide { opacity: 1; }
+.cam-hide:hover { background: rgba(10, 11, 14, 0.95); }
+.btn.pov-hidden { color: var(--ink-dim); border-style: dashed; }
+.pov-hide-btn { margin-bottom: 8px; justify-content: space-between; }
 /* between groups of transport controls (playback · tools · view · export) */
 .t-sep { flex: none; width: 1px; height: 18px; margin: 0 5px; background: var(--line); }
 .transport .btn { margin-left: 4px; }

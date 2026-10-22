@@ -11,6 +11,7 @@ import ViewerButton from './ViewerButton.jsx'
 import { useVideoZoom } from '../lib/videoZoom.js'
 import { PlayerHideButton } from './LayoutToggles.jsx'
 import { usePovs, useCamLayout, rectStyle, pipPress, PovCam, PovMenu, PipResize, SideDivider, MainCamLabel, useYou } from './PovStage.jsx'
+const NO_POVS_SHOWN = []
 import PovSync from './PovSync.jsx'
 
 // A button's key hint, following the user's bindings (hidden if unbound).
@@ -301,7 +302,9 @@ export default function PlayerView() {
   const videoRef = useRef(null)
   const ghostRef = useRef(null)
   const stageRef = useRef(null)
-  const povs = usePovs()
+  const allPovs = usePovs()
+  const povsHidden = useStore((s) => s.settings.povsHidden)
+  const povs = povsHidden ? NO_POVS_SHOWN : allPovs // hidden for a while (H)
   const cams = useCamLayout(stageRef, povs)
   const povFocus = useStore((s) => s.povFocus)
   const syncing = useStore((s) => !!s.povSync)
@@ -350,6 +353,11 @@ export default function PlayerView() {
           <video ref={ghostRef} className="video ghost" muted />
           {povs.length > 0 && <MainCamLabel />}
           {povs.length > 0 && !mainBig && cams.layout === 'pip' && <PipResize stageRef={stageRef} />}
+          {povs.length > 0 && !mainBig && (
+            <button className="cam-hide" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); useStore.getState().togglePovsHidden(true) }} title="Hide the POVs for a while — back to yours (H brings them back)">
+              Hide POVs
+            </button>
+          )}
         </div>
         {povs.length > 0 && cams.layout === 'side' && <SideDivider rect={cams.rects.divider} stageRef={stageRef} />}
         {clip && povs.map((p, i) => <PovCam key={p.key} pov={p} index={i} rect={cams.rects[p.key]} big={cams.big === p.key} layout={cams.layout} stageRef={stageRef} />)}
