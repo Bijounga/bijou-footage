@@ -113,9 +113,19 @@ class Player {
     this.videoChain = this.makeChain(video)
     this.videoChain.active = true
     const v = video
-    v.addEventListener('play', () => { this.ctx.resume(); this.syncAll(true); this.startSync(); this.emitState() })
-    v.addEventListener('playing', () => this.syncAll(true))
-    v.addEventListener('pause', () => {
+    // Only the element on screen speaks for the player. An older one (Review
+    // rebuilt after Edit / Voiceover, or a recording opened from Edit before
+    // Review was back) kept firing pause / seeking / seeked into it — pausing
+    // the extracted tracks under the new video: only track 1 (Game) played.
+    const on = (type, fn) => v.addEventListener(type, (e) => { if (this.video === v) fn(e) })
+    if (prev && prev !== v) {
+      prev.pause()
+      prev.removeAttribute('src')
+      prev.load()
+    }
+    on('play', () => { this.ctx.resume(); this.syncAll(true); this.startSync(); this.emitState() })
+    on('playing', () => this.syncAll(true))
+    on('pause', () => {
       this.pauseAudio()
       this.savePosition()
       this.stopSync()
@@ -124,8 +134,8 @@ class Player {
       if (!this.skim && !this.scrub) this.endShuttle()
       this.emitState()
     })
-    v.addEventListener('waiting', () => this.pauseAudio())
-    v.addEventListener('seeking', () => {
+    on('waiting', () => this.pauseAudio())
+    on('seeking', () => {
       // Extracted .m4a tracks seek almost for free, so do it now. Tracks
       // still reading the full video file wait until the video's own seek is
       // done — seeking them in parallel was measured to make the video seek
@@ -136,19 +146,19 @@ class Player {
         else c.el.pause()
       }
     })
-    v.addEventListener('seeked', () => {
+    on('seeked', () => {
       this.wantAt = null
       this.syncAll(!v.paused)
       this.uncover()
       this.emit('seeked')
     })
-    v.addEventListener('ratechange', () => this.syncAll(!v.paused))
-    v.addEventListener('ended', () => { this.savePosition(); this.emitState(); this.emit('ended') })
-    v.addEventListener('loadedmetadata', () => {
+    on('ratechange', () => this.syncAll(!v.paused))
+    on('ended', () => { this.savePosition(); this.emitState(); this.emit('ended') })
+    on('loadedmetadata', () => {
       this.updateVideoAudio()
       this.emitState()
     })
-    v.addEventListener('error', () => this.emit('error', v.error ? v.error.message || 'Playback error ' + v.error.code : 'Playback error'))
+    on('error', () => this.emit('error', v.error ? v.error.message || 'Playback error ' + v.error.code : 'Playback error'))
     // load() switches every track off and forgets the extracted track files,
     // trusting store.openClip to push the mixer right after. Coming back to
     // Review (or opening there after starting in Edit / Voiceover) nobody
@@ -328,6 +338,26 @@ class Player {
       el.preload = 'auto'
       el.preservesPitch = true
       c = this.chains[i] = this.makeChain(el)
+      // A track that runs off the end while the video plays on got stuck
+      // there (see syncOne): load it afresh and put it back in place.
+      const chain = c
+      el.addEventListener('ended', () => {
+        const v = this.video
+        if (!v || !chain.active || chain.healing || !chain.extracted) return
+        if (v.duration && v.duration - v.currentTime < 1) return // really the end
+        const src = el.getAttribute('src')
+        if (!src) return
+        chain.healing = true
+        chain.ready = false
+        el.removeAttribute('src')
+        el.load()
+        el.src = src
+        el.addEventListener('loadedmetadata', () => {
+          chain.healing = false
+          chain.ready = true
+          this.syncOne(chain, this.playing && !this.skim && !this.scrub)
+        }, { once: true })
+      })
     }
     const extracted = this.audioFiles[i]
     const url = mediaUrl(extracted || this.clip.path)
@@ -370,9 +400,25 @@ class Player {
   syncOne(c, play) {
     if (!c.active || !c.ready || !this.video) return
     c.el.playbackRate = this.video.playbackRate
-    if (Math.abs(c.el.currentTime - this.video.currentTime) > 0.02) c.el.currentTime = this.video.currentTime
-    if (play && !this.video.paused && this.video.readyState >= 3) c.el.play().catch(() => {})
-    else c.el.pause()
+    // No tiny seeks, and never one while a seek is still landing: a ~0.02 s
+    // nudge sent long extracted .m4a tracks to the END of the file (they
+    // stopped there — only the video's own track 1 played), and once there
+    // every later seek landed there too. Small offsets are the 200 ms sync's
+    // job (it eases the rate); only real jumps seek. (2026-10-22)
+    if (!c.el.seeking && (c.el.ended || Math.abs(c.el.currentTime - this.video.currentTime) > 0.1)) c.el.currentTime = this.video.currentTime
+    if (play && !this.video.paused && this.video.readyState >= 3) {
+      // play() while a seek is still loading sent long extracted .m4a tracks
+      // to the end of the file too: start it once the seek has landed
+      if (c.el.seeking) {
+        if (!c.playAfterSeek) {
+          c.playAfterSeek = true
+          c.el.addEventListener('seeked', () => {
+            c.playAfterSeek = false
+            if (c.active && this.video && !this.video.paused) c.el.play().catch(() => {})
+          }, { once: true })
+        }
+      } else c.el.play().catch(() => {})
+    } else c.el.pause()
   }
 
   syncAll(play) {
