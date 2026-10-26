@@ -482,6 +482,7 @@ async function exportSection(opts = {}) {
     const said = textIn(v.take, v.in, v.out)
     return {
       path: project.folder.replace(/[\\/]+$/, '') + '/voiceover/audio/' + v.take + '.wav',
+      take: v.take,
       name: v.take + '.wav',
       label: said ? 'VO — ' + (said.length > 60 ? said.slice(0, 57) + '…' : said) : 'Voiceover',
       at: v.at,
@@ -492,7 +493,10 @@ async function exportSection(opts = {}) {
     }
   })
   const voTrack = { ...VO_TRACK, ...(st.settings.voTrack || {}) }
-  const file = await window.footage.exportSection({ name: (project ? project.name + ' — ' : '') + sec.name, clips, markers, vo, voEnabled: !voTrack.mute })
+  // Voice enhance on: the enhanced copies of the takes go to Premiere (main swaps the files)
+  const enh = st.settings.voEnhanceBy && project ? st.settings.voEnhanceBy[project.id] : null
+  const voEnhance = enh && enh.on && project.folder ? { folder: project.folder, amount: enh.amount != null ? enh.amount : 1 } : null
+  const file = await window.footage.exportSection({ name: (project ? project.name + ' — ' : '') + sec.name, clips, markers, vo, voEnabled: !voTrack.mute, voEnhance })
   if (file) st.showToast('Premiere XML saved: ' + file)
 }
 

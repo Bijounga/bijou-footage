@@ -11,6 +11,7 @@ import * as transcribe from './transcribe.js'
 import * as llm from './llm.js'
 import * as projects from './projects.js'
 import * as vo from './voiceover.js'
+import * as voEnh from './voEnhance.js'
 import * as bijou from './bijou.js'
 import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
 import { initUpdater } from './updater.js'
@@ -545,13 +546,20 @@ function registerIpc() {
   ipcMain.handle('vo:recStart', (_e, folder, take, sr, ch) => vo.recStart(folder, take, sr, ch))
   ipcMain.on('vo:recChunk', (_e, file, samples, peaks) => vo.recChunk(file, samples, peaks))
   ipcMain.handle('vo:recStop', (_e, file) => vo.recStop(file))
-  ipcMain.handle('vo:readPcm', (_e, folder, take, start, dur, rate) => {
-    const file = path.join(vo.audioDir(folder), take + '.wav')
+  ipcMain.handle('vo:readPcm', (_e, folder, take, start, dur, rate, enh) => {
+    // enh: the enhanced copy (voEnhance.js) — null while it isn't made
+    const file = path.join(vo.audioDir(folder), take + (enh ? '.enh' : '') + '.wav')
+    if (enh && !fs.existsSync(file)) return null
     if (!rate || rate === 1) return vo.readPcm(file, start, dur)
     const t = tools()
     return vo.readPcmTempo(file, start, dur, rate, t && t.ffmpeg)
   })
-  ipcMain.handle('vo:readPeaks', (_e, folder, take) => vo.readPeaks(path.join(vo.audioDir(folder), take + '.wav')))
+  ipcMain.handle('vo:readPeaks', (_e, folder, take, enh) => vo.readPeaks(path.join(vo.audioDir(folder), take + (enh ? '.enh' : '') + '.wav')))
+  // Voice enhance: which takes have an enhanced copy, make the missing ones (in the background, with progress events)
+  voEnh.setEmit((ev) => send('vo:enh:event', ev))
+  ipcMain.handle('vo:enh:status', (_e, folder, takes) => voEnh.status(folder, takes))
+  ipcMain.handle('vo:enh:request', (_e, folder, takes) => voEnh.request(folder, takes, tools().ffmpeg))
+  ipcMain.handle('vo:enh:cancel', (_e, folder) => voEnh.cancel(folder))
   ipcMain.handle('vo:micAccess', async () => {
     // A Mac asks once (and needs NSMicrophoneUsageDescription); elsewhere it's allowed.
     if (process.platform !== 'darwin') return true
@@ -578,6 +586,16 @@ function registerIpc() {
     const markers = copySketches(r.filePath, payload.markers || [])
     // the voiceover lines: each take's real format (rate / channels / length);
     // a take whose WAV is gone is left out rather than imported offline
+    // Voice enhance on: the enhanced copy of each take (a baked blend at less than 100%)
+    if (payload.voEnhance) {
+      for (const v of payload.vo || []) {
+        if (!v.take) continue
+        try {
+          const f = voEnh.pathForExport(payload.voEnhance.folder, v.take, payload.voEnhance.amount)
+          if (f) { v.path = f; v.name = path.basename(f) }
+        } catch { /* the original goes out */ }
+      }
+    }
     const voItems = (payload.vo || []).map((v) => ({ ...v, ...vo.wavInfo(v.path) })).filter((v) => v.sampleRate)
     fs.writeFileSync(r.filePath, buildSequenceXml({ ...payload, markers, vo: voItems }), 'utf8')
     return r.filePath
@@ -716,6 +734,7 @@ else {
   })
   app.on('window-all-closed', () => app.quit())
   app.on('will-quit', () => {
+    voEnh.shutdown()
     stopDeckBridge()
     transcribe.shutdown()
     llm.shutdown()

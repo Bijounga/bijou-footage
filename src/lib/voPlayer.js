@@ -6,6 +6,7 @@
 // clock — gapless and sample-exact, however many cuts there are. Each clip
 // fades in / out over a few ms so cuts don't click.
 import { layoutVo } from './voModel.js'
+import { wanted, gainsFor, config, subscribe } from './voEnhance.js'
 
 const api = window.footage
 const PIECE = 4 // seconds of audio per read
@@ -16,7 +17,7 @@ const EDGE_FADE = 0.004
 // the one behind Edit's VO lane (voMix, slaved to the cut's playhead).
 function makePlayer() {
   const listeners = {}
-  return {
+  const player = {
   ctx: null,
   master: null,
   folder: null,
@@ -39,6 +40,7 @@ function makePlayer() {
   scheduledUntil: 0, // timeline time scheduled up to
   timer: 0,
   cache: new Map(), // `${take}@${t0}` -> Promise<AudioBuffer>
+  pieces: new Set(), // the scheduled pieces that have an enhanced half: {take, gd, gw} (see voEnhance.js)
   gen: 0, // bumps on every stop, so late reads are dropped
 
   on(evt, fn) {
@@ -179,6 +181,7 @@ function makePlayer() {
   },
   stopSources() {
     this.gen++
+    this.pieces.clear()
     clearInterval(this.timer)
     for (const s of this.sources) {
       try { s.stop() } catch { /* already done */ }
@@ -189,6 +192,7 @@ function makePlayer() {
     const ctx = this.ensureCtx()
     if (ctx.state === 'suspended') await ctx.resume()
     const gen = ++this.gen
+    this.lastOn = config().on
     // Have the first piece in hand before the clock starts.
     const first = this.pieceAt(t)
     if (first) await this.load(first).catch(() => null)
@@ -219,24 +223,65 @@ function makePlayer() {
     const t0 = it.in + k * PIECE
     return { it, t0, dur: Math.min(PIECE, it.out - t0), at: it.start + k * PIECE }
   },
+  toBuffer({ sr, ch, samples }) {
+    const f = new Float32Array(samples)
+    const n = Math.floor(f.length / ch)
+    const buf = this.ctx.createBuffer(ch, Math.max(1, n), sr)
+    for (let c = 0; c < ch; c++) {
+      const d = buf.getChannelData(c)
+      for (let i = 0; i < n; i++) d[i] = f[i * ch + c]
+    }
+    return buf
+  },
   load(p) {
     const key = p.it.take + '@' + p.t0.toFixed(4) + '+' + p.dur.toFixed(4) + 'x' + this.rate
     let pr = this.cache.get(key)
     if (!pr) {
-      pr = api.voReadPcm(this.folder, p.it.take, p.t0, p.dur, this.rate).then(({ sr, ch, samples }) => {
-        const f = new Float32Array(samples)
-        const n = Math.floor(f.length / ch)
-        const buf = this.ctx.createBuffer(ch, Math.max(1, n), sr)
-        for (let c = 0; c < ch; c++) {
-          const d = buf.getChannelData(c)
-          for (let i = 0; i < n; i++) d[i] = f[i * ch + c]
-        }
-        return buf
+      pr = api.voReadPcm(this.folder, p.it.take, p.t0, p.dur, this.rate).then((r) => this.toBuffer(r))
+      this.cache.set(key, pr)
+      if (this.cache.size > 60) this.cache.delete(this.cache.keys().next().value)
+    }
+    return pr
+  },
+  // The same stretch from the take's enhanced copy (null if it isn't made).
+  loadWet(p) {
+    const key = p.it.take + '@' + p.t0.toFixed(4) + '+' + p.dur.toFixed(4) + 'x' + this.rate + 'E'
+    let pr = this.cache.get(key)
+    if (!pr) {
+      pr = api.voReadPcm(this.folder, p.it.take, p.t0, p.dur, this.rate, true).then((r) => {
+        if (!r) { this.cache.delete(key); return null }
+        return this.toBuffer(r)
       })
       this.cache.set(key, pr)
       if (this.cache.size > 60) this.cache.delete(this.cache.keys().next().value)
     }
     return pr
+  },
+  // Original / enhanced mix of a piece, from the setting (live: the slider moves it while playing).
+  mixPiece(pc, smooth) {
+    const g = gainsFor(pc.take)
+    const now = this.ctx.currentTime
+    if (smooth) {
+      pc.gd.gain.setTargetAtTime(g.dry, now, 0.02)
+      pc.gw.gain.setTargetAtTime(g.wet, now, 0.02)
+    } else {
+      pc.gd.gain.value = g.dry
+      pc.gw.gain.value = g.wet
+    }
+  },
+  // The enhance setting changed (on / off / strength).
+  enhChanged() {
+    if (!this.ctx) return
+    for (const pc of this.pieces) this.mixPiece(pc, true)
+    // Switched on while playing: what's scheduled has no enhanced half — carry on from here with it.
+    const on = config().on
+    const turnedOn = on && !this.lastOn
+    this.lastOn = on
+    if (this.playing && turnedOn) {
+      const t = this.getTime()
+      this.stopSources()
+      this.startAt(t)
+    }
   },
   // Schedule whatever starts before now + AHEAD and isn't scheduled yet.
   pump() {
@@ -263,7 +308,8 @@ function makePlayer() {
       this.scheduledUntil = pieceEnd
       const edgeIn = Math.abs(p.at - p.it.start) < 1e-6
       const edgeOut = Math.abs(pieceEnd - (p.it.start + p.it.dur)) < 1e-6
-      this.load(p).then((buf) => {
+      const wantWet = wanted(p.it.take)
+      Promise.all([this.load(p), wantWet ? this.loadWet(p).catch(() => null) : null]).then(([buf, wbuf]) => {
         if (gen !== this.gen || !this.playing) return
         const ctx = this.ctx
         const when = this.startCtx + (p.at + skip - this.startT) / this.rate
@@ -272,8 +318,22 @@ function makePlayer() {
         if (offset >= buf.duration) return
         const src = ctx.createBufferSource()
         src.buffer = buf
-        const g = ctx.createGain()
-        src.connect(g).connect(this.master)
+        const g = ctx.createGain() // the clip's volume and edge fades, for both halves
+        g.connect(this.master)
+        // Voice enhance: the original and the enhanced copy of this stretch, each through its own gain
+        let pc = null
+        let wsrc = null
+        if (wbuf && offset < wbuf.duration) {
+          const gd = ctx.createGain()
+          const gw = ctx.createGain()
+          src.connect(gd).connect(g)
+          wsrc = ctx.createBufferSource()
+          wsrc.buffer = wbuf
+          wsrc.connect(gw).connect(g)
+          pc = { take: p.it.take, gd, gw }
+          this.mixPiece(pc, false)
+          this.pieces.add(pc)
+        } else src.connect(g)
         const t0 = Math.max(when, ctx.currentTime)
         const len = buf.duration - offset
         const vol = p.it.gain != null ? Math.pow(10, p.it.gain / 20) : 1
@@ -285,9 +345,20 @@ function makePlayer() {
         }
         src.start(t0, offset, len)
         this.sources.push(src)
+        if (wsrc) {
+          wsrc.start(t0, offset, Math.max(0.001, Math.min(len, wbuf.duration - offset)))
+          this.sources.push(wsrc)
+        }
         src.onended = () => {
           const i = this.sources.indexOf(src)
           if (i >= 0) this.sources.splice(i, 1)
+          if (pc) this.pieces.delete(pc)
+        }
+        if (wsrc) {
+          wsrc.onended = () => {
+            const i = this.sources.indexOf(wsrc)
+            if (i >= 0) this.sources.splice(i, 1)
+          }
         }
       }).catch(() => {})
     }
@@ -298,6 +369,8 @@ function makePlayer() {
   // The section changed under it (a cut, a re-record): what was read for the
   // old layout is still right (pieces are keyed by take + window), nothing to drop.
   }
+  subscribe(() => player.enhChanged())
+  return player
 }
 
 export const voPlayer = makePlayer()

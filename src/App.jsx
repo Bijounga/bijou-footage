@@ -23,6 +23,7 @@ import VoiceoverWorkspace, { handleVoKey } from './components/VoiceoverWorkspace
 import { editKeymap } from './lib/editKeys.js'
 import { runOnSource } from './lib/voSrcKeys.js'
 import { startDeck } from './lib/deck.js'
+import { VoEnhanceBridge } from './components/VoEnhance.jsx'
 
 function isTyping(el) {
   if (!el) return false
@@ -199,6 +200,7 @@ export default function App() {
     return (
       <>
         <VoiceoverWorkspace />
+        <VoEnhanceBridge />
         {modal === 'settings' && <SettingsModal />}
         {modal === 'help' && <KeybindsModal />}
         <UpdateBanner />
@@ -210,6 +212,7 @@ export default function App() {
     return (
       <>
         <EditWorkspace />
+        <VoEnhanceBridge />
         {modal === 'settings' && <SettingsModal />}
         {modal === 'help' && <KeybindsModal />}
         <CacheReminder />

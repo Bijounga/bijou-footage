@@ -51,7 +51,7 @@ export async function trashVoSection(folder, id) {
 }
 
 // ---- WAV (32-bit IEEE float) ----
-function wavHeader(sampleRate, channels, dataBytes) {
+export function wavHeader(sampleRate, channels, dataBytes) {
   const b = Buffer.alloc(44)
   b.write('RIFF', 0)
   b.writeUInt32LE(36 + dataBytes, 4)

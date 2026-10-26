@@ -1668,6 +1668,26 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .vo-gain-reset svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .vo-meter { flex: none; }
 .vo-preroll { flex: none; }
+/* Voice enhance: the switch, the strength slider, what it's doing */
+.vo-enh { display: flex; align-items: center; gap: 8px; flex: none; }
+.vo-enh.stacked { margin: 2px 4px 4px; }
+.vo-enh-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink-dim); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.vo-enh-btn:hover { color: var(--ink); border-color: var(--ink-faint); }
+.vo-enh-btn.on { color: #fff; border-color: transparent; background: linear-gradient(135deg, #6a8cff, #b46bff); box-shadow: 0 0 12px rgba(150, 120, 255, 0.45); }
+.vo-enh-range { width: 110px; accent-color: #9a82ff; }
+.vo-enh:not(.on) .vo-enh-range { opacity: 0.45; }
+.vo-enh-pct { min-width: 34px; font: 11px var(--mono); color: var(--ink-dim); }
+.vo-enh-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
+.vo-enh-spin { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink-faint); border-top-color: #9a82ff; animation: vo-enh-spin 0.8s linear infinite; }
+@keyframes vo-enh-spin { to { transform: rotate(360deg); } }
+.vo-enh-err { font-size: 11px; color: var(--danger); white-space: nowrap; }
+.vo-enh-pop { flex-direction: column; gap: 4px; min-width: 300px; padding: 10px; }
+.vo-menu.vo-enh-pop .vo-enh-btn { flex-direction: row; align-items: center; white-space: nowrap; padding: 5px 11px; }
+.vo-menu.vo-enh-pop .vo-enh-btn:hover { background: transparent; }
+.vo-menu.vo-enh-pop .vo-enh-btn.on:hover { background: linear-gradient(135deg, #6a8cff, #b46bff); }
+.th-enh { position: relative; }
+.th-enh.on-a { background: linear-gradient(135deg, #6a8cff, #b46bff); border-color: transparent; color: #fff; }
+.vo-enh-dot { position: absolute; right: 1px; top: 1px; width: 5px; height: 5px; border-radius: 50%; background: #fff; animation: vo-enh-spin 1.2s linear infinite; }
 .vo-mic { flex-wrap: nowrap; }
 @container (max-width: 1250px) { .vo-mic { flex-wrap: wrap; row-gap: 6px; } }
 

@@ -31,6 +31,7 @@ import { bus, onTick } from '../lib/hooks.js'
 import { Fader } from './Timeline.jsx'
 import { VO_MIME } from '../lib/voLane.js'
 import { editRecToggle } from '../lib/editRecord.js'
+import { EnhanceHeadButton } from './VoEnhance.jsx'
 import { clipBlocks, blockFill, BLOCK_WAVE } from '../lib/themes.js'
 
 export const VO_DEFAULT_COLOR = '#4fd1c5'
@@ -129,6 +130,7 @@ export function VoTrackHead({ count }) {
           >
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">{rec ? <rect x="2" y="2" width="6" height="6" rx="1" fill="currentColor" /> : <circle cx="5" cy="5" r="3.6" fill="currentColor" />}</svg>
           </button>
+          <EnhanceHeadButton />
           <div className="th-meter"><div ref={meter} /></div>
         </div>
       </div>

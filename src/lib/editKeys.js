@@ -9,6 +9,7 @@ import { seqPlayer } from './seqPlayer.js'
 import { toggleViewer } from './viewer.js'
 import { speechStarts, hasWave } from './speech.js'
 import { MARKER_COLORS } from './beats.js'
+import { keyToggleEnhance } from './voEnhanceSetting.js'
 
 // Every place someone on the ⇥ tracks starts talking, in timeline time.
 function speechInCut(st) {
@@ -213,6 +214,7 @@ export const EDIT_ACTIONS = [
     st.setEditSel([]); st.setVoSel([]); st.setEditTool('select')
   } },
   { id: 'e.voRecord', label: 'Record voiceover over the cut (from the playhead, after the pre-roll) / stop', cat: 'Voiceover', keys: ['R'], run: () => editRecToggle() },
+  { id: 'e.enhance', label: 'Voice clean-up on / off — to hear the difference', cat: 'Voiceover', keys: ['Shift+E'], run: ({ osd }) => keyToggleEnhance(osd) },
   { id: 'e.voTap', label: 'Tap to place: the next voiceover line from the strip, at the playhead', cat: 'Voiceover', keys: ['T'], run: () => tapPlace() },
   { id: 'e.selectAll', label: 'Select all clips', cat: 'Edit', keys: ['Ctrl+A'], run: ({ st }) => { const s = sec(st); if (s) st.setEditSel(s.clips.map((c) => c.id)) } },
   { id: 'e.undo', label: 'Undo', cat: 'Edit', keys: ['Ctrl+Z'], run: ({ st }) => st.editUndoRedo(false) },

@@ -1,6 +1,6 @@
 {
   "name": "bijou-footage",
-  "version": "0.9.11",
+  "version": "0.10.0",
   "description": "Bijou Footage — a fast footage reviewer for long OBS recordings, feeding BijouDocs",
   "main": "out/main/index.js",
   "author": "Bijou",
@@ -39,6 +39,10 @@
       {
         "from": "resources/whisper_worker.py",
         "to": "whisper_worker.py"
+      },
+      {
+        "from": "resources/rnnoise-bd.rnnn",
+        "to": "rnnoise-bd.rnnn"
       }
     ],
     "win": {

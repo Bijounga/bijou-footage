@@ -16,6 +16,7 @@ import { WATCH_SPEEDS } from '../lib/player.js'
 import { voPlayer } from '../lib/voPlayer.js'
 import { voKeymap } from '../lib/voKeys.js'
 import { voRec, listMics } from '../lib/voRecorder.js'
+import { EnhanceControl } from './VoEnhance.jsx'
 import { onTick, bus } from '../lib/hooks.js'
 import { fmtTime, fmtDuration } from '../lib/time.js'
 import { IconSkipStart, IconSkipEnd, IconVolume } from './Icons.jsx'
@@ -373,6 +374,7 @@ function RecordBar({ section }) {
           <span className="vo-vol-val">{Math.round(volume * 100)}%</span>
         </div>
       </div>
+      <EnhanceControl />
       <div className="vo-mic">
         <select
           value={settings.voMic || ''}

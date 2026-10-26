@@ -7,6 +7,7 @@ import { useStore } from '../state/store.js'
 import { useVo } from '../state/voStore.js'
 import { voPlayer } from './voPlayer.js'
 import { bus } from './hooks.js'
+import { keyToggleEnhance } from './voEnhanceSetting.js'
 
 const st = () => useStore.getState()
 const vo = () => useVo.getState()
@@ -24,6 +25,7 @@ function levelStep(d) {
 }
 
 export const VO_ACTIONS = [
+  { id: 'vo.enhance', label: 'Voice clean-up on / off — to hear the difference', cat: 'View', keys: ['Shift+E'], run: () => keyToggleEnhance(toast) },
   // Record
   { id: 'vo.record', label: 'Record a new clip at the playhead / stop recording', cat: 'Record', keys: ['R'], rec: true, run: () => vo().toggleRecord() },
   { id: 'vo.rerecord', label: 'Re-record the selected clip (or the one at the playhead) — the rest ripples', cat: 'Record', keys: ['Shift+R'], run: () => vo().rerecord() },
