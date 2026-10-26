@@ -1600,6 +1600,11 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 .vo-tl-bar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--line-soft); }
 .vo-tl-body { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: default; }
 .vo-tl-body canvas { display: block; }
+/* Cut tool: where the click would cut */
+.vo-cutline { position: absolute; left: 0; width: 0; display: none; pointer-events: none; z-index: 4; border-left: 1.5px dashed #ff5d6c; filter: drop-shadow(0 0 3px rgba(255, 93, 108, 0.7)); }
+.vo-cutline::before { content: ''; position: absolute; left: -5px; top: 0; border: 4.5px solid transparent; border-top: 6px solid #ff5d6c; }
+.vo-cutline span { position: absolute; left: 6px; top: -2px; padding: 0 4px; border-radius: 3px; background: rgba(15, 16, 20, 0.85); color: #ffb3ba; font: 600 10px var(--mono); white-space: nowrap; }
+.vo-cutline.off { opacity: 0.35; }
 .vo-head { position: absolute; top: 0; left: 0; width: 1px; height: 100%; background: var(--playhead); box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4); pointer-events: none; z-index: 3; }
 .vo-lane-resize { position: absolute; left: 0; right: 0; height: 7px; cursor: ns-resize; z-index: 2; }
 .vo-lane-resize:hover { background: color-mix(in srgb, var(--cyan) 35%, transparent); }

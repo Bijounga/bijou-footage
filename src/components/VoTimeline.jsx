@@ -450,10 +450,25 @@ export default function VoTimeline({ section }) {
     window.addEventListener('pointermove', mv)
     window.addEventListener('pointerup', end)
   }
+  // Cut tool: a line where the click would cut (snapped like the cut), dim
+  // when it's too close to an edge to cut.
+  const cutRef = useRef(null)
+  const showCut = (z) => {
+    const el = cutRef.current
+    if (!el) return
+    if (tool !== 'razor' || !z || z.zone !== 'clip' || useVo.getState().rec) { el.style.display = 'none'; return }
+    const t = snap(z.t, snapPts())
+    const ok = !!VM.splitAt(clips, t)
+    el.style.display = 'block'
+    el.style.transform = `translateX(${Math.round(xAt(t))}px)`
+    el.classList.toggle('off', !ok)
+    el.querySelector('span').textContent = fmtTime(t, true)
+  }
   const onMove = (e) => {
     if (e.buttons) return
     const { x, y } = local(e)
     const z = zoneAt(x, y)
+    showCut(z)
     const el = bodyRef.current
     const onEdge = z.zone === 'clip' && z.edge && tool === 'select' && !useVo.getState().rec
     el.style.cursor = useVo.getState().rec ? 'default' : onEdge ? (z.edge === 'in' ? 'var(--cur-trim-in)' : 'var(--cur-trim-out)') : z.zone === 'clip' ? (tool === 'razor' ? 'crosshair' : 'text') : z.zone === 'ruler' ? 'col-resize' : 'default'
@@ -462,7 +477,12 @@ export default function VoTimeline({ section }) {
       return (h && next && h.id === next.id && h.side === next.side) || (!h && !next) ? h : next
     })
   }
-  const onLeave = () => { if (!gesture.current) setHoverEdge(null) }
+  const onLeave = () => {
+    if (cutRef.current) cutRef.current.style.display = 'none'
+    if (!gesture.current) setHoverEdge(null)
+  }
+  // switching tools (or starting a recording) clears a line left behind
+  useEffect(() => { if (cutRef.current) cutRef.current.style.display = 'none' }, [tool])
   const onDown = (e) => {
     const st = useVo.getState()
     const { x, y } = local(e)
@@ -582,6 +602,7 @@ export default function VoTimeline({ section }) {
       <div className="vo-tl-body" ref={bodyRef} onPointerDown={onDown} onPointerMove={onMove} onPointerLeave={onLeave}>
         <canvas ref={canvasRef} data-peaks={peaksVer} />
         <div className="vo-head" ref={headRef} />
+        <div className="vo-cutline" ref={cutRef} style={{ top: LANE_TOP - 6, height: laneH + 12 }}><span /></div>
         <div className="vo-marquee" ref={boxRef} style={{ display: 'none' }} />
         <div className="vo-lane-resize" style={{ top: LANE_TOP + laneH - 3 }} onPointerDown={(e) => { e.stopPropagation(); onResize(e) }} onDoubleClick={() => useStore.getState().updateSettings({ voLaneH: null })} title="Drag to make the waveform taller or shorter · double-click to reset" />
         {!items.length && !rec && <div className="vo-empty dim">Press <kbd>R</kbd> (or the red button) to record. Each recording lands at the playhead.</div>}
