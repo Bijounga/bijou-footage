@@ -266,10 +266,10 @@ export function ExportSectionDialog({ onExport }) {
   const counts = useMemo(() => (sec ? T.markerCounts(useStore.getState(), sec.clips, sec.markers) : { colors: {}, types: {}, timeline: {} }), [sec, reviews])
   const toggle = (list, k) => (list.includes(k) ? list.filter((x) => x !== k) : [...list, k])
   const close = () => useStore.getState().closeModal()
-  const go = () => {
+  const go = (format) => {
     useStore.getState().updateSettings({ exportMarkers: opts })
     close()
-    onExport(opts)
+    onExport({ ...opts, format })
   }
   const tl = Object.values(counts.timeline).reduce((a, b) => a + b, 0)
   return (
@@ -280,7 +280,8 @@ export function ExportSectionDialog({ onExport }) {
         <>
           <span className="grow" />
           <button className="btn small ghost" onClick={close}>Cancel</button>
-          <button className="btn small accent" onClick={go}>Export…</button>
+          <button className="btn small ghost" onClick={() => go('panel')} title="A file for the Bijou Footage Rebuild panel in Premiere (Window > Extensions): it rebuilds this section there, importing the recordings the way Premiere does, so their audio comes in as proper stereo tracks. Use the XML if you have not set the panel up.">Export for the Premiere panel…</button>
+          <button className="btn small accent" onClick={() => go()}>Export…</button>
         </>
       }
     >

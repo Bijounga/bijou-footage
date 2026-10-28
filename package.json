@@ -1,6 +1,6 @@
 {
   "name": "bijou-footage",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Bijou Footage — a fast footage reviewer for long OBS recordings, feeding BijouDocs",
   "main": "out/main/index.js",
   "author": "Bijou",
@@ -43,6 +43,18 @@
       {
         "from": "resources/rnnoise-bd.rnnn",
         "to": "rnnoise-bd.rnnn"
+      },
+      {
+        "from": "premiere-panel",
+        "to": "premiere-panel",
+        "filter": [
+          "**/*",
+          "!job.json",
+          "!result.json",
+          "!alive.txt",
+          "!panel.log",
+          "!install.ps1"
+        ]
       }
     ],
     "win": {

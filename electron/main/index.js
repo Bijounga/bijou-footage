@@ -14,6 +14,8 @@ import * as vo from './voiceover.js'
 import * as voEnh from './voEnhance.js'
 import * as bijou from './bijou.js'
 import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
+import { buildPanelFile } from './premierePanel.js'
+import * as panelInstall from './premierePanelInstall.js'
 import { initUpdater } from './updater.js'
 import * as macUpdate from './macUpdate.js'
 import { startDeckBridge, deckReply, deckState, stopDeckBridge } from './deckBridge.js'
@@ -473,6 +475,9 @@ function registerIpc() {
     return ok
   })
   ipcMain.handle('setup:cancel', () => setup.cancel())
+  // Settings → Tools: the Premiere panel (premierePanelInstall.js)
+  ipcMain.handle('premierePanel:status', () => panelInstall.status())
+  ipcMain.handle('premierePanel:install', () => panelInstall.install())
   // Displays, for the sketch window's display picker.
   ipcMain.handle('displays:list', () => {
     const appD = win ? screen.getDisplayMatching(win.getBounds()) : screen.getPrimaryDisplay()
@@ -578,12 +583,15 @@ function registerIpc() {
   })
   ipcMain.handle('app:defaultProjectsDir', () => path.join(app.getPath('documents'), 'Bijou Footage Projects'))
   ipcMain.handle('export:section', async (_e, payload) => {
+    // format 'panel': a file for the Bijou Footage Rebuild panel in Premiere (premiere-panel/)
+    const forPanel = payload.format === 'panel'
+    const base = (payload.name || 'Section').replace(/[\\/:*?"<>|]/g, '-')
     const r = await dialog.showSaveDialog(win, {
-      defaultPath: `${(payload.name || 'Section').replace(/[\\/:*?"<>|]/g, '-')}.xml`,
-      filters: [{ name: 'Premiere / FCP XML', extensions: ['xml'] }]
+      defaultPath: forPanel ? `${base}.bijouseq.json` : `${base}.xml`,
+      filters: forPanel ? [{ name: 'Bijou Footage sequence', extensions: ['json'] }] : [{ name: 'Premiere / FCP XML', extensions: ['xml'] }]
     })
     if (r.canceled || !r.filePath) return null
-    const markers = copySketches(r.filePath, payload.markers || [])
+    const markers = forPanel ? payload.markers || [] : copySketches(r.filePath, payload.markers || [])
     // the voiceover lines: each take's real format (rate / channels / length);
     // a take whose WAV is gone is left out rather than imported offline
     // Voice enhance on: the enhanced copy of each take (a baked blend at less than 100%)
@@ -597,6 +605,10 @@ function registerIpc() {
       }
     }
     const voItems = (payload.vo || []).map((v) => ({ ...v, ...vo.wavInfo(v.path) })).filter((v) => v.sampleRate)
+    if (forPanel) {
+      fs.writeFileSync(r.filePath, JSON.stringify(buildPanelFile({ ...payload, markers, vo: voItems }), null, 1), 'utf8')
+      return r.filePath
+    }
     fs.writeFileSync(r.filePath, buildSequenceXml({ ...payload, markers, vo: voItems }), 'utf8')
     return r.filePath
   })
@@ -713,6 +725,7 @@ else {
     transcribe.setFfmpeg(tools().ffmpeg)
     rotateBackup()
     registerIpc()
+    panelInstall.updateIfOld().catch(() => {}) // a panel from an older app is brought up to date
     initUpdater(send)
     if (isMac) macMenu()
     createWindow()

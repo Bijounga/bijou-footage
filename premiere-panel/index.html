@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bijou Footage Rebuild</title>
+  <style>
+    body { margin: 0; padding: 14px; background: #232323; color: #ddd; font: 12px/1.45 system-ui, sans-serif; }
+    h1 { font-size: 14px; margin: 0 0 4px; }
+    p { margin: 0 0 12px; color: #aaa; }
+    button { padding: 7px 12px; background: #3a6df0; color: #fff; border: 0; border-radius: 3px; cursor: pointer; margin: 0 6px 8px 0; font: inherit; }
+    button.alt { background: #444; }
+    button:disabled { opacity: 0.4; cursor: default; }
+    #file { padding: 8px; background: #1a1a1a; border: 1px solid #333; border-radius: 3px; margin-bottom: 10px; min-height: 18px; word-break: break-all; }
+    #sum { margin-bottom: 10px; color: #ccc; }
+    #bar { display: none; height: 8px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px; overflow: hidden; margin: 0 0 8px; }
+    #fill { height: 100%; width: 0; background: #3a6df0; transition: width 0.2s; }
+    pre { background: #1a1a1a; border: 1px solid #333; padding: 8px; white-space: pre-wrap; word-break: break-word; min-height: 90px; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Bijou Footage Rebuild</h1>
+  <p>Rebuilds a section from Bijou Footage as a new sequence in the open project. In Bijou Footage: Edit &gt; Export &gt; <em>Export for the Premiere panel</em>.</p>
+  <button id="load">Load a section file…</button>
+  <div id="file">No file chosen yet.</div>
+  <div id="sum"></div>
+  <button id="build" disabled>Build the sequence</button>
+  <div id="bar"><div id="fill"></div></div>
+  <pre id="out">Ready.</pre>
+  <script src="js/CSInterface.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

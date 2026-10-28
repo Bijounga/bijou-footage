@@ -3,3 +3,9 @@ out
 dist
 __pycache__/
 *.pyc
+
+premiere-panel/panel.log
+test.xml
+premiere-panel/job.json
+premiere-panel/result.json
+premiere-panel/alive.txt

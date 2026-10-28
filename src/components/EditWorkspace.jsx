@@ -496,8 +496,8 @@ async function exportSection(opts = {}) {
   // Voice enhance on: the enhanced copies of the takes go to Premiere (main swaps the files)
   const enh = st.settings.voEnhanceBy && project ? st.settings.voEnhanceBy[project.id] : null
   const voEnhance = enh && enh.on && project.folder ? { folder: project.folder, amount: enh.amount != null ? enh.amount : 1 } : null
-  const file = await window.footage.exportSection({ name: (project ? project.name + ' — ' : '') + sec.name, clips, markers, vo, voEnabled: !voTrack.mute, voEnhance })
-  if (file) st.showToast('Premiere XML saved: ' + file)
+  const file = await window.footage.exportSection({ name: (project ? project.name + ' — ' : '') + sec.name, clips, markers, vo, voEnabled: !voTrack.mute, voEnhance, format: opts.format })
+  if (file) st.showToast((opts.format === 'panel' ? 'Premiere panel file saved: ' : 'Premiere XML saved: ') + file)
 }
 
 // Recording voiceover over the cut: a badge on the picture — the pre-roll

@@ -101,8 +101,50 @@ export function ToolsSection() {
         }
         reinstallText={s.llm.installed && chosen && s.llmModels[chosen].file !== s.llm.model ? `Switch to ${s.llmModels[chosen].label}` : null}
       />
+      <PremierePanelRow />
       <p className="dim small">Everything is saved in <code>~/.bijou-footage</code>, outside the app, so updates and reinstalls keep it.</p>
     </section>
+  )
+}
+
+// The Premiere panel that rebuilds an exported section in Premiere (premiere-panel/).
+function PremierePanelRow() {
+  const [s, setS] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState(null)
+  const refresh = () => window.footage.premierePanelStatus().then(setS)
+  useEffect(() => { refresh() }, [])
+  if (!s || !s.available) return null
+  const ok = s.installed && (s.upToDate || s.linked)
+  const go = async () => {
+    setBusy(true)
+    setMsg(null)
+    const r = await window.footage.premierePanelInstall()
+    setMsg(r)
+    setBusy(false)
+    refresh()
+  }
+  const where = 'Premiere Pro'
+  return (
+    <div className={'tool-row' + (ok ? ' ok' : '')}>
+      <div className="tool-head">
+        <span className={'tool-dot' + (ok ? ' ok' : '')} />
+        <b>Premiere panel</b>
+        {ok && !busy && <span className="dim small">{s.linked ? 'Linked to a development folder' : 'Installed · ' + s.installedVersion}</span>}
+        {s.installed && !ok && !busy && <span className="dim small">Update available</span>}
+        <span className="grow" />
+        {!s.linked && (
+          <button className={'btn small' + (ok ? ' ghost' : ' primary')} disabled={busy} onClick={go}>
+            {busy ? 'Installing…' : ok ? 'Reinstall' : s.installed ? 'Update the panel' : 'Install the panel'}
+          </button>
+        )}
+      </div>
+      <div className="dim small tool-what">
+        Rebuilds a section you exported with “Export for the Premiere panel…” as a sequence in {where} — the recordings come in with proper stereo tracks, and the cuts, switched-off layers, markers and voiceover are all set. Restart {where} after installing or updating; then open Window → Extensions → Bijou Footage Rebuild.
+        {!s.premiere && ' (Premiere Pro was not found on this computer — it can still be installed here.)'}
+      </div>
+      {msg && <div className={msg.ok ? 'small tool-what' : 'tool-error small'}>{msg.message}</div>}
+    </div>
   )
 }
 

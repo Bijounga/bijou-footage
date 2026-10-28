@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('footage', {
   setupStatus: () => ipcRenderer.invoke('setup:status'),
   setupInstall: (what, opts) => ipcRenderer.invoke('setup:install', what, opts),
   setupCancel: () => ipcRenderer.invoke('setup:cancel'),
+  premierePanelStatus: () => ipcRenderer.invoke('premierePanel:status'),
+  premierePanelInstall: () => ipcRenderer.invoke('premierePanel:install'),
   onSetupEvent: (cb) => on('setup:event', cb),
   onUpdateStatus: (cb) => on('update:status', cb),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
