@@ -23,9 +23,14 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
   viewRef.current = view
   const [drag, setDrag] = useState(null) // live offset while dragging theirs
   const o = drag != null ? drag : off
-  const rowsA = A ? A.tracks.map((tr, i) => ({ tr, i })).filter((x) => has(x.tr)) : []
-  const rowsB = B ? B.tracks.map((tr, i) => ({ tr, i })).filter((x) => has(x.tr)) : []
-  const H = RULER + (rowsA.length + (B ? rowsB.length : 3)) * ROW + 6
+  // Hide either side's tracks to give the window room (the choice is remembered).
+  const [show, setShow] = useState(() => { try { return { a: true, b: true, ...JSON.parse(localStorage.getItem('syncWavesShow') || '{}') } } catch { return { a: true, b: true } } })
+  const toggle = (k) => setShow((s) => { const n = { ...s, [k]: !s[k] }; try { localStorage.setItem('syncWavesShow', JSON.stringify(n)) } catch { /* not remembered */ } return n })
+  const allA = A ? A.tracks.map((tr, i) => ({ tr, i })).filter((x) => has(x.tr)) : []
+  const allB = B ? B.tracks.map((tr, i) => ({ tr, i })).filter((x) => has(x.tr)) : []
+  const rowsA = show.a ? allA : []
+  const rowsB = show.b ? allB : []
+  const H = RULER + (rowsA.length + (B ? rowsB.length : show.b ? 3 : 0)) * ROW + (rowsA.length && rowsB.length ? 6 : 2)
 
   useLayoutEffect(() => {
     const el = wrapRef.current
@@ -128,9 +133,11 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
       y += ROW
     }
     // a divider between yours and theirs
-    ctx.fillStyle = line
-    ctx.fillRect(0, y + 1, w, 1)
-    y += 3
+    if (rowsA.length && rowsB.length) {
+      ctx.fillStyle = line
+      ctx.fillRect(0, y + 1, w, 1)
+      y += 3
+    }
     for (const r of rowsB) {
       drawRow(r.tr, B.pps, y, povColor, o, !audible || audible('b', r.i))
       ctx.globalAlpha = 1
@@ -153,7 +160,7 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
     const y = e.clientY - r.top
     if (x < LABEL) return
     const v = viewRef.current
-    const theirs = y > RULER + rowsA.length * ROW + 2
+    const theirs = rowsB.length > 0 && y > RULER + rowsA.length * ROW + 2
     if (!theirs) {
       // yours / the ruler: the playhead goes here (drag to scrub)
       const seek = (ev) => onSeek(Math.max(0, v.start + (ev.clientX - r.left - LABEL) / v.pps))
@@ -193,7 +200,11 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
   return (
     <div className="sw">
       <div className="sw-bar">
-        <span className="dim small">Your tracks above, theirs below — drag theirs until the bumps line up · Ctrl+scroll zooms · click to move the playhead</span>
+        <span className="dim small">{show.a && show.b ? 'Your tracks above, theirs below — drag theirs until the bumps line up · ' : ''}Ctrl+scroll zooms · click to move the playhead</span>
+        <span className="sw-show" title="Show or hide each side’s tracks">
+          <button className={'mini-btn' + (show.a ? ' on' : '')} onClick={() => toggle('a')} aria-pressed={show.a}>{show.a ? '▾' : '▸'} Yours</button>
+          <button className={'mini-btn' + (show.b ? ' on' : '')} onClick={() => toggle('b')} aria-pressed={show.b}>{show.b ? '▾' : '▸'} {clip(povName, 14)}</button>
+        </span>
         <span className="vo-tx-spacer" />
         <button className="mini-btn" onClick={() => zoom(1 / 2)} title="Zoom out">−</button>
         <button className="mini-btn" onClick={() => zoom(2)} title="Zoom in (around the playhead)">+</button>
@@ -202,8 +213,8 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
       <div className="sw-canvas" ref={wrapRef} onMouseDown={down} style={{ height: H }}>
         {A ? <canvas ref={cvRef} /> : <div className="dim small sw-wait">{waiting || 'Getting the waveforms ready…'}</div>}
         {onMix && A && rowsA.map((r, k) => <RowButtons key={'a' + r.i} top={RULER + k * ROW} m={(mix && mix.a && mix.a[r.i]) || {}} onMix={(what) => onMix('a', r.i, what)} />)}
-        {onMix && B && rowsB.map((r, k) => <RowButtons key={'b' + r.i} top={RULER + rowsA.length * ROW + 3 + k * ROW} m={(mix && mix.b && mix.b[r.i]) || {}} onMix={(what) => onMix('b', r.i, what)} />)}
-        {A && !B && <div className="sw-wait sw-wait-b small">{waiting || 'Getting their waveform ready…'}</div>}
+        {onMix && B && rowsB.map((r, k) => <RowButtons key={'b' + r.i} top={RULER + rowsA.length * ROW + (rowsA.length ? 3 : 0) + k * ROW} m={(mix && mix.b && mix.b[r.i]) || {}} onMix={(what) => onMix('b', r.i, what)} />)}
+        {A && !B && show.b && <div className="sw-wait sw-wait-b small">{waiting || 'Getting their waveform ready…'}</div>}
       </div>
     </div>
   )

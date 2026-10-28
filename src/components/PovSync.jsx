@@ -13,7 +13,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useStore, trackNamesFor, useTrackColors } from '../state/store.js'
 import { player, mediaUrl } from '../lib/player.js'
-import { findOffset, loadPeaks, overlap, preciseGuess, guessOffset, startOf } from '../lib/povSync.js'
+import { findOffset, loadPeaks, overlap, preciseGuess, guessOffset, startOf, offsetAt } from '../lib/povSync.js'
 import { useVideoZoom } from '../lib/videoZoom.js'
 import SyncWaves from './SyncWaves.jsx'
 import { makeSideAudio } from '../lib/syncAudio.js'
@@ -75,10 +75,10 @@ export default function PovSync() {
   const pov = useStore((s) => (sync && s.reviews[sync.main] ? (s.reviews[sync.main].povs || []).find((p) => p.key === sync.pov) : null))
   const youSet = useStore((s) => s.settings.povYou)
   const you = { name: 'You', color: '#e5e7eb', ...(youSet || {}) }
-  const [off, setOff] = useState(pov ? pov.off || 0 : 0)
+  const [off, setOff] = useState(pov ? offsetAt(pov, player.getTime()) : 0)
   const [linked, setLinked] = useState(true)
   const [tm, setTm] = useState(() => player.getTime())
-  const [tp, setTp] = useState(() => player.getTime() + (pov ? pov.off || 0 : 0))
+  const [tp, setTp] = useState(() => player.getTime() + (pov ? offsetAt(pov, player.getTime()) : 0))
   const [playM, setPlayM] = useState(false)
   const [playP, setPlayP] = useState(false)
   const [mutedM, setMutedM] = useState(false)
@@ -290,8 +290,94 @@ export default function PovSync() {
   useEffect(() => { if (linked) align(off) }, [linked])
 
   const close = () => useStore.getState().closePovSync()
+  // What the POV looked like when the window opened: Cancel (or Esc, or a click outside) puts it back,
+  // since stretches are saved the moment you add or remove one.
+  const opened = useRef(pov ? { pts: pov.pts ? pov.pts.map((p) => ({ ...p })) : undefined, synced: pov.synced } : null)
+  const cancel = () => {
+    if (opened.current && pov) useStore.getState().updatePov(sync.pov, { pts: opened.current.pts, synced: opened.current.synced })
+    close()
+  }
+
+  // ---- undo / redo: the alignment shown and the stretches ----
+  // Each edit (a nudge, a drag, "These match", a match by sound, adding or removing a stretch)
+  // is one step; a run of quick nudges / a drag counts as one.
+  const cur = useRef({ off, pts: pov && pov.pts ? pov.pts.map((p) => ({ ...p })) : undefined })
+  const undoStack = useRef([])
+  const redoStack = useRef([])
+  const lastPush = useRef(0)
+  const restoring = useRef(false)
+  const [, bump] = useState(0)
+  const ptsNow = pov ? pov.pts : undefined
+  useEffect(() => {
+    if (restoring.current) { restoring.current = false; return } // undo / redo already set `cur` to the state it restored
+    const c = cur.current
+    if (c.off === off && JSON.stringify(c.pts || null) === JSON.stringify(ptsNow || null)) return
+    const now = Date.now()
+    if (now - lastPush.current > 700 || !undoStack.current.length) undoStack.current.push(c)
+    lastPush.current = now
+    redoStack.current = []
+    cur.current = { off, pts: ptsNow ? ptsNow.map((p) => ({ ...p })) : undefined }
+    bump((n) => n + 1)
+  }, [off, ptsNow])
+  const applyState = (st) => {
+    restoring.current = true
+    setOff(st.off)
+    offRef.current = st.off
+    useStore.getState().updatePov(sync.pov, { pts: st.pts ? st.pts.map((p) => ({ ...p })) : undefined })
+    if (linkedRef.current) align(st.off)
+    setFresh(null)
+    bump((n) => n + 1)
+  }
+  const undo = () => {
+    const prev = undoStack.current.pop()
+    if (!prev) return
+    redoStack.current.push(cur.current)
+    lastPush.current = 0
+    applyState(prev)
+    cur.current = prev
+  }
+  const redo = () => {
+    const next = redoStack.current.pop()
+    if (!next) return
+    undoStack.current.push(cur.current)
+    lastPush.current = 0
+    applyState(next)
+    cur.current = next
+  }
+  // Parts: the offset can change along the way (a pause, a split recording). Each part
+  // is a moment of yours (`at`) from which an offset holds (lib/povSync.js).
+  const parts = (pov && pov.pts) || []
+  const partIndex = (t) => { let k = -1; for (let i = 0; i < parts.length; i++) if (parts[i].at <= t + 0.01) k = i; return k }
+  const here = partIndex(tm) // -1: the first part (from the start)
+  const setPts = (pts) => useStore.getState().updatePov(sync.pov, { pts: pts.length ? pts : undefined, synced: true })
+  const roundT = (x) => Math.floor(x * 100) / 100 // never later than the playhead, so the playhead is inside the new part
+  const [fresh, setFresh] = useState(null) // the part just started, until you line it up and save: {at, off}
+  // From this moment on, they're at the offset shown (the part before it keeps its own).
+  const startPart = () => {
+    const at = roundT(tm)
+    const kept = parts.filter((p) => Math.abs(p.at - at) > 0.5)
+    setPts([...kept, { at, off }].sort((a, b) => a.at - b.at))
+    setFresh({ at, off })
+  }
+  const removePart = (at) => { setPts(parts.filter((p) => p.at !== at)); setFresh(null) }
+  const gotoPart = (k) => {
+    const at = k < 0 ? 0 : parts[k].at
+    const o = k < 0 ? (pov && pov.off) || 0 : parts[k].off
+    setOff(o)
+    offRef.current = o
+    setLinked(true)
+    setFresh(null)
+    seekM(Math.min(durM, at + 0.5))
+  }
+  const partName = (k) => (k < 0 ? 'the start' : fmtTime(parts[k].at))
+  const savedOff = here < 0 ? (pov && pov.off) || 0 : parts[here].off
+  const changed = Math.abs(off - savedOff) > 0.0005
+  // the stretches along your recording, for the strip: [{from, to, off, k}]
+  const stretches = [{ from: 0, to: parts.length ? parts[0].at : durM, k: -1 }, ...parts.map((p, i) => ({ from: p.at, to: i + 1 < parts.length ? parts[i + 1].at : durM, k: i }))]
+  // Save: the offset shown goes to the part you are in, then close.
   const save = () => {
-    useStore.getState().updatePov(sync.pov, { off, synced: true })
+    if (here < 0) useStore.getState().updatePov(sync.pov, { off, synced: true })
+    else setPts(parts.map((p, i) => (i === here ? { ...p, off } : p)))
     close()
   }
 
@@ -304,7 +390,9 @@ export default function PovSync() {
     const move = (d) => (target === 'main' ? seekM((vm.current ? vm.current.currentTime : tm) + d) : seekP((vp.current ? vp.current.currentTime : tp) + d))
     let done = true
     if (e.key === ' ') playToggle(target)
-    else if (e.key === 'Escape') close()
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') (e.shiftKey ? redo : undo)()
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') redo()
+    else if (e.key === 'Escape') cancel()
     else if (e.key === 'Enter') save()
     else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.altKey) nudge((e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 0.1 : 1 / fps))
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') move((e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? 5 : 1))
@@ -336,7 +424,7 @@ export default function PovSync() {
   const povNote = linked && durP ? (at < 0 ? name + ' starts recording in ' + fmtTime(-at, true) : at > durP ? name + ' stopped recording ' + fmtTime(at - durP) + ' ago' : null) : null
   const prepText = prep && !prep.error ? `Getting ${prep.who === 'yours' ? 'your' : name + '’s'} audio ready… ${Math.round((prep.p || 0) * 100)}%` : null
   return (
-    <div className="modal-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}>
+    <div className="modal-scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) cancel() }}>
       <div className="modal ps-modal">
         <div className="ps-head">
           <h3>Line up {name}</h3>
@@ -391,6 +479,36 @@ export default function PovSync() {
             </span>
           )}
         </div>
+        <div className="ps-parts" style={{ '--cc': povColor }}>
+          <div className="ps-parts-head">
+            <span className="ps-parts-q"><b>Does {name} drift out of step later on?</b> <span className="dim small">That happens if you paused your recording and they didn’t (or they stopped and started again). Put the white line where it goes wrong, then press the button and line them up there.</span></span>
+            <button className="btn small accent" onClick={startPart} title={'From the white line on, use a new alignment for ' + name + '. Everything before it keeps its own.'}>They’re out of step from here</button>
+          </div>
+          <div className="ps-strip" title="Your recording, left to right. Each block is a stretch with its own alignment. Click one to go there.">
+            {stretches.map((s) => (
+              <button
+                key={s.k}
+                className={'ps-stretch' + (s.k === here ? ' on' : '')}
+                style={{ left: (durM ? (s.from / durM) * 100 : 0) + '%', width: (durM ? ((s.to - s.from) / durM) * 100 : 100) + '%' }}
+                onClick={() => gotoPart(s.k)}
+                title={'From ' + partName(s.k) + ' · ' + name + ' ' + offsetText(s.k === here ? off : s.k < 0 ? (pov && pov.off) || 0 : parts[s.k].off) + ' — click to go there'}
+              >
+                <span>From {partName(s.k)} · {offsetText(s.k === here ? off : s.k < 0 ? (pov && pov.off) || 0 : parts[s.k].off)}</span>
+                {s.k >= 0 && <i className="ps-stretch-x" onClick={(e) => { e.stopPropagation(); removePart(parts[s.k].at) }} title="Remove this stretch (the one before it carries on)">×</i>}
+              </button>
+            ))}
+            {durM > 0 && <i className="ps-playhead" style={{ left: Math.min(100, (tm / durM) * 100) + '%' }} />}
+          </div>
+          <div className="ps-parts-now small">
+            {fresh && here >= 0 && parts[here].at === fresh.at
+              ? (changed
+                  ? <span className="ps-good">Lined up from {fmtTime(fresh.at)} on? Press <b>Save</b> to keep it — or keep adjusting.</span>
+                  : <span className="ps-warn">New stretch from {fmtTime(fresh.at)}. Now line {name} up at this moment — nudge them above, or drag their tracks below — then press <b>Save</b>.</span>)
+              : parts.length === 0
+                ? <span className="dim">One alignment for the whole recording. If it goes wrong later, move the white line there and press “They’re out of step from here”.</span>
+                : <span className="dim">At the white line ({fmtTime(tm)}) you’re in the stretch from {partName(here)}.{changed ? ' You’ve changed its alignment — press Save to keep it.' : ''}</span>}
+          </div>
+        </div>
         <SyncWaves
           A={peaks.A}
           B={peaks.B}
@@ -413,7 +531,9 @@ export default function PovSync() {
             <kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> 1 s · <kbd>,</kbd><kbd>.</kbd> frame · <kbd>Alt</kbd>+<kbd>←</kbd><kbd>→</kbd> nudge theirs · <kbd>T</kbd> together / separately · <kbd>Ctrl</kbd>+scroll zoom · <kbd>Enter</kbd> save
           </span>
           <span className="vo-tx-spacer" />
-          <button className="btn small ghost" onClick={close}>Cancel</button>
+          <button className="mini-btn" disabled={!undoStack.current.length} onClick={undo} title="Undo the last change to the alignment or the stretches (Ctrl+Z)">↶ Undo</button>
+          <button className="mini-btn" disabled={!redoStack.current.length} onClick={redo} title="Redo it (Ctrl+Shift+Z)">↷ Redo</button>
+          <button className="btn small ghost" onClick={cancel} title="Close without keeping any changes made here">Cancel</button>
           <button className="btn small accent" onClick={save}>Save</button>
         </div>
       </div>

@@ -12,13 +12,16 @@
 // Sound: a POV is silent unless it's the big view (then yours goes quiet
 // instead — store.setPovFocus).
 import { player } from './player.js'
+import { offsetAt } from './povSync.js'
 
 const cams = new Map() // key -> {el, off, dur, onRange}
 let timer = 0
 let offs = []
 
+// their time at this moment: yours + the offset that holds here (it can change along the way: povSync.js)
 function want(c) {
-  return player.getTime() + c.off
+  const t = player.getTime()
+  return t + offsetAt(c, t)
 }
 
 function inRange(c, t) {
@@ -116,9 +119,9 @@ export function bigPovVideo() {
 }
 
 // A POV's <video> joins (or updates: a new offset). Returns a remover.
-export function registerPov(key, el, { off, dur, onRange }) {
+export function registerPov(key, el, { off, pts, dur, onRange }) {
   const prev = cams.get(key)
-  cams.set(key, { el, off, dur, onRange, lastOk: prev ? prev.lastOk : undefined })
+  cams.set(key, { el, off, pts, dur, onRange, lastOk: prev ? prev.lastOk : undefined })
   start()
   follow(cams.get(key), false)
   return () => {
@@ -143,7 +146,7 @@ export function setPovOffset(key, off) {
 // heads). Before those files exist, its first track plays from the video.
 let listening = null // {key, els: [audio], video}
 
-export function listenTo(key, { files, video, off, dur, mix, solo, master }) {
+export function listenTo(key, { files, video, off, pts, dur, mix, solo, master }) {
   stopListening()
   // Through the player's audio engine (a gain per track), so the faders go to
   // 200% like your own tracks — an element's own volume stops at 100%.
@@ -163,7 +166,7 @@ export function listenTo(key, { files, video, off, dur, mix, solo, master }) {
     } catch { /* no engine: plain element volume */ }
     els[+i] = el
     gains[+i] = g
-    cams.set(key + '#a' + i, { el, off, dur })
+    cams.set(key + '#a' + i, { el, off, pts, dur })
   }
   listening = { key, els, gains, video, fallback: !els.length }
   if (video) video.muted = els.length > 0

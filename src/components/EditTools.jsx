@@ -280,8 +280,8 @@ export function ExportSectionDialog({ onExport }) {
         <>
           <span className="grow" />
           <button className="btn small ghost" onClick={close}>Cancel</button>
-          <button className="btn small ghost" onClick={() => go('panel')} title="A file for the Bijou Footage Rebuild panel in Premiere (Window > Extensions): it rebuilds this section there, importing the recordings the way Premiere does, so their audio comes in as proper stereo tracks. Use the XML if you have not set the panel up.">Export for the Premiere panel…</button>
-          <button className="btn small accent" onClick={() => go()}>Export…</button>
+          <button className="btn small accent" onClick={() => go('panel')} title="A file for the Bijou Footage Rebuild panel in Premiere (Window > Extensions): it rebuilds this section there, importing the recordings the way Premiere does, so their audio comes in as proper stereo tracks. Use the XML if you have not set the panel up.">Export for the Premiere panel…</button>
+          <button className="btn small ghost" onClick={() => go()} title="A Final Cut / Premiere XML file, imported through Premiere’s importer — the recordings’ audio comes in as 8 single tracks. The panel route above is better.">Export as XML…</button>
         </>
       }
     >

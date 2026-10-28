@@ -2046,6 +2046,22 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .ps-paused { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: rgba(255, 255, 255, 0.55); pointer-events: none; }
 .ps-row { justify-content: center; gap: 4px; }
 .ps-follows { min-height: 24px; align-items: center; }
+.sw-show { display: inline-flex; gap: 6px; margin: 0 8px; }
+.sw-show .mini-btn.on { color: var(--ink); }
+.sw-show .mini-btn:not(.on) { opacity: 0.7; }
+.ps-parts { padding: 4px 18px 10px; }
+.ps-parts-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.ps-parts-q { flex: 1; line-height: 1.4; }
+.ps-strip { position: relative; height: 30px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-2, rgba(255, 255, 255, 0.03)); }
+.ps-stretch { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; gap: 6px; padding: 0 8px; overflow: hidden; white-space: nowrap; border: 0; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--cc, #4fd1c5) 14%, transparent); color: var(--ink-dim); font: inherit; font-size: 11px; cursor: pointer; text-align: left; }
+.ps-stretch:nth-child(even) { background: color-mix(in srgb, var(--cc, #4fd1c5) 24%, transparent); }
+.ps-stretch:hover { color: var(--ink); }
+.ps-stretch.on { color: var(--ink); box-shadow: inset 0 0 0 1px var(--cc, #4fd1c5); }
+.ps-stretch span { overflow: hidden; text-overflow: ellipsis; }
+.ps-stretch-x { font-style: normal; opacity: 0.55; padding: 0 2px; flex: none; }
+.ps-stretch-x:hover { opacity: 1; color: var(--danger); }
+.ps-playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; pointer-events: none; box-shadow: 0 0 4px rgba(0, 0, 0, 0.6); }
+.ps-parts-now { margin-top: 6px; min-height: 16px; }
 .ps-mode { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 6px 18px 10px; }
 .ps-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .ps-seg button { border: 0; background: none; padding: 5px 14px; border-radius: 6px; color: var(--ink-dim); font: 600 12.5px var(--sans, Inter, sans-serif); cursor: pointer; }

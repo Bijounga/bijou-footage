@@ -269,3 +269,31 @@ export function overlap(a, b) {
   const b1 = b0 + ((b.probe && b.probe.duration) || 0) * 1000
   return (Math.min(a1, b1) - Math.max(a0, b0)) / 1000
 }
+
+// ---- sync points: an alignment that changes along the way ----
+// A POV normally has one offset (their time − yours). When one of you pauses or
+// stops recording while the other keeps going (or one of you splits the recording
+// into files), the offset changes at that moment. So a POV can also carry
+// pts = [{at, off}] (at: a moment in YOUR recording): from there on, that offset
+// holds, until the next point. Before the first point, the POV's own `off`.
+// Points are set by hand in the POV sync window ("Start a new part here").
+export function offsetAt(p, t) {
+  let o = (p && p.off) || 0
+  const pts = p && p.pts
+  if (pts) for (let i = 0; i < pts.length; i++) { if (pts[i].at <= t) o = pts[i].off; else break }
+  return o
+}
+
+// Where in your recording (a..b, seconds) they have footage, one piece per part.
+export function coverage(p, mainDur, povDur) {
+  const pts = (p && p.pts) || []
+  const out = []
+  const edges = [0, ...pts.map((x) => x.at), mainDur]
+  const offs = [(p && p.off) || 0, ...pts.map((x) => x.off)]
+  for (let i = 0; i < offs.length; i++) {
+    const a = Math.max(edges[i], -offs[i])
+    const b = Math.min(edges[i + 1], povDur - offs[i])
+    if (b > a) out.push({ a, b })
+  }
+  return out
+}

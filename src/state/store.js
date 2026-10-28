@@ -574,7 +574,7 @@ export const useStore = create(
         s.reviews[from].povs = s.reviews[from].povs.filter((p) => p.key !== povKey)
         const r = s.reviews[toKey] || (s.reviews[toKey] = emptyReview())
         if (!r.povs) r.povs = []
-        if (!r.povs.some((p) => p.key === povKey)) r.povs.push({ ...pov, off: guessOffset(toClip, povClip || {}), synced: false })
+        if (!r.povs.some((p) => p.key === povKey)) r.povs.push({ ...pov, pts: undefined, off: guessOffset(toClip, povClip || {}), synced: false })
         s.povSync = null
       })
       get().scheduleSave()

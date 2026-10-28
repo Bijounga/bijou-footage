@@ -14,6 +14,7 @@ import { player, mediaUrl } from '../lib/player.js'
 import { registerPov, listenTo, stopListening, setListenMix, setBigPov } from '../lib/povPlayer.js'
 import { usePlayerTime } from '../lib/hooks.js'
 import { fmtTime } from '../lib/time.js'
+import { offsetAt } from '../lib/povSync.js'
 import { POV_COLORS } from './Timeline.jsx'
 
 export const povColor = (i, p) => (p && p.color) || POV_COLORS[i % POV_COLORS.length]
@@ -161,8 +162,8 @@ export function PovCam({ pov, index, rect, big, layout, stageRef }) {
   useEffect(() => {
     const el = ref.current
     if (!el || !clip) return
-    return registerPov(pov.key, el, { off: pov.off || 0, dur: clip.probe && clip.probe.duration, onRange: setInRange })
-  }, [pov.key, pov.off, clip && clip.path])
+    return registerPov(pov.key, el, { off: pov.off || 0, pts: pov.pts, dur: clip.probe && clip.probe.duration, onRange: setInRange })
+  }, [pov.key, pov.off, pov.pts, clip && clip.path])
   // big: the viewer window shows it too
   useEffect(() => {
     if (!big) return
@@ -177,10 +178,10 @@ export function PovCam({ pov, index, rect, big, layout, stageRef }) {
     window.footage.audioFiles(clip).catch(() => ({})).then((files) => {
       if (gone) return
       const p = useStore.getState().reviews[useStore.getState().currentKey]?.povs?.find((x) => x.key === pov.key) || pov
-      listenTo(pov.key, { files, video: ref.current, off: p.off || 0, dur: clip.probe && clip.probe.duration, mix: p.mix, solo: useStore.getState().povSolo, master: (useStore.getState().settings.masterVol ?? 1) * (p.vol ?? 1) })
+      listenTo(pov.key, { files, video: ref.current, off: p.off || 0, pts: p.pts, dur: clip.probe && clip.probe.duration, mix: p.mix, solo: useStore.getState().povSolo, master: (useStore.getState().settings.masterVol ?? 1) * (p.vol ?? 1) })
     })
     return () => { gone = true; stopListening() }
-  }, [big, clip && clip.path, pov.off])
+  }, [big, clip && clip.path, pov.off, pov.pts])
   // their master (all their tracks together) × the app's master volume
   useEffect(() => { if (big) setListenMix(pov.mix, povSolo, masterVol * (pov.vol ?? 1)) }, [big, pov.mix, pov.vol, povSolo, masterVol])
   const small = !big
@@ -208,7 +209,7 @@ export function PovCam({ pov, index, rect, big, layout, stageRef }) {
 
 function OutOfRange({ pov, clip }) {
   const t = usePlayerTime(500)
-  const at = t + (pov.off || 0)
+  const at = t + offsetAt(pov, t)
   const dur = (clip.probe && clip.probe.duration) || 0
   const text = at < 0 ? `${pov.name} starts recording in ${fmtTime(-at)}` : `${pov.name} stopped recording ${fmtTime(Math.max(0, at - dur))} ago`
   return <div className="cam-note">{text}</div>
@@ -322,7 +323,7 @@ export function PovMenu() {
                 <ColorDot value={povColor(i, p)} onChange={(c) => st().updatePov(p.key, { color: c })} title={'Colour for ' + p.name + ' (its border, label and timeline)'} />
                 <button className="pov-name" onClick={() => st().setPovFocus(p.key)} onDoubleClick={() => setRenaming(p.key)} title="Watch big (you hear them) · double-click to rename">
                   {p.name}
-                  <span className="dim small"> {offsetText(p.off || 0)}</span>
+                  <span className="dim small"> {offsetText(p.off || 0)}{p.pts && p.pts.length ? ' · ' + (p.pts.length + 1) + ' parts' : ''}</span>
                 </button>
                 </>
               )}

@@ -3,6 +3,7 @@ import { useStore, TRACK_COLORS, DEFAULT_LANE_H, useTrackColors, useTrackNames }
 import { player } from '../lib/player.js'
 import { bus, onTick } from '../lib/hooks.js'
 import { fmtTime } from '../lib/time.js'
+import { offsetAt, coverage } from '../lib/povSync.js'
 import { LABEL, noteHex } from '../lib/beats.js'
 import { setWave, speechSegments } from '../lib/speech.js'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
@@ -132,7 +133,7 @@ function HoverPreview({ subs, wrapRef, canvasRef }) {
 
 // Also used by the Edit timeline (showReset=false; its own row heights via
 // onResize/onResetHeight; renames there change the default name).
-// Their track names live with the POV (e.g. "Loaffy mic").
+// Their track names live with the POV (e.g. "Alex mic").
 function renamePovTrack(pov, i, name) {
   const st = useStore.getState()
   const p = ((st.reviews[st.currentKey] && st.reviews[st.currentKey].povs) || []).find((x) => x.key === pov)
@@ -226,6 +227,7 @@ export default function Timeline() {
   const povSolo = useStore((s) => s.povSolo)
   const wclip = povClip || clip
   const shift = povClip ? povEntry.off || 0 : 0
+  const povAlign = povClip && povEntry.pts && povEntry.pts.length ? povEntry : null // an alignment that changes along the way (povSync.js)
   const wfState = useStore((s) => (wclip ? s.waveforms[wclip.key] : null))
   const ownNames = useTrackNames(useStore((s) => s.currentKey))
   const trackNames = povClip ? ((povClip.probe && povClip.probe.audio) || []).map((a, i) => ((povEntry.trackNames || [])[i] || (a && a.title) || 'Track ' + (i + 1))) : ownNames
@@ -282,7 +284,7 @@ export default function Timeline() {
   const drag = useRef(null)
   const size = useRef({ w: 0, h: 0 })
   const latest = useRef({})
-  latest.current = { clip, review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, wfState, laneH, lanesTotal, trackColors, snapOn, speechShow: povClip ? [] : speechShow, speechSens, searchHits: povClip ? [] : searchHits, shift }
+  latest.current = { clip, review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, wfState, laneH, lanesTotal, trackColors, snapOn, speechShow: povClip ? [] : speechShow, speechSens, searchHits: povClip ? [] : searchHits, shift, povAlign }
   if (import.meta.env.DEV) window.__tl = { view, scrollRef } // for scripts/cdp.mjs checks
 
   // Reset the view whenever a different clip opens.
@@ -317,7 +319,7 @@ export default function Timeline() {
 
   useEffect(() => {
     dirty.current = true
-  }, [review, shift, effMixer.map((m) => m.mute + ':' + m.vol).join(), solo.join(), beatColors, selectedNoteId, inPoint, nTracks, laneH.join(), trackColors.join(), themeId, speechShow.join(), speechSens, searchHits, wfState && wfState.status, wfState && Math.round((wfState.progress || 0) * 100)])
+  }, [review, shift, povAlign, effMixer.map((m) => m.mute + ':' + m.vol).join(), solo.join(), beatColors, selectedNoteId, inPoint, nTracks, laneH.join(), trackColors.join(), themeId, speechShow.join(), speechSens, searchHits, wfState && wfState.status, wfState && Math.round((wfState.progress || 0) * 100)])
 
   // ---- geometry ----
   const xToT = (x) => {
@@ -433,7 +435,7 @@ export default function Timeline() {
   const drawMain = useCallback(() => {
     const c = mainRef.current
     if (!c) return
-    const { review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, clip, wfState, laneH, trackColors, speechShow, speechSens, searchHits, shift } = latest.current
+    const { review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, clip, wfState, laneH, trackColors, speechShow, speechSens, searchHits, shift, povAlign } = latest.current
     const ctx = c.getContext('2d')
     const dpr = window.devicePixelRatio || 1
     const { w, h } = size.current
@@ -482,8 +484,10 @@ export default function Timeline() {
           const blocksOn = clipBlocks()
           if (blocksOn) {
             // the recording as one solid clip on this track (Premiere theme)
-            const xa = Math.max(-2, tToX(-shift))
-            const xb = Math.min(w + 2, tToX(duration - shift))
+            const spans = povAlign ? coverage(povAlign, duration, (wclip.probe && wclip.probe.duration) || duration) : [{ a: -shift, b: duration - shift }]
+            for (const sp of spans) {
+            const xa = Math.max(-2, tToX(sp.a))
+            const xb = Math.min(w + 2, tToX(sp.b))
             if (xb > xa) {
               // an empty (silent) track or a muted one: a dim grey clip
               const silent = clip.probe && clip.probe.audio[i] && clip.probe.audio[i].likelySilent
@@ -491,6 +495,7 @@ export default function Timeline() {
               ctx.fillRect(xa, y0 + 1, xb - xa, lh - 3)
               ctx.fillStyle = 'rgba(255,255,255,0.22)'
               ctx.fillRect(xa, y0 + 1, xb - xa, 1)
+            }
             }
           }
           ctx.fillStyle = blocksOn ? BLOCK_WAVE : audible ? trackColors[i] || TRACK_COLORS[i] : 'rgba(150,150,160,0.35)'
@@ -500,7 +505,7 @@ export default function Timeline() {
           // Pyramid lookups (lib/wavePeaks.js) + one path, one fill.
           ctx.beginPath()
           for (let x = 0; x < w; x++) {
-            const t0 = v.start + x * spp + shift
+            const t0 = v.start + x * spp + (povAlign ? offsetAt(povAlign, v.start + x * spp) : shift)
             const i0 = Math.floor(t0 * pps)
             let i1 = Math.floor((t0 + spp) * pps)
             if (i1 <= i0) i1 = i0 + 1
@@ -623,11 +628,12 @@ export default function Timeline() {
         const pc = all.find((c) => c.key === p.key)
         const pd = pc && pc.probe ? pc.probe.duration : 0
         if (!pd) return
-        const a = Math.max(v.start, -(p.off || 0))
-        const b = Math.min(v.end, pd - (p.off || 0))
-        if (b <= a) return
         ctx.fillStyle = p.color || POV_COLORS[i % POV_COLORS.length]
-        ctx.fillRect(tToX(a), 21 + i * 3, Math.max(1, tToX(b) - tToX(a)), 2)
+        for (const seg of coverage(p, latest.current.duration || Infinity, pd)) {
+          const a = Math.max(v.start, seg.a)
+          const b = Math.min(v.end, seg.b)
+          if (b > a) ctx.fillRect(tToX(a), 21 + i * 3, Math.max(1, tToX(b) - tToX(a)), 2)
+        }
       })
     }
     // Notes on the ruler: small shields in the beat's color; your markers
