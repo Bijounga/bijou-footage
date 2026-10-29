@@ -2000,16 +2000,18 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .sw-wait { padding: 12px; }
 .ps-apart { margin: 4px 18px 6px; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, #f5c542 14%, transparent); border: 1px solid color-mix(in srgb, #f5c542 45%, transparent); font-size: 12.5px; line-height: 1.45; }
 .ps-move { margin-left: 6px; }
-.tl-pov-pill { position: absolute; right: 12px; top: 6px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--c) 60%, transparent); background: color-mix(in srgb, var(--c) 16%, var(--panel)); color: var(--ink); font: 600 11.5px var(--sans, Inter, sans-serif); cursor: pointer; }
-.tl-pov-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
-.tl-pov-pill:hover { border-color: var(--c); }
-.tl-pov-pill { cursor: default; gap: 10px; padding: 4px 6px 4px 12px; }
-.tl-pov-pill b { font-weight: 600; }
+.tl-pov-bar { flex: none; height: 30px; display: flex; align-items: center; gap: 14px; padding: 0 12px; border-bottom: 1px solid color-mix(in srgb, var(--c) 45%, var(--line)); background: color-mix(in srgb, var(--c) 10%, var(--panel)); font: 600 11.5px var(--sans, Inter, sans-serif); color: var(--ink); }
+.tl-pov-who { display: inline-flex; align-items: center; gap: 7px; }
+.tl-pov-who i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.tl-pov-who b { font-weight: 600; }
 .tl-pov-vol { display: inline-flex; align-items: center; gap: 6px; }
 .tl-pov-vol input { width: 110px; accent-color: var(--c); }
 .tl-pov-volnum { font: 500 11px var(--mono); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
-.tl-pov-pill .link-btn { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; }
-.tl-pov-pill .link-btn:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
+.tl-pov-align { display: inline-flex; align-items: center; gap: 4px; padding-left: 14px; border-left: 1px solid color-mix(in srgb, var(--c) 40%, transparent); }
+.tl-pov-bar .link-btn { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; }
+.tl-pov-bar .link-btn:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
+.tl-pov-bar .link-btn:disabled { opacity: 0.35; cursor: default; }
+.tl-pov-hint { font-weight: 400; }
 /* telling the views apart: a coloured frame + named label per view */
 .cam.framed::after { content: ''; position: absolute; inset: 0; border: 2px solid var(--cc); border-radius: inherit; pointer-events: none; z-index: 2; }
 /* the big view stands out: its frame bright, the small ones' darker */

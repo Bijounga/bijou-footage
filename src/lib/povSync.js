@@ -284,13 +284,23 @@ export function offsetAt(p, t) {
   return o
 }
 
+// A stretch can be cut out: their footage is left out there (gap: true on the point, or on the POV for the first stretch).
+export function gapAt(p, t) {
+  let g = !!(p && p.gap)
+  const pts = p && p.pts
+  if (pts) for (let i = 0; i < pts.length; i++) { if (pts[i].at <= t) g = !!pts[i].gap; else break }
+  return g
+}
+
 // Where in your recording (a..b, seconds) they have footage, one piece per part.
 export function coverage(p, mainDur, povDur) {
   const pts = (p && p.pts) || []
   const out = []
   const edges = [0, ...pts.map((x) => x.at), mainDur]
   const offs = [(p && p.off) || 0, ...pts.map((x) => x.off)]
+  const gaps = [!!(p && p.gap), ...pts.map((x) => !!x.gap)]
   for (let i = 0; i < offs.length; i++) {
+    if (gaps[i]) continue
     const a = Math.max(edges[i], -offs[i])
     const b = Math.min(edges[i + 1], povDur - offs[i])
     if (b > a) out.push({ a, b })

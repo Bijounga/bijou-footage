@@ -1,9 +1,10 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { useStore, TRACK_COLORS, DEFAULT_LANE_H, useTrackColors, useTrackNames } from '../state/store.js'
 import { player } from '../lib/player.js'
-import { bus, onTick } from '../lib/hooks.js'
+import { bus, onTick, usePlayerTime } from '../lib/hooks.js'
 import { fmtTime } from '../lib/time.js'
-import { offsetAt, coverage } from '../lib/povSync.js'
+import { offsetAt, coverage, gapAt } from '../lib/povSync.js'
+import { pushAlign, undoAlign, redoAlign, splitAt, mergeAt, cutAt, stretchAt, setStretchOffset, onAlignHistory, alignHistoryInfo } from '../lib/povAlign.js'
 import { LABEL, noteHex } from '../lib/beats.js'
 import { setWave, speechSegments } from '../lib/speech.js'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
@@ -227,7 +228,7 @@ export default function Timeline() {
   const povSolo = useStore((s) => s.povSolo)
   const wclip = povClip || clip
   const shift = povClip ? povEntry.off || 0 : 0
-  const povAlign = povClip && povEntry.pts && povEntry.pts.length ? povEntry : null // an alignment that changes along the way (povSync.js)
+  const povAlign = povClip && ((povEntry.pts && povEntry.pts.length) || povEntry.gap) ? povEntry : null // an alignment that changes along the way, or footage cut out (povSync.js)
   const wfState = useStore((s) => (wclip ? s.waveforms[wclip.key] : null))
   const ownNames = useTrackNames(useStore((s) => s.currentKey))
   const trackNames = povClip ? ((povClip.probe && povClip.probe.audio) || []).map((a, i) => ((povEntry.trackNames || [])[i] || (a && a.title) || 'Track ' + (i + 1))) : ownNames
@@ -261,6 +262,16 @@ export default function Timeline() {
 
   const nTracks = wclip && wclip.probe ? Math.max(1, wclip.probe.audio.length) : 0
   const duration = (clip && clip.probe && clip.probe.duration) || 0
+  // With a POV big, the timeline reaches over THEIR whole recording (not just the part that is yours):
+  // in your time that runs from −offset to (their length − offset). Your own recording sits inside it.
+  let dMin = 0
+  let dMax = duration
+  if (povEntry && povClip && povClip.probe && povClip.probe.duration) {
+    for (const o of [povEntry.off || 0, ...(povEntry.pts || []).map((p) => p.off)]) {
+      dMin = Math.min(dMin, -o)
+      dMax = Math.max(dMax, povClip.probe.duration - o)
+    }
+  }
   const laneH = Array.from({ length: nTracks }, (_, i) => laneHeightsSetting[i] || DEFAULT_LANE_H)
   const lanesTotal = laneH.reduce((a, b) => a + b, 0)
 
@@ -279,12 +290,20 @@ export default function Timeline() {
   const scrollRef = useRef(0)
   const waveRef = useRef(null)
   const dirty = useRef(true)
+  // for the POV bar's buttons, which depend on which stretch the playhead is in: re-render as it moves
+  usePlayerTime(250)
+  const [, bumpSeek] = useState(0)
+  useEffect(() => { const offs = [player.on('seek', () => bumpSeek((n) => n + 1)), player.on('seeked', () => bumpSeek((n) => n + 1))]; return () => offs.forEach((o) => o && o()) }, [])
+  const playhead = player.getTime()
+  // re-render when the alignment history changes (for the Undo / Redo buttons)
+  const [aligned, setAligned] = useState(alignHistoryInfo())
+  useEffect(() => onAlignHistory(() => setAligned(alignHistoryInfo())), [])
   const frameNow = useRef(null) // draws one frame immediately (see the rAF loop)
   const follow = useRef(true)
   const drag = useRef(null)
   const size = useRef({ w: 0, h: 0 })
   const latest = useRef({})
-  latest.current = { clip, review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, wfState, laneH, lanesTotal, trackColors, snapOn, speechShow: povClip ? [] : speechShow, speechSens, searchHits: povClip ? [] : searchHits, shift, povAlign }
+  latest.current = { clip, review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, wfState, laneH, lanesTotal, trackColors, snapOn, speechShow: povClip ? [] : speechShow, speechSens, searchHits: povClip ? [] : searchHits, shift, povAlign, povEntry, wclip, dMin, dMax }
   if (import.meta.env.DEV) window.__tl = { view, scrollRef } // for scripts/cdp.mjs checks
 
   // Reset the view whenever a different clip opens.
@@ -293,6 +312,16 @@ export default function Timeline() {
     follow.current = true
     dirty.current = true
   }, [clip && clip.key, duration])
+
+  // A POV going big (or coming back): keep the zoom you are at — the view just may reach further (or
+  // less far) now. "Fit" shows all of their recording, with where yours begins and ends.
+  useEffect(() => {
+    const v = view.current
+    clampView(v.start, v.end)
+    follow.current = true
+    dirty.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [povEntry && povEntry.key])
 
   // Load waveform peaks when they're ready.
   useEffect(() => {
@@ -319,7 +348,7 @@ export default function Timeline() {
 
   useEffect(() => {
     dirty.current = true
-  }, [review, shift, povAlign, effMixer.map((m) => m.mute + ':' + m.vol).join(), solo.join(), beatColors, selectedNoteId, inPoint, nTracks, laneH.join(), trackColors.join(), themeId, speechShow.join(), speechSens, searchHits, wfState && wfState.status, wfState && Math.round((wfState.progress || 0) * 100)])
+  }, [review, shift, povAlign, povEntry && povEntry.key, dMin, dMax, effMixer.map((m) => m.mute + ':' + m.vol).join(), solo.join(), beatColors, selectedNoteId, inPoint, nTracks, laneH.join(), trackColors.join(), themeId, speechShow.join(), speechSens, searchHits, wfState && wfState.status, wfState && Math.round((wfState.progress || 0) * 100)])
 
   // ---- geometry ----
   const xToT = (x) => {
@@ -331,9 +360,11 @@ export default function Timeline() {
     return ((t - v.start) / (v.end - v.start)) * size.current.w
   }
   const clampView = (start, end) => {
-    const d = latest.current.duration || 1
+    const lo = latest.current.dMin || 0
+    const hi = latest.current.dMax || latest.current.duration || 1
+    const d = Math.max(1, hi - lo)
     const span = Math.max(Math.min(MIN_SPAN, d), Math.min(d, end - start))
-    start = Math.max(0, Math.min(d - span, start))
+    start = Math.max(lo, Math.min(hi - span, start))
     view.current = { start, end: start + span }
     dirty.current = true
   }
@@ -346,13 +377,13 @@ export default function Timeline() {
   }
   // The zoom bar: 0 = whole recording … 1 = MIN_SPAN on screen, log scale.
   const zoomGet = useCallback(() => {
-    const d = latest.current.duration || 0
+    const d = (latest.current.dMax || latest.current.duration || 0) - (latest.current.dMin || 0)
     if (d <= MIN_SPAN) return 0
     const span = view.current.end - view.current.start
     return Math.max(0, Math.min(1, Math.log(d / span) / Math.log(d / MIN_SPAN)))
   }, [])
   const zoomSet = useCallback((z) => {
-    const d = latest.current.duration || 0
+    const d = (latest.current.dMax || latest.current.duration || 0) - (latest.current.dMin || 0)
     if (d <= MIN_SPAN) return
     const v = view.current
     const span = d / Math.pow(d / MIN_SPAN, z)
@@ -396,7 +427,7 @@ export default function Timeline() {
   useEffect(() => {
     const offs = [
       bus.on('zoom', (f) => { zoomAt(f); follow.current = true }),
-      bus.on('fit', () => { clampView(0, latest.current.duration); follow.current = true })
+      bus.on('fit', () => { clampView(latest.current.dMin || 0, latest.current.dMax || latest.current.duration); follow.current = true })
     ]
     return () => offs.forEach((o) => o())
   }, [])
@@ -435,7 +466,7 @@ export default function Timeline() {
   const drawMain = useCallback(() => {
     const c = mainRef.current
     if (!c) return
-    const { review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, clip, wfState, laneH, trackColors, speechShow, speechSens, searchHits, shift, povAlign } = latest.current
+    const { review, effMixer, solo, beatColors, selectedNoteId, inPoint, nTracks, duration, clip, wfState, laneH, trackColors, speechShow, speechSens, searchHits, shift, povAlign, povEntry, wclip } = latest.current // (read from latest: this draw function is made once, so anything else would be from the first render)
     const ctx = c.getContext('2d')
     const dpr = window.devicePixelRatio || 1
     const { w, h } = size.current
@@ -490,7 +521,7 @@ export default function Timeline() {
             const xb = Math.min(w + 2, tToX(sp.b))
             if (xb > xa) {
               // an empty (silent) track or a muted one: a dim grey clip
-              const silent = clip.probe && clip.probe.audio[i] && clip.probe.audio[i].likelySilent
+              const silent = wclip.probe && wclip.probe.audio[i] && wclip.probe.audio[i].likelySilent // THAT recording's track (a POV's, when one is big)
               ctx.fillStyle = silent ? blockEmpty() : audible ? blockFill(trackColors[i] || TRACK_COLORS[i]) : blockMuted()
               ctx.fillRect(xa, y0 + 1, xb - xa, lh - 3)
               ctx.fillStyle = 'rgba(255,255,255,0.22)'
@@ -505,6 +536,7 @@ export default function Timeline() {
           // Pyramid lookups (lib/wavePeaks.js) + one path, one fill.
           ctx.beginPath()
           for (let x = 0; x < w; x++) {
+            if (povAlign && gapAt(povAlign, v.start + x * spp)) continue // cut out here
             const t0 = v.start + x * spp + (povAlign ? offsetAt(povAlign, v.start + x * spp) : shift)
             const i0 = Math.floor(t0 * pps)
             let i1 = Math.floor((t0 + spp) * pps)
@@ -584,6 +616,76 @@ export default function Timeline() {
         ctx.globalAlpha = 1
       }
     }
+    // POV big: where YOUR recording begins and ends on their timeline (and where they weren't there to see)
+    if (povEntry) {
+      const xs = tToX(0)
+      const xe = tToX(duration)
+      ctx.fillStyle = 'rgba(0,0,0,0.38)'
+      if (xs > 0) ctx.fillRect(0, RULER_H, Math.min(w, xs), lanesBottom - RULER_H)
+      if (xe < w) ctx.fillRect(Math.max(0, xe), RULER_H, w - Math.max(0, xe), lanesBottom - RULER_H)
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'
+      ctx.fillRect(Math.max(0, xs), RULER_H - 3, Math.max(1, Math.min(w, xe) - Math.max(0, xs)), 3)
+      ctx.font = '600 10px Inter'
+      const mark = (t, text, right) => {
+        const x = Math.round(tToX(t)) + 0.5
+        if (x < -1 || x > w + 1) return
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(x, RULER_H)
+        ctx.lineTo(x, lanesBottom)
+        ctx.stroke()
+        ctx.lineWidth = 1
+        const tw = ctx.measureText(text).width
+        const lx = right ? x - tw - 8 : x + 4
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'
+        ctx.fillRect(lx - 3, RULER_H + 14, tw + 6, 14)
+        ctx.fillStyle = '#fff'
+        ctx.textBaseline = 'top'
+        ctx.fillText(text, lx, RULER_H + 16)
+      }
+      // stretches you cut out of theirs
+      {
+        const pts = povEntry.pts || []
+        const edges = [-1e9, ...pts.map((p) => p.at), 1e9]
+        const gaps = [!!povEntry.gap, ...pts.map((p) => !!p.gap)]
+        for (let i = 0; i < gaps.length; i++) {
+          if (!gaps[i]) continue
+          const a = Math.max(0, tToX(Math.max(edges[i], v.start)))
+          const b = Math.min(w, tToX(Math.min(edges[i + 1], v.end)))
+          if (b <= a) continue
+          ctx.fillStyle = 'rgba(12,12,16,0.85)'
+          ctx.fillRect(a, RULER_H, b - a, lanesBottom - RULER_H)
+          ctx.strokeStyle = 'rgba(255,255,255,0.14)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          for (let hx = a - (lanesBottom - RULER_H); hx < b; hx += 14) {
+            ctx.moveTo(Math.max(a, hx), RULER_H + Math.max(0, a - hx))
+            ctx.lineTo(Math.min(b, hx + (lanesBottom - RULER_H)), RULER_H + Math.min(lanesBottom - RULER_H, b - hx))
+          }
+          ctx.stroke()
+          if (b - a > 70) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.textBaseline = 'top'; ctx.fillText('Cut out', a + 8, RULER_H + 44) }
+        }
+      }
+      mark(0, 'You start recording', false)
+      mark(duration, 'You stop recording', true)
+      // where their alignment to yours changes (a pause, a split)
+      for (const p of povEntry.pts || []) {
+        const x = Math.round(tToX(p.at)) + 0.5
+        if (x < 0 || x > w) continue
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+        ctx.setLineDash([3, 3])
+        ctx.beginPath()
+        ctx.moveTo(x, RULER_H)
+        ctx.lineTo(x, lanesBottom)
+        ctx.stroke()
+        ctx.setLineDash([])
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'
+        ctx.fillRect(x + 1, RULER_H + 30, 126, 14)
+        ctx.fillStyle = '#fff'
+        ctx.fillText('Their time jumps here', x + 4, RULER_H + 32)
+      }
+    }
     if (inPoint && inPoint.key === clip.key) {
       const x = Math.round(tToX(inPoint.t)) + 0.5
       ctx.strokeStyle = '#ffffff'
@@ -607,13 +709,16 @@ export default function Timeline() {
     const step = tickStep(spp)
     ctx.font = '10px "JetBrains Mono", monospace'
     ctx.textBaseline = 'top'
-    const first = Math.floor(v.start / step) * step
-    for (let t = first; t <= v.end; t += step) {
+    // with a POV big the ruler shows THEIR clock (ticks at round times of theirs)
+    const rs = povEntry ? offsetAt(povEntry, (v.start + v.end) / 2) : 0
+    const first = Math.floor((v.start + rs) / step) * step
+    for (let tt = first; tt - rs <= v.end; tt += step) {
+      const t = tt - rs
       const x = Math.round(tToX(t)) + 0.5
       ctx.fillStyle = line
       ctx.fillRect(x, RULER_H - 12, 1, 12)
       ctx.fillStyle = ink
-      ctx.fillText(fmtTime(t), x + 3, RULER_H - 12)
+      ctx.fillText(fmtTime(tt), x + 3, RULER_H - 12)
       const minor = step / 5
       for (let k = 1; k < 5; k++) {
         ctx.fillStyle = line
@@ -689,7 +794,7 @@ export default function Timeline() {
       if (follow.current && player.playing && !drag.current && duration) {
         const v = view.current
         const span = v.end - v.start
-        if (span < duration - 0.5 && (t > v.end - span * 0.02 || t < v.start)) clampView(t - span * 0.1, t + span * 0.9)
+        if (span < (latest.current.dMax || duration) - (latest.current.dMin || 0) - 0.5 && (t > v.end - span * 0.02 || t < v.start)) clampView(t - span * 0.1, t + span * 0.9)
       }
       if (dirty.current) {
         dirty.current = false
@@ -847,6 +952,8 @@ export default function Timeline() {
   function onMainDown(e) {
     if (!latest.current.duration || e.button !== 0) return
     const { x, y } = localXY(e, mainRef.current)
+    // A POV big: Shift+drag on its tracks slides them against yours (the stretch under the cursor)
+    if (e.shiftKey && latest.current.povEntry && y > RULER_H) return slidePov(e, x)
     const n = noteAt(x, y)
     follow.current = false
     if (n && !e.altKey) {
@@ -889,6 +996,35 @@ export default function Timeline() {
     window.addEventListener('mouseup', up)
   }
 
+  // Slide their footage: dragging right moves what you see of theirs right (their time under yours goes down).
+  function slidePov(e, x) {
+    e.preventDefault()
+    const pe = latest.current.povEntry
+    const t0 = xToT(x)
+    const cur = () => (useStore.getState().reviews[useStore.getState().currentKey] || { povs: [] }).povs.find((p) => p.key === pe.key) || pe
+    const k = stretchAt(cur(), t0)
+    const o0 = k < 0 ? cur().off || 0 : cur().pts[k].off
+    const x0 = e.clientX
+    pushAlign(pe.key)
+    follow.current = false
+    drag.current = { kind: 'slide' }
+    document.body.classList.add('grabbing')
+    const move = (ev) => {
+      const v = view.current
+      const dt = ((ev.clientX - x0) / Math.max(1, size.current.w)) * (v.end - v.start)
+      setStretchOffset(pe.key, t0, k, o0 - dt)
+    }
+    const up = () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+      document.body.classList.remove('grabbing')
+      drag.current = null
+      setTimeout(() => { follow.current = true }, 1500)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
   function onMainDouble(e) {
     const { x, y } = localXY(e, mainRef.current)
     const n = noteAt(x, y)
@@ -918,7 +1054,39 @@ export default function Timeline() {
 
   const soloSet = new Set(solo)
   return (
-    <div className="timeline" ref={wrapRef} style={{ height }}>
+    <div className="timeline" ref={wrapRef} style={{ height: height + (povClip ? 30 : 0) }}>
+      {povClip && (
+        <div className="tl-pov-bar" style={{ '--c': trackColors[0] }}>
+          <span className="tl-pov-who"><i /> <b>{povEntry.name}’s tracks</b></span>
+          <label className="tl-pov-vol" title={'All of ' + povEntry.name + '’s tracks together — double-click for 100%'}>
+            <span className="dim">Volume</span>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              value={povEntry.vol ?? 1}
+              onChange={(e) => useStore.getState().updatePov(povEntry.key, { vol: Number(e.target.value) })}
+              onDoubleClick={() => useStore.getState().updatePov(povEntry.key, { vol: 1 })}
+            />
+            <span className="tl-pov-volnum">{Math.round((povEntry.vol ?? 1) * 100)}%</span>
+          </label>
+          <span className="tl-pov-align">
+            <button className="link-btn" onClick={() => splitAt(povEntry.key, player.getTime())} title={'From the playhead on, use a new alignment for ' + povEntry.name + ' (e.g. you paused your recording and they didn’t). Then Shift+drag their tracks to line them up.'}>Out of step from here</button>
+            {gapAt(povEntry, playhead) ? (
+              <button className="link-btn" onClick={() => cutAt(povEntry.key, player.getTime(), false)} title="Put their footage back for this stretch">Bring this stretch back</button>
+            ) : (
+              <button className="link-btn" onClick={() => cutAt(povEntry.key, player.getTime(), true)} title="Leave their footage out of this stretch (start and end it with “Out of step from here” first). Their video shows “cut out” there.">Cut out this stretch</button>
+            )}
+            {stretchAt(povEntry, playhead) >= 0 && <button className="link-btn" onClick={() => mergeAt(povEntry.key, player.getTime())} title="Take this stretch away — the one before it carries on">Merge back</button>}
+            <button className="link-btn" disabled={!aligned.canUndo} onClick={undoAlign} title="Undo the last alignment change (Ctrl+Z)">↶</button>
+            <button className="link-btn" disabled={!aligned.canRedo} onClick={redoAlign} title="Redo it">↷</button>
+          </span>
+          <span className="dim small tl-pov-hint" title="Drag their tracks sideways with Shift held to line them up with yours">Shift+drag their tracks to line up</span>
+          <span className="grow" />
+          <button className="link-btn" onClick={() => useStore.getState().setPovFocus(null)} title="Back to your own tracks (and your view big)">Back to yours</button>
+        </div>
+      )}
       <div className="tl-row tl-main-row">
         <div className="tl-heads">
           <div className="tl-head tl-ruler-head" style={{ height: RULER_H }}>
@@ -967,25 +1135,6 @@ export default function Timeline() {
         </div>
       </div>
       <HoverPreview subs={hoverSubs} wrapRef={wrapRef} canvasRef={previewCanvasRef} />
-      {povClip && (
-        <div className="tl-pov-pill" style={{ '--c': trackColors[0] }}>
-          <i /> <b>{povEntry.name}’s tracks</b>
-          <label className="tl-pov-vol" title={'All of ' + povEntry.name + '’s tracks together — double-click for 100%'}>
-            <span className="dim">Volume</span>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.01"
-              value={povEntry.vol ?? 1}
-              onChange={(e) => useStore.getState().updatePov(povEntry.key, { vol: Number(e.target.value) })}
-              onDoubleClick={() => useStore.getState().updatePov(povEntry.key, { vol: 1 })}
-            />
-            <span className="tl-pov-volnum">{Math.round((povEntry.vol ?? 1) * 100)}%</span>
-          </label>
-          <button className="link-btn" onClick={() => useStore.getState().setPovFocus(null)} title="Back to your own tracks (and your view big)">Back to yours</button>
-        </div>
-      )}
     </div>
   )
 }

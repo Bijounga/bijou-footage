@@ -1,4 +1,5 @@
 import { trackNamesFor } from '../state/store.js'
+import { undoAlign, alignHistoryInfo } from './povAlign.js'
 // Every keyboard action in the app, in one place: its label (what the
 // shortcuts window lists, A–Z), its default key(s), and what it does.
 // Users can rebind any of them (settings.keybinds overrides the defaults).
@@ -193,7 +194,7 @@ export const ACTIONS = [
     run: ({ st, e }) => { const n = selectedNote(st); if (n && n.type !== 'BREAK' && n.type !== 'MARKER') st.editNote(n.id, { type: cycleType(n.type, e.shiftKey ? -1 : 1) }) }
   },
   { id: 'deselect', label: 'Deselect note', cat: 'Notes', keys: ['Escape'], run: ({ st }) => { if (st.selectedNoteId) st.selectNote(null) } },
-  { id: 'undo', label: 'Undo (notes)', cat: 'Notes', keys: ['Ctrl+Z'], run: ({ st }) => st.undoNotes() },
+  { id: 'undo', label: 'Undo (notes)', cat: 'Notes', keys: ['Ctrl+Z'], run: ({ st }) => { if (st.povFocus && alignHistoryInfo().canUndo) undoAlign(); else st.undoNotes() } },
   { id: 'redo', label: 'Redo (notes)', cat: 'Notes', keys: ['Ctrl+Shift+Z', 'Ctrl+Y'], run: ({ st }) => st.redoNotes() },
   {
     id: 'markReviewed', label: 'Mark recording reviewed', cat: 'Library', keys: ['D'], needsClip: true,

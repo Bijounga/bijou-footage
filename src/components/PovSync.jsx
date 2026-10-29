@@ -493,7 +493,7 @@ export default function PovSync() {
                 onClick={() => gotoPart(s.k)}
                 title={'From ' + partName(s.k) + ' · ' + name + ' ' + offsetText(s.k === here ? off : s.k < 0 ? (pov && pov.off) || 0 : parts[s.k].off) + ' — click to go there'}
               >
-                <span>From {partName(s.k)} · {offsetText(s.k === here ? off : s.k < 0 ? (pov && pov.off) || 0 : parts[s.k].off)}</span>
+                <span>From {partName(s.k)} · {(s.k < 0 ? pov && pov.gap : parts[s.k].gap) ? 'cut out' : offsetText(s.k === here ? off : s.k < 0 ? (pov && pov.off) || 0 : parts[s.k].off)}</span>
                 {s.k >= 0 && <i className="ps-stretch-x" onClick={(e) => { e.stopPropagation(); removePart(parts[s.k].at) }} title="Remove this stretch (the one before it carries on)">×</i>}
               </button>
             ))}
