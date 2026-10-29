@@ -108,3 +108,28 @@ export function cutAt(key, t, on) {
   else st().updatePov(key, { pts: p.pts.map((x, i) => (i === k ? { ...x, gap: on ? true : undefined } : x)), synced: true })
   return true
 }
+
+// Close the gap a cut leaves (a ripple delete in THEIR footage): the stretch after the cut moves up to where the cut
+// began, and its offset grows by the cut's length — so their footage carries straight on from what came before the
+// cut, with nothing missing in between. Check it by sound afterwards (Shift+drag to fine-tune).
+export function closeGapAt(key, t) {
+  const p = povOf(st().currentKey, key)
+  if (!p) return false
+  const k = stretchAt(p, t)
+  if (!gapAt(p, t)) return false
+  const pts = p.pts || []
+  const next = pts[k + 1]
+  if (!next) return false // nothing after it to move up
+  const from = k < 0 ? 0 : pts[k].at
+  const len = next.at - from
+  pushAlign(key)
+  const moved = { ...next, at: from, off: Math.round((next.off + len) * 1000) / 1000 }
+  const rest = pts.filter((_, i) => i !== k && i !== k + 1)
+  if (k < 0) {
+    // the cut was the first stretch: what follows becomes the first stretch
+    st().updatePov(key, { off: moved.off, gap: moved.gap ? true : undefined, pts: rest.length ? rest : undefined, synced: true })
+  } else {
+    st().updatePov(key, { pts: [...rest, moved].sort((a, b) => a.at - b.at), synced: true })
+  }
+  return true
+}

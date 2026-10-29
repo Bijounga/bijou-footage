@@ -4,7 +4,7 @@ import { player } from '../lib/player.js'
 import { bus, onTick, usePlayerTime } from '../lib/hooks.js'
 import { fmtTime } from '../lib/time.js'
 import { offsetAt, coverage, gapAt } from '../lib/povSync.js'
-import { pushAlign, undoAlign, redoAlign, splitAt, mergeAt, cutAt, stretchAt, setStretchOffset, onAlignHistory, alignHistoryInfo } from '../lib/povAlign.js'
+import { pushAlign, undoAlign, redoAlign, splitAt, mergeAt, cutAt, closeGapAt, stretchAt, setStretchOffset, onAlignHistory, alignHistoryInfo } from '../lib/povAlign.js'
 import { LABEL, noteHex } from '../lib/beats.js'
 import { setWave, speechSegments } from '../lib/speech.js'
 import { peakBetween, speechRuns } from '../lib/wavePeaks.js'
@@ -1074,7 +1074,10 @@ export default function Timeline() {
           <span className="tl-pov-align">
             <button className="link-btn" onClick={() => splitAt(povEntry.key, player.getTime())} title={'From the playhead on, use a new alignment for ' + povEntry.name + ' (e.g. you paused your recording and they didn’t). Then Shift+drag their tracks to line them up.'}>Out of step from here</button>
             {gapAt(povEntry, playhead) ? (
-              <button className="link-btn" onClick={() => cutAt(povEntry.key, player.getTime(), false)} title="Put their footage back for this stretch">Bring this stretch back</button>
+              <>
+                <button className="link-btn" onClick={() => cutAt(povEntry.key, player.getTime(), false)} title="Put their footage back for this stretch">Bring this stretch back</button>
+                <button className="link-btn" onClick={() => closeGapAt(povEntry.key, player.getTime())} title="Remove this cut and slide their footage after it up to where the cut began, so it carries straight on with no gap. Check it by sound afterwards; Shift+drag to fine-tune.">Close the gap</button>
+              </>
             ) : (
               <button className="link-btn" onClick={() => cutAt(povEntry.key, player.getTime(), true)} title="Leave their footage out of this stretch (start and end it with “Out of step from here” first). Their video shows “cut out” there.">Cut out this stretch</button>
             )}
