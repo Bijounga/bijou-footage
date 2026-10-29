@@ -55,11 +55,31 @@ function follow(c, quick) {
     el.play().catch(() => {})
     return
   }
-  if (Math.abs(drift) > 0.3) {
+  if (el.tagName === 'AUDIO') {
+    // the sound (small files of its own) jumps instantly: keep it tight
+    if (Math.abs(drift) > 0.3) {
+      el.currentTime = t
+      el.playbackRate = rate
+    } else if (Math.abs(drift) > 0.03) el.playbackRate = rate * (1 - Math.max(-0.06, Math.min(0.06, drift * 0.6)))
+    else if (el.playbackRate !== rate) el.playbackRate = rate
+    return
+  }
+  // The picture: a jump restarts decoding from a keyframe, which freezes it for up to a second (the sound carries
+  // on). Your recording's clock leaps ahead often — "Skip silence" jumps a few seconds at a time — so the POV
+  // follows by playing faster to catch up (the decoder manages 4x and more on its own) instead of jumping, and by
+  // slowing right down when it's ahead. It only jumps when it's really far off.
+  const fast = Math.max(1, rate)
+  const dead = 0.05 * fast // close enough
+  const behindMax = 8 // seconds behind we'll fast-forward through; further than this, jump
+  const aheadMax = 1.5 // seconds ahead we'll wait out
+  if (drift < -behindMax || drift > aheadMax) {
     el.currentTime = t
     el.playbackRate = rate
-  } else if (Math.abs(drift) > 0.03) el.playbackRate = rate * (1 - Math.max(-0.06, Math.min(0.06, drift * 0.6)))
-  else if (el.playbackRate !== rate) el.playbackRate = rate
+  } else if (drift < -dead) {
+    el.playbackRate = Math.min(10, rate + Math.min(8, -drift / 0.5)) // behind: close the gap in about half a second
+  } else if (drift > dead) {
+    el.playbackRate = Math.max(0.0625, rate * 0.25) // ahead: let the clock catch up
+  } else if (el.playbackRate !== rate) el.playbackRate = rate
 }
 
 // One seek at a time: a new one while the last is still landing would cancel
