@@ -36,7 +36,7 @@ export function listProjects(dir) {
     const folder = path.join(dir, d.name)
     try {
       const p = JSON.parse(fs.readFileSync(path.join(folder, 'project.json'), 'utf8'))
-      out.push({ id: p.id, name: p.name, clipKeys: p.clipKeys || [], folders: p.folders || [], excluded: p.excluded || [], bijouScriptId: p.bijouScriptId || null, createdAt: p.createdAt || 0, pad: p.pad || null, folder })
+      out.push({ id: p.id, name: p.name, clipKeys: p.clipKeys || [], folders: p.folders || [], excluded: p.excluded || [], sources: p.sources || [], bijouScriptId: p.bijouScriptId || null, createdAt: p.createdAt || 0, pad: p.pad || null, folder })
     } catch { /* not a project folder */ }
   }
   return out.sort((a, b) => a.createdAt - b.createdAt)
@@ -58,7 +58,7 @@ export function saveProject(dir, p) {
       } catch { /* folder in use (e.g. open in Explorer) — keep the old name */ }
     }
   }
-  writeJson(path.join(folder, 'project.json'), { v: 1, id: p.id, name: p.name, clipKeys: p.clipKeys || [], folders: p.folders || [], excluded: p.excluded || [], bijouScriptId: p.bijouScriptId || null, createdAt: p.createdAt || Date.now(), pad: p.pad || null })
+  writeJson(path.join(folder, 'project.json'), { v: 1, id: p.id, name: p.name, clipKeys: p.clipKeys || [], folders: p.folders || [], excluded: p.excluded || [], sources: p.sources || [], bijouScriptId: p.bijouScriptId || null, createdAt: p.createdAt || Date.now(), pad: p.pad || null })
   return folder
 }
 

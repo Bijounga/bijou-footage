@@ -102,6 +102,7 @@ function defaultSettings() {
     workspace: 'review', // 'review' | 'edit'
     projectsDir: null, // where projects are saved (folder per project); null = not chosen yet
     sectionByProject: {}, // projectId -> the section last open in Edit
+    sourceByProject: {}, // projectId -> the POV source open in the list (someone else's footage), or none = yours
     editSnap: true, // W — snapping in the edit timeline
     editSidebarHidden: false, // Ctrl+\ in Edit
     editPanelHidden: false, // Ctrl+Shift+\ in Edit — the Notes / Transcript panel
@@ -134,7 +135,7 @@ export function emptyReview() {
 // out). Notes live on the recordings, so a recording in two projects shows
 // the same notes.
 function newProject(name) {
-  return { id: newId().replace(/^n/, 'p'), name: name || 'New project', clipKeys: [], folders: [], excluded: [], createdAt: Date.now(), bijouScriptId: null }
+  return { id: newId().replace(/^n/, 'p'), name: name || 'New project', clipKeys: [], folders: [], excluded: [], sources: [], createdAt: Date.now(), bijouScriptId: null }
 }
 // Is this recording (clip key = its path; lower-case on Windows) inside folder?
 const IS_WIN = typeof window !== 'undefined' && window.footage && window.footage.platform === 'win32'
@@ -147,7 +148,10 @@ function inFolder(key, folder) {
 // Every folder to scan: the library's own, plus each project's.
 function allFolders(st) {
   const out = [...st.settings.folders]
-  for (const p of st.projects) for (const f of p.folders || []) if (!out.includes(f)) out.push(f)
+  for (const p of st.projects) {
+    for (const f of p.folders || []) if (!out.includes(f)) out.push(f)
+    for (const src of p.sources || []) for (const f of src.folders || []) if (!out.includes(f)) out.push(f)
+  }
   return out
 }
 
@@ -156,7 +160,7 @@ function allFolders(st) {
 // a moment after the last change; removed projects go to the Recycle Bin.
 const savedProjects = new Map() // id -> {json, folder}
 const savedSections = new Map() // id -> json
-const projectJson = (p, pad) => JSON.stringify([p.name, p.clipKeys, p.folders || [], p.excluded || [], p.bijouScriptId || null, p.createdAt, pad || null])
+const projectJson = (p, pad) => JSON.stringify([p.name, p.clipKeys, p.folders || [], p.excluded || [], p.bijouScriptId || null, p.createdAt, pad || null, p.sources || []])
 const sectionJson = (x) => JSON.stringify([x.name, x.order, x.clips, x.markers || [], x.vo || []])
 function markProjectsSaved(list) {
   const pads = useStore.getState().pads
@@ -1159,11 +1163,111 @@ export const useStore = create(
         const keys = clips.filter((c) => !have.has(c.key) && !out.has(c.key) && p.folders.some((f) => inFolder(c.key, f))).map((c) => c.key)
         if (keys.length) adds.push([p.id, keys])
       }
-      if (!adds.length) return
+      // the same for the POV sources (someone else's footage) inside each project
+      const srcAdds = []
+      for (const p of projects) {
+        for (const src of p.sources || []) {
+          if (!src.folders || !src.folders.length) continue
+          const have = new Set(src.clipKeys)
+          const out = new Set(src.excluded || [])
+          const keys = clips.filter((c) => !have.has(c.key) && !out.has(c.key) && src.folders.some((f) => inFolder(c.key, f))).map((c) => c.key)
+          if (keys.length) srcAdds.push([p.id, src.id, keys])
+        }
+      }
+      if (!adds.length && !srcAdds.length) return
       set((s) => {
         for (const [id, keys] of adds) {
           const p = s.projects.find((x) => x.id === id)
           if (p) p.clipKeys.push(...keys)
+        }
+        for (const [id, sid, keys] of srcAdds) {
+          const src = ((s.projects.find((x) => x.id === id) || {}).sources || []).find((x) => x.id === sid)
+          if (src) src.clipKeys.push(...keys)
+        }
+      })
+      get().scheduleSave()
+    },
+    // ---- POV sources: someone else's footage, listed next to yours in the project ----
+    currentSource() {
+      const st = get()
+      const p = st.currentProject()
+      const id = p && st.settings.sourceByProject && st.settings.sourceByProject[p.id]
+      return (id && (p.sources || []).find((x) => x.id === id)) || null
+    },
+    setSource(projectId, sourceId) {
+      set((s) => {
+        if (!s.settings.sourceByProject) s.settings.sourceByProject = {}
+        s.settings.sourceByProject[projectId] = sourceId || null
+      })
+      get().scheduleSave()
+    },
+    addSource(projectId, name) {
+      const id = newId().replace(/^n/, 's')
+      set((s) => {
+        const p = s.projects.find((x) => x.id === projectId)
+        if (!p) return
+        if (!p.sources) p.sources = []
+        p.sources.push({ id, name: (name || '').trim() || 'POV', folders: [], clipKeys: [], excluded: [] })
+        if (!s.settings.sourceByProject) s.settings.sourceByProject = {}
+        s.settings.sourceByProject[projectId] = id
+      })
+      get().scheduleSave()
+      return id
+    },
+    renameSource(projectId, sourceId, name) {
+      set((s) => {
+        const src = ((s.projects.find((x) => x.id === projectId) || {}).sources || []).find((x) => x.id === sourceId)
+        if (src && name.trim()) src.name = name.trim()
+      })
+      get().scheduleSave()
+    },
+    // Takes the source (and its folders) off the project; the recordings and their notes are not touched.
+    removeSource(projectId, sourceId) {
+      set((s) => {
+        const p = s.projects.find((x) => x.id === projectId)
+        if (!p) return
+        p.sources = (p.sources || []).filter((x) => x.id !== sourceId)
+        if (s.settings.sourceByProject && s.settings.sourceByProject[projectId] === sourceId) s.settings.sourceByProject[projectId] = null
+      })
+      get().scheduleSave()
+      get().rescan()
+    },
+    // Pick folders for a source; returns how many recordings they brought.
+    async addSourceFolders(projectId, sourceId) {
+      const picked = await api.pickFolders()
+      if (!picked.length) return 0
+      const find = () => ((get().projects.find((x) => x.id === projectId) || {}).sources || []).find((x) => x.id === sourceId)
+      const before = (find() || { clipKeys: [] }).clipKeys.length
+      set((s) => {
+        const src = ((s.projects.find((x) => x.id === projectId) || {}).sources || []).find((x) => x.id === sourceId)
+        if (!src) return
+        if (!src.folders) src.folders = []
+        for (const f of picked) if (!src.folders.includes(f)) src.folders.push(f)
+      })
+      get().scheduleSave()
+      await get().rescan()
+      const src = find()
+      return src ? src.clipKeys.length - before : 0
+    },
+    removeSourceFolder(projectId, sourceId, folder) {
+      set((s) => {
+        const src = ((s.projects.find((x) => x.id === projectId) || {}).sources || []).find((x) => x.id === sourceId)
+        if (!src) return
+        src.folders = (src.folders || []).filter((f) => f !== folder)
+        src.clipKeys = src.clipKeys.filter((k) => !inFolder(k, folder) || src.folders.some((f) => inFolder(k, f)))
+        src.excluded = (src.excluded || []).filter((k) => !inFolder(k, folder))
+      })
+      get().scheduleSave()
+      get().rescan()
+    },
+    removeFromSource(projectId, sourceId, key) {
+      set((s) => {
+        const src = ((s.projects.find((x) => x.id === projectId) || {}).sources || []).find((x) => x.id === sourceId)
+        if (!src) return
+        src.clipKeys = src.clipKeys.filter((k) => k !== key)
+        if ((src.folders || []).some((f) => inFolder(key, f))) {
+          if (!src.excluded) src.excluded = []
+          if (!src.excluded.includes(key)) src.excluded.push(key)
         }
       })
       get().scheduleSave()

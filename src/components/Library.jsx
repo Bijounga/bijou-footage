@@ -4,6 +4,7 @@ import { fmtDuration, fmtDay, fmtClock, fmtHours, fmtHM } from '../lib/time.js'
 import { WorkspaceSwitch } from './EditWorkspace.jsx'
 import { Brand } from './Updates.jsx'
 import { bus } from '../lib/hooks.js'
+import { overlap } from '../lib/povSync.js'
 
 const OBS_NAME = /^\d{4}-\d{2}-\d{2}[ _]\d{2}-\d{2}-\d{2}/
 
@@ -144,6 +145,95 @@ export function ProjectFolders({ project }) {
   )
 }
 
+// "You" and the POV sources (someone else's footage, e.g. Loaffy's folder) of the open project: click one and
+// the list below is that person's recordings — all of them, including the ones you weren't there for.
+function SourceTabs({ project }) {
+  const source = useStore((s) => s.currentSource())
+  const setSource = useStore((s) => s.setSource)
+  const addSource = useStore((s) => s.addSource)
+  const renameSource = useStore((s) => s.renameSource)
+  const removeSource = useStore((s) => s.removeSource)
+  const addSourceFolders = useStore((s) => s.addSourceFolders)
+  const showToast = useStore((s) => s.showToast)
+  const [naming, setNaming] = useState(null) // 'new' | a source id being renamed
+  const [menu, setMenu] = useState(null) // source id with its menu open
+  const menuRef = useOutsideClose(!!menu, () => setMenu(null))
+  const sources = project.sources || []
+  async function create(name) {
+    setNaming(null)
+    if (!name.trim()) return
+    const id = addSource(project.id, name)
+    const n = await addSourceFolders(project.id, id)
+    if (n) showToast(`Added ${n} recording${n === 1 ? '' : 's'} to “${name.trim()}”`)
+  }
+  const nameInput = (initial, onDone) => (
+    <input
+      className="src-name-input"
+      autoFocus
+      defaultValue={initial}
+      placeholder="Whose footage? (e.g. Loaffy)"
+      onKeyDown={(e) => { if (e.key === 'Enter') onDone(e.target.value); if (e.key === 'Escape') setNaming(null) }}
+      onBlur={(e) => onDone(e.target.value)}
+    />
+  )
+  return (
+    <div className="src-tabs" ref={menuRef}>
+      <button className={'src-tab' + (!source ? ' on' : '')} onClick={() => setSource(project.id, null)} title="Your own recordings">You</button>
+      {sources.map((s) => (
+        <span key={s.id} className={'src-tab-wrap' + (source && source.id === s.id ? ' on' : '')}>
+          {naming === s.id ? (
+            nameInput(s.name, (v) => { setNaming(null); if (v.trim()) renameSource(project.id, s.id, v) })
+          ) : (
+            <>
+              <button className={'src-tab' + (source && source.id === s.id ? ' on' : '')} onClick={() => setSource(project.id, s.id)} title={s.name + '’s recordings — everything in their folder, including what you weren’t there for'}>{s.name}</button>
+              <button className="src-more" onClick={(e) => { e.stopPropagation(); setMenu(menu === s.id ? null : s.id) }} title="Rename, add a folder, remove" aria-label={s.name + ' options'}>⋯</button>
+            </>
+          )}
+          {menu === s.id && (
+            <div className="menu src-menu">
+              <button onClick={() => { setMenu(null); setNaming(s.id) }}>Rename</button>
+              <button onClick={async () => { setMenu(null); const n = await addSourceFolders(project.id, s.id); if (n) showToast(`Added ${n} recording${n === 1 ? '' : 's'} to “${s.name}”`) }}>Add a folder…</button>
+              <button className="danger" onClick={() => { setMenu(null); if (window.confirm(`Take “${s.name}” off ${project.name}? Their recordings and your notes on them are not touched.`)) removeSource(project.id, s.id) }}>Remove</button>
+            </div>
+          )}
+        </span>
+      ))}
+      {naming === 'new' ? nameInput('', create) : <button className="src-tab src-add" onClick={() => setNaming('new')} title="Add someone else’s footage (a folder of their recordings) to this project">＋ POV</button>}
+    </div>
+  )
+}
+
+// The folders a POV source takes its recordings from.
+function SourceFolders({ project, source }) {
+  const addSourceFolders = useStore((s) => s.addSourceFolders)
+  const removeSourceFolder = useStore((s) => s.removeSourceFolder)
+  const showToast = useStore((s) => s.showToast)
+  const [busy, setBusy] = useState(false)
+  async function add() {
+    setBusy(true)
+    try {
+      const n = await addSourceFolders(project.id, source.id)
+      if (n) showToast(`Added ${n} recording${n === 1 ? '' : 's'} to “${source.name}”`)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="proj-folders">
+      {(source.folders || []).map((f) => (
+        <div key={f} className="proj-folder" title={f + '\nEvery recording in here (and its subfolders) is ' + source.name + '’s — new ones too.'}>
+          <span className="proj-folder-icon">📁</span>
+          <span className="proj-folder-name">{f.split(/[\\/]/).filter(Boolean).pop() || f}</span>
+          <button className="row-btn" title="Take this folder off (the recordings stay where they are; notes are kept)" onClick={() => { if (window.confirm(`Take “${f}” off ${source.name}? Their recordings leave this list; notes are kept.`)) removeSourceFolder(project.id, source.id, f) }}>×</button>
+        </div>
+      ))}
+      <div className="proj-folder-btns">
+        <button className="btn small accent" disabled={busy} onClick={add} title={`Everything in the folder (and its subfolders) is ${source.name}’s — and new recordings there join by themselves`}>{busy ? 'Scanning…' : '＋ Add folder'}</button>
+      </div>
+    </div>
+  )
+}
+
 // Hover "+" on a row in All footage: add that recording to a project.
 function AddToProjectMenu({ clipKey }) {
   const projects = useStore((s) => s.projects)
@@ -201,11 +291,16 @@ export default function Library() {
   const openModal = useStore((s) => s.openModal)
   const toggleLibrary = useStore((s) => s.toggleLibrary)
   const project = useStore((s) => s.currentProject())
+  const source = useStore((s) => s.currentSource())
   const removeFromProject = useStore((s) => s.removeFromProject)
+  const removeFromSource = useStore((s) => s.removeFromSource)
   const trackColors = useTrackColors()
 
   const { groups, stats, visibleCount, scopeCount } = useMemo(() => {
-    const scope = project ? project.clipKeys.map((k) => clips.find((c) => c.key === k)).filter(Boolean) : clips
+    const keys = project ? (source ? source.clipKeys : project.clipKeys) : null
+    const scope = keys ? keys.map((k) => clips.find((c) => c.key === k)).filter(Boolean) : clips
+    // yours, for the "with yours" tag on someone else's recordings
+    const mine = source && project ? project.clipKeys.map((k) => clips.find((c) => c.key === k)).filter(Boolean) : []
     let total = 0
     let notes = 0
     let reviewed = 0 // done: all of it; started: as far as you've watched
@@ -215,7 +310,7 @@ export default function Library() {
     const povOf = new Set()
     for (const k in reviews) for (const p of reviews[k].povs || []) povOf.add(p.key)
     for (const c of scope) {
-      if (povOf.has(c.key)) continue
+      if (!source && povOf.has(c.key)) continue // (in someone's own list their POVs are the point)
       const r = reviews[c.key]
       const dur = c.probe ? c.probe.duration : 0
       total += dur
@@ -228,7 +323,9 @@ export default function Library() {
         const hay = (c.name + ' ' + c.folder + ' ' + (r ? r.notes.map((n) => n.text).join(' ') : '')).toLowerCase()
         if (!hay.includes(text)) continue
       }
-      rows.push({ c, r, p })
+      let withYours = null
+      if (source) for (const m of mine) { if (overlap(c, m) > 60) { withYours = m; break } }
+      rows.push({ c, r, p, withYours })
     }
     // Projects read in story order (oldest first); the whole library newest first.
     rows.sort((a, b) => (project ? a.c.recordedAt - b.c.recordedAt : b.c.recordedAt - a.c.recordedAt))
@@ -243,9 +340,9 @@ export default function Library() {
       g.dur += row.c.probe ? row.c.probe.duration : 0
     }
     return { groups, stats: { total, notes, reviewed, count: scope.length }, visibleCount: rows.length, scopeCount: scope.length }
-  }, [clips, reviews, filter, project])
+  }, [clips, reviews, filter, project, source])
 
-  const missing = project ? project.clipKeys.filter((k) => !clips.some((c) => c.key === k)).length : 0
+  const missing = project ? (source ? source.clipKeys : project.clipKeys).filter((k) => !clips.some((c) => c.key === k)).length : 0
 
   return (
     <aside className="library">
@@ -263,6 +360,7 @@ export default function Library() {
 
       <WorkspaceSwitch />
       <ProjectPicker clipCount={clips.length} />
+      {project && <SourceTabs project={project} />}
 
       {scopeCount > 0 && (
         <div className="lib-stats">
@@ -282,7 +380,7 @@ export default function Library() {
         </div>
       )}
 
-      {project && <ProjectFolders project={project} />}
+      {project && (source ? <SourceFolders project={project} source={source} /> : <ProjectFolders project={project} />)}
 
       {scopeCount > 0 && (
         <div className="lib-filters">
@@ -312,7 +410,7 @@ export default function Library() {
         )}
         {project && scopeCount === 0 && !scanning && (
           <div className="lib-empty">
-            <p>No footage in <b>{project.name}</b> yet.</p>
+            <p>No footage in <b>{source ? source.name : project.name}</b> yet.</p>
             <p className="dim small">Add the folder its recordings are in (<b>＋ Add folder</b> above) — everything in it joins the project, and new recordings there join by themselves. Or pick recordings one by one.</p>
           </div>
         )}
@@ -324,7 +422,7 @@ export default function Library() {
             <div className="lib-day" title={`${fmtDuration(g.dur)} recorded this day (${g.rows.length} recording${g.rows.length === 1 ? '' : 's'})`}>
               <span>{g.day}</span>
             </div>
-            {g.rows.map(({ c, r, p, index }) => {
+            {g.rows.map(({ c, r, p, index, withYours }) => {
               const noteCount = r ? r.notes.filter((n) => n.type !== 'BREAK').length : 0
               return (
                 <div
@@ -339,7 +437,11 @@ export default function Library() {
                     <span className="lib-dur">{c.probe ? fmtDuration(c.probe.duration) : c.probe === null ? '…' : '?'}</span>
                     {project ? (
                       <span className="row-action" onClick={(e) => e.stopPropagation()}>
-                        <button className="row-btn" title={`Remove from “${project.name}” (notes are kept)`} onClick={() => removeFromProject(project.id, c.key)}>×</button>
+                        {source ? (
+                          <button className="row-btn" title={`Take off “${source.name}” (notes are kept)`} onClick={() => removeFromSource(project.id, source.id, c.key)}>×</button>
+                        ) : (
+                          <button className="row-btn" title={`Remove from “${project.name}” (notes are kept)`} onClick={() => removeFromProject(project.id, c.key)}>×</button>
+                        )}
                       </span>
                     ) : (
                       <AddToProjectMenu clipKey={c.key} />
@@ -353,6 +455,7 @@ export default function Library() {
                       {c.probe && c.probe.vcodec === 'hevc' && <span className="tag">HEVC</span>}
                       {c.probe && c.probe.error && <span className="tag bad">unreadable</span>}
                     </span>
+                    {source && <span className={'lib-with' + (withYours ? ' yes' : '')} title={withYours ? 'Recorded at the same time as your ' + clipTitle(withYours) + ' recording' : 'Recorded when you weren’t'}>{withYours ? '↔ yours' : 'on its own'}</span>}
                     {noteCount > 0 && <span className="lib-notes">{noteCount} ✎</span>}
                     {p.status === 'started' && <span className="lib-status started" title="You started reviewing this">● started</span>}
                     {p.status === 'done' && <span className="lib-done" title="Marked reviewed">✓</span>}

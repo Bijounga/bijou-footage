@@ -1457,6 +1457,21 @@ body.frameless .brand-btn { -webkit-app-region: no-drag; }
 @keyframes brand-spin { to { transform: rotate(360deg); } }
 
 /* ---- a project's folders ---- */
+/* the You / POV tabs under the project picker */
+.src-tabs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 2px 12px 6px; position: relative; }
+.src-tab { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink-dim); font: 600 11.5px var(--sans, Inter, sans-serif); cursor: pointer; }
+.src-tab:hover { color: var(--ink); border-color: var(--ink-faint); }
+.src-tab.on { color: var(--ink); border-color: var(--accent, #5b8def); background: color-mix(in srgb, var(--accent, #5b8def) 16%, transparent); }
+.src-add { border-style: dashed; }
+.src-tab-wrap { display: inline-flex; align-items: center; position: relative; }
+.src-tab-wrap .src-tab { padding-right: 6px; border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; }
+.src-more { padding: 3px 7px 3px 2px; border: 1px solid var(--line); border-left: 0; border-radius: 0 999px 999px 0; background: transparent; color: var(--ink-faint); cursor: pointer; font-size: 12px; line-height: 1; }
+.src-tab-wrap.on .src-more { border-color: var(--accent, #5b8def); color: var(--ink-dim); }
+.src-more:hover { color: var(--ink); }
+.src-menu { position: absolute; top: 100%; left: 0; z-index: 30; min-width: 150px; }
+.src-name-input { width: 150px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--accent, #5b8def); background: var(--bg); color: var(--ink); font: inherit; font-size: 12px; }
+.lib-with { font-size: 10px; color: var(--ink-faint); }
+.lib-with.yes { color: var(--cyan, #4fd1c5); }
 .proj-folders { padding: 0 10px 8px; display: flex; flex-direction: column; gap: 3px; }
 .proj-folder { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 6px; background: var(--panel-2); font-size: 12px; }
 .proj-folder-icon { font-size: 11px; }
