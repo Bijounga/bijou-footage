@@ -533,6 +533,7 @@ function registerIpc() {
   ipcMain.handle('cache:stats', () => waveform.cacheStats(path.join(userData(), 'transcripts')))
   ipcMain.handle('cache:trim', (_e, keepClip) => waveform.trimCache(keepClip))
   ipcMain.handle('cache:empty', (_e, keepClip) => waveform.emptyCache(keepClip))
+  ipcMain.handle('cache:drop', (_e, clips) => waveform.dropClips(clips))
   ipcMain.handle('shell:openPath', (_e, p) => shell.openPath(p))
 
   ipcMain.handle('transcript:state', () => transcribe.queueState())

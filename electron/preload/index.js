@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('footage', {
   cacheStats: () => ipcRenderer.invoke('cache:stats'),
   trimCache: (keepClip) => ipcRenderer.invoke('cache:trim', keepClip),
   emptyCache: (keepClip) => ipcRenderer.invoke('cache:empty', keepClip),
+  dropFromCache: (clips) => ipcRenderer.invoke('cache:drop', clips),
   openPath: (p) => ipcRenderer.invoke('shell:openPath', p),
   pickFolders: () => ipcRenderer.invoke('dialog:pickFolder'),
   listScripts: () => ipcRenderer.invoke('bijou:listScripts'),

@@ -115,7 +115,7 @@ export function request(clip, front = false) {
   if (isComplete(clip)) return
   // Over the limit in "remind" mode: background prep waits (the recording
   // you open still gets prepared).
-  if (!front && cacheMode === 'remind' && overLimit()) return
+  if (!front && overLimit()) return
   if (running && running.clip.key === clip.key) return
   const existing = queue.findIndex((j) => j.clip.key === clip.key)
   if (existing !== -1) {
@@ -137,7 +137,7 @@ function pump() {
   if (running || !queue.length || !ffmpegPath) return
   const job = queue.shift()
   // A background job queued before the cache filled up: skip it now.
-  if (!job.front && cacheMode === 'remind' && overLimit()) {
+  if (!job.front && overLimit()) {
     pump()
     return
   }
@@ -255,6 +255,22 @@ export function trimCache(keepClip) {
   emit({ type: 'cacheCleared' })
   cacheEvent()
   return res
+}
+
+// Forget the prepared audio + waveforms of these recordings (someone else's footage, say) — they rebuild
+// when opened. Files being played can't be deleted on Windows; those are skipped.
+export function dropClips(clips) {
+  const hashes = new Set(clips.map((c) => hashFor(c)))
+  let freed = 0
+  let skipped = 0
+  for (const x of listCache()) {
+    if (!hashes.has(x.hash)) continue
+    try { fs.unlinkSync(x.p); freed += x.size } catch { skipped++ }
+  }
+  measure()
+  emit({ type: 'cacheCleared' })
+  cacheEvent()
+  return { freed, skipped }
 }
 
 export function emptyCache(keepClip) {

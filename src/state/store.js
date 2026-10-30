@@ -397,9 +397,22 @@ export const useStore = create(
     },
     // Newest first; main-process queue skips anything already prepared, and
     // whatever the user opens jumps to the front.
+    // Someone else's footage (a POV source's folder) is not prepared in the background — hours of it fill the
+    // cache — only when you open it or use it as a POV on a recording you open.
+    othersKeys() {
+      const own = new Set()
+      const others = new Set()
+      for (const p of get().projects) {
+        p.clipKeys.forEach((k) => own.add(k))
+        for (const s of p.sources || []) (s.clipKeys || []).forEach((k) => others.add(k))
+      }
+      own.forEach((k) => others.delete(k))
+      return others
+    },
     prepareAll() {
+      const others = get().othersKeys()
       const withAudio = get()
-        .clips.filter((c) => c.probe && c.probe.audio && c.probe.audio.length)
+        .clips.filter((c) => c.probe && c.probe.audio && c.probe.audio.length && !others.has(c.key))
         .sort((a, b) => b.recordedAt - a.recordedAt)
       api.requestWaveforms(withAudio)
     },
@@ -412,7 +425,7 @@ export const useStore = create(
         player.clip = clip
         get().pushMixer()
         api.requestWaveform(clip, true)
-      } else if (get().settings.autoPrepare && clip.probe && clip.probe.audio && clip.probe.audio.length) {
+      } else if (get().settings.autoPrepare && clip.probe && clip.probe.audio && clip.probe.audio.length && !get().othersKeys().has(clip.key)) {
         api.requestWaveforms([clip])
       }
     },
@@ -492,6 +505,11 @@ export const useStore = create(
           player.audioFiles = files || {}
           get().pushMixer()
         })
+      // its POVs' sound too (asked first, so the recording itself still goes to the front of the queue)
+      for (const p of (rev && rev.povs) || []) {
+        const pc = get().clips.find((c) => c.key === p.key)
+        if (pc && pc.probe && pc.probe.audio && pc.probe.audio.length) api.requestWaveform(pc, true)
+      }
       if (clip.probe) api.requestWaveform(clip, true).then((st) => get().setWaveformStatus(key, st))
       get().scheduleSave()
       if (get().settings.autoTranscribeOpen !== false && get().tx.installed) setTimeout(() => get().transcribe([key], { silent: true, front: true }), 1500)
@@ -1623,6 +1641,16 @@ export const useStore = create(
     async trimCache() {
       const r = await api.trimCache(get().clip() || null)
       get().showToast('Freed ' + fmtBytes(r.freed) + (r.skipped ? ' (' + r.skipped + ' files in use were kept)' : ''))
+      return r
+    },
+    // Forget the prepared audio of everyone else's recordings (POV sources), except what's open or its POVs.
+    async clearOthersCache() {
+      const st = get()
+      const keep = new Set([st.currentKey, ...(((st.reviews[st.currentKey] || {}).povs || []).map((p) => p.key))])
+      const others = st.othersKeys()
+      const clips = st.clips.filter((c) => others.has(c.key) && !keep.has(c.key))
+      const r = await api.dropFromCache(clips)
+      get().showToast('Freed ' + fmtBytes(r.freed) + ' of other people’s footage — it rebuilds when you open it' + (r.skipped ? ' (' + r.skipped + ' files in use were kept)' : ''))
       return r
     },
     async emptyCache() {
