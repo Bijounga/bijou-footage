@@ -1822,14 +1822,19 @@ export const useStore = create(
     },
     // The notes panel's "Type what happened" box: a finished note in one go,
     // stamped at the moment you started typing. Doesn't pause playback.
-    logNote({ t, type, text }) {
+    // pov: whose footage it's about — a POV's name, '' for yours; left out = whoever is big right now.
+    logNote({ t, type, text, pov }) {
       const key = get().currentKey
       if (!key || !text.trim()) return
       get().snapshot(key)
       set((s) => {
         const r = s.reviews[key] || (s.reviews[key] = emptyReview())
         const before = r.notes.filter((n) => n.t <= t).sort((a, b) => a.t - b.t)
-        r.notes.push({ id: newId(), t: Math.round(t * 100) / 100, type: type || pickDefaultType(before), text: text.trim(), star: false, createdAt: Date.now() })
+        const note = { id: newId(), t: Math.round(t * 100) / 100, type: type || pickDefaultType(before), text: text.trim(), star: false, createdAt: Date.now() }
+        const big = s.povFocus && (r.povs || []).find((p) => p.key === s.povFocus)
+        const who = pov !== undefined ? pov : big ? big.name : ''
+        if (who) note.pov = who
+        r.notes.push(note)
         r.notes.sort((a, b) => a.t - b.t)
       })
       get().scheduleSave()

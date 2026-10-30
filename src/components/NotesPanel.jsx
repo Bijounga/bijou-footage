@@ -8,6 +8,43 @@ import { usePlayerDerived, bus } from '../lib/hooks.js'
 import { fmtTime, fmtDay } from '../lib/time.js'
 import { TYPES, LABEL, DEFAULT_COLORS, MARKER_COLORS, DEFAULT_MARKER_COLOR, cycleType, pickDefaultType, noteHex } from '../lib/beats.js'
 import { clipTitle } from './Library.jsx'
+import { POV_COLORS } from './Timeline.jsx'
+
+const YOU = 'You'
+
+// Small drawn icons for the list tools (one stroke weight, like the layout toggles).
+const ICON_PATHS = {
+  search: <><circle cx="6" cy="6" r="3.6" /><path d="M8.8 8.8L12 12" /></>,
+  filter: <path d="M2 3h10L8.2 7.4V11.5L5.8 10.3V7.4z" />,
+  x: <path d="M3.5 3.5l7 7M10.5 3.5l-7 7" />,
+  top: <path d="M3 2.5h8M7 12V5.2M4.2 7.8L7 5l2.8 2.8" />,
+  bottom: <path d="M3 11.5h8M7 2v6.8M4.2 6.2L7 9l2.8-2.8" />,
+  now: <><circle cx="7" cy="7" r="2.1" /><path d="M7 1.5v2.2M7 10.3v2.2M1.5 7h2.2M10.3 7h2.2" /></>,
+  fold: <path d="M3.5 2.5L7 5.8l3.5-3.3M3.5 11.5L7 8.2l3.5 3.3" />,
+  unfold: <path d="M3.5 5.5L7 2.2l3.5 3.3M3.5 8.5L7 11.8l3.5-3.3" />
+}
+function Ico({ name }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICON_PATHS[name]}
+    </svg>
+  )
+}
+
+// The text with what you searched for lit up.
+function Hl({ text, q }) {
+  if (!q) return text
+  const low = text.toLowerCase()
+  const parts = []
+  let at = 0
+  for (let i = low.indexOf(q); i !== -1; i = low.indexOf(q, at)) {
+    if (i > at) parts.push(text.slice(at, i))
+    parts.push(<mark key={i} className="hl">{text.slice(i, i + q.length)}</mark>)
+    at = i + q.length
+  }
+  parts.push(text.slice(at))
+  return parts
+}
 
 export function useBeatColor() {
   const colors = useStore((s) => s.beatColors)
@@ -76,7 +113,22 @@ function noteLine(n) {
   return `${at}  ${label}${n.star ? ' ★' : ''} — ${n.text || ''}`.trimEnd()
 }
 
-function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, onAnchor }) {
+// Whose footage a note is about. On a recording that has POVs it's a button: click to move the note to
+// the next person (you → each POV → you). Notes on someone's own recordings show their name, fixed.
+function WhoTag({ name, color, choices, onPick }) {
+  const you = !name || name === YOU
+  if (you && !choices) return null
+  const cls = 'who-tag' + (you ? ' you' : '')
+  const style = { '--w': color || '#888' }
+  if (!choices) return <span className={cls} style={style} title={name + '’s recording'}>{name}</span>
+  return (
+    <button className={cls} style={style} onClick={(e) => { e.stopPropagation(); onPick() }} title={'About ' + (you ? 'your own footage' : name + '’s POV') + ' — click to change whose it is'}>
+      {you ? YOU : name}
+    </button>
+  )
+}
+
+function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, onAnchor, q, who }) {
   const selected = useStore((s) => s.selectedNoteId === n.id)
   const editing = useStore((s) => s.editingNoteId === n.id)
   const selectNote = useStore((s) => s.selectNote)
@@ -166,6 +218,11 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
             {LABEL[n.type]}
           </button>
         )}
+        {who && <WhoTag name={who.name} color={who.color} choices={who.choices} onPick={() => {
+          const list = ['', ...who.choices]
+          const next = list[(list.indexOf(n.pov || '') + 1) % list.length]
+          editNote(n.id, { pov: next || undefined }, clipKey)
+        }} />}
         {n.exportedAt && <span className="sent" title={'Sent to BijouDocs ' + new Date(n.exportedAt).toLocaleString()}>↗</span>}
         <span className="grow" />
         <span className="note-actions">
@@ -192,7 +249,7 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
           }}
         />
       ) : (
-        n.text && <div className="note-text">{n.text}</div>
+        n.text && <div className="note-text"><Hl text={n.text} q={q} /></div>
       )}
       {n.sketch && (
         <img
@@ -207,16 +264,22 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
   )
 }
 
-// "Type what happened": timestamp is taken when you START typing, so a
-// slow typist still lands the note on the moment itself. Doesn't pause.
+// "Type what happened": the note is stamped when you START typing, so a slow typist still lands on the
+// moment itself. Doesn't pause. Shows where it will land, and whose footage it is about.
+const NONE = []
 function LogBox({ clipKey }) {
   const logNote = useStore((s) => s.logNote)
   const color = useBeatColor()
+  const povs = useStore((s) => (clipKey && s.reviews[clipKey] && s.reviews[clipKey].povs) || NONE)
+  const bigPov = useStore((s) => s.povFocus)
   const [text, setText] = useState('')
   const [stamp, setStamp] = useState(null)
   const [type, setType] = useState(null) // null = auto (Setup / But / Therefore)
+  const [who, setWho] = useState(null) // null = whoever is big right now (you, or the POV on screen)
   const ref = useRef(null)
-  useEffect(() => { setText(''); setStamp(null); setType(null) }, [clipKey])
+  const live = usePlayerDerived((t) => Math.floor(t), [clipKey], 500)
+  useEffect(() => { setText(''); setStamp(null); setType(null); setWho(null) }, [clipKey])
+  useEffect(() => { setWho(null) }, [bigPov]) // switching POV switches whose note it is
   useEffect(() => bus.on('focusLog', () => ref.current && ref.current.focus()), [])
 
   const autoType = () => {
@@ -226,23 +289,44 @@ function LogBox({ clipKey }) {
     return pickDefaultType(r ? r.notes.filter((n) => n.t <= t) : [])
   }
   const shownType = type || autoType()
+  const big = povs.find((p) => p.key === bigPov)
+  const shownWho = who !== null ? who : big ? big.name : ''
+  const names = ['', ...povs.map((p) => p.name)]
+  const whoColor = (name) => {
+    const i = povs.findIndex((p) => p.name === name)
+    return i < 0 ? '#888' : povs[i].color || POV_COLORS[i % POV_COLORS.length]
+  }
 
   return (
     <div className={'logbox' + (text ? ' typing' : '')} style={{ '--c': color(shownType) }}>
-      <button
-        className="type-pill logbox-type"
-        onClick={(e) => setType(cycleType(shownType, e.shiftKey ? -1 : 1))}
-        title={(type ? 'Beat type — click or Tab to change' : 'Auto beat type (like M) — click or Tab to choose') + ' · the note is stamped at the moment you start typing'}
-      >
-        {LABEL[shownType]}
-      </button>
+      <div className="logbox-meta">
+        <button
+          className="type-pill logbox-type"
+          onClick={(e) => setType(cycleType(shownType, e.shiftKey ? -1 : 1))}
+          title={type ? 'Beat type — click or Tab to change' : 'Auto beat type (like M) — click or Tab to choose'}
+        >
+          {LABEL[shownType]}
+        </button>
+        <span className="logbox-at" title="The note lands on this moment — it is stamped when you start typing">at {fmtTime(stamp != null ? stamp : live)}</span>
+        {povs.length > 0 && (
+          <button
+            className={'who-tag' + (shownWho ? '' : ' you')}
+            style={{ '--w': shownWho ? whoColor(shownWho) : '#888' }}
+            onClick={() => setWho(names[(Math.max(0, names.indexOf(shownWho)) + 1) % names.length])}
+            title={'This note is about ' + (shownWho ? shownWho + '’s POV' : 'your own footage') + ' — click to change whose it is'}
+          >
+            {shownWho || YOU}
+          </button>
+        )}
+        <span className="logbox-hint">{text ? 'Enter adds it · Shift+Enter new line' : 'Press / to type here'}</span>
+      </div>
       <textarea
         ref={ref}
         className="logbox-input"
         rows={1}
         value={text}
         disabled={!clipKey}
-        placeholder={clipKey ? 'Type what happened…' : 'Open a recording first'}
+        placeholder={clipKey ? (shownWho ? 'What happens on ' + shownWho + '’s POV?' : 'Type what happened…') : 'Open a recording first'}
         onChange={(e) => {
           if (stamp == null && e.target.value.trim()) setStamp(player.getTime())
           if (!e.target.value.trim()) setStamp(null)
@@ -254,7 +338,7 @@ function LogBox({ clipKey }) {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             if (text.trim()) {
-              logNote({ t: stamp != null ? stamp : player.getTime(), type, text })
+              logNote({ t: stamp != null ? stamp : player.getTime(), type, text, pov: shownWho })
               setText('')
               setStamp(null)
               setType(null)
@@ -284,6 +368,7 @@ export default function NotesPanel() {
   const setExportSelection = useStore((s) => s.setExportSelection)
   const toggleNotesPanel = useStore((s) => s.toggleNotesPanel)
   const openClip = useStore((s) => s.openClip)
+  const selectNote = useStore((s) => s.selectNote)
   const deleteNotes = useStore((s) => s.deleteNotes)
   const setNotesWidth = useStore((s) => s.setNotesWidth)
   const sideTab = useStore((s) => s.settings.sideTab || 'notes')
@@ -295,6 +380,7 @@ export default function NotesPanel() {
   const split = useStore((s) => s.settings.sideSplit ?? 0.5) // notes' share of the width, side by side
   const swap = useStore((s) => !!s.settings.sideSwap) // transcript first (left / top)
   const stack = useStore((s) => !!s.settings.sideStack) // notes above the transcript, not beside it
+  const follow = useStore((s) => !!s.settings.notesFollow)
   const bodyRef = useRef(null)
   function dragSplit(e) {
     if (e.button !== 0) return
@@ -328,9 +414,14 @@ export default function NotesPanel() {
   const [types, setTypes] = useState(() => new Set([...TYPES, 'MARKER']))
   const [starred, setStarred] = useState(false)
   const [unsent, setUnsent] = useState(false)
+  const [hidden, setHidden] = useState(() => new Set()) // people whose notes are switched off
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(() => new Set())
+  const [pos, setPos] = useState(-1) // which search match Enter last went to
+  const [edge, setEdge] = useState({ top: true, bottom: true })
   const currentGroupRef = useRef(null)
+  const searchRef = useRef(null)
+  const userScroll = useRef(0)
   const zoom = useStore((s) => s.settings.notesZoom || 1)
   const colorBars = useStore((s) => !!s.settings.noteColorBars)
   const setNotesZoom = useStore((s) => s.setNotesZoom)
@@ -357,30 +448,87 @@ export default function NotesPanel() {
     window.addEventListener('mousedown', close)
     return () => window.removeEventListener('mousedown', close)
   }, [exportOpen])
+  useEffect(() => bus.on('focusNotesSearch', () => { const el = searchRef.current; if (el) { el.focus(); el.select() } }), [])
 
-  // Groups: the project's recordings in story order (with "n/N"), or in
-  // All footage, every recording that has notes plus the one that's open.
+  // What's in the list: your recordings in story order (with "n/N"), then — when the project has POV
+  // sources — their recordings that have notes (or are open). In All footage, every recording with notes
+  // plus the open one. Also who each note is about, and a colour for each person.
+  const scope = useMemo(() => {
+    const byKey = new Map(clips.map((c) => [c.key, c]))
+    const sources = (project && project.sources) || []
+    const srcOf = new Map()
+    const rank = new Map()
+    sources.forEach((s, i) => (s.clipKeys || []).forEach((k) => { srcOf.set(k, { name: s.name, color: POV_COLORS[i % POV_COLORS.length] }); rank.set(k, i) }))
+    const has = (k) => reviews[k] && reviews[k].notes.length
+    const byTime = (a, b) => a.recordedAt - b.recordedAt
+    let yours
+    const others = []
+    if (project) {
+      yours = project.clipKeys.map((k) => byKey.get(k)).filter(Boolean)
+      const seen = new Set(yours.map((c) => c.key))
+      sources.forEach((s) => (s.clipKeys || []).forEach((k) => {
+        const c = byKey.get(k)
+        if (c && !seen.has(k) && (k === currentKey || has(k))) { seen.add(k); others.push(c) }
+      }))
+      const cur = currentKey && byKey.get(currentKey)
+      if (cur && !seen.has(currentKey)) others.push(cur)
+    } else {
+      yours = clips.filter((c) => c.key === currentKey || has(c.key))
+    }
+    yours = yours.slice().sort(byTime)
+    others.sort((a, b) => (rank.has(a.key) ? rank.get(a.key) : 99) - (rank.has(b.key) ? rank.get(b.key) : 99) || byTime(a, b))
+    const personOf = (n, key) => n.pov || (srcOf.get(key) || {}).name || YOU
+
+    const palette = new Map([[YOU, null]])
+    sources.forEach((s, i) => palette.set(s.name, POV_COLORS[i % POV_COLORS.length]))
+    let next = sources.length
+    const paint = (name, hint) => { if (!palette.has(name)) palette.set(name, hint || POV_COLORS[next++ % POV_COLORS.length]) }
+    const facets = { types: {}, star: 0, unsent: 0, total: 0, people: new Map() }
+    for (const c of [...yours, ...others]) {
+      const r = reviews[c.key]
+      if (!r) continue
+      ;(r.povs || []).forEach((p, i) => paint(p.name, p.color || POV_COLORS[i % POV_COLORS.length]))
+      for (const n of r.notes) {
+        if (n.type === 'BREAK') continue
+        if (n.pov) paint(n.pov)
+        const who = personOf(n, c.key)
+        facets.total++
+        facets.types[n.type] = (facets.types[n.type] || 0) + 1
+        if (n.star) facets.star++
+        if (!n.exportedAt) facets.unsent++
+        facets.people.set(who, (facets.people.get(who) || 0) + 1)
+      }
+    }
+    const isSource = (name) => sources.some((s) => s.name === name)
+    const people = [...palette].filter(([name]) => name === YOU || facets.people.get(name) > 0 || isSource(name)).map(([name, col]) => ({ name, color: col, count: facets.people.get(name) || 0 }))
+    return { yours, others, srcOf, palette, personOf, facets, people }
+  }, [clips, reviews, project, currentKey])
+
+  const text = q.trim().toLowerCase()
+  const filtering = !!(text || starred || unsent || types.size !== TYPES.length + 1 || hidden.size)
+  const activeFilters = (types.size !== TYPES.length + 1 ? 1 : 0) + (starred ? 1 : 0) + (unsent ? 1 : 0) + (hidden.size ? 1 : 0)
   const groups = useMemo(() => {
-    const scope = project
-      ? project.clipKeys.map((k) => clips.find((c) => c.key === k)).filter(Boolean)
-      : clips.filter((c) => c.key === currentKey || (reviews[c.key] && reviews[c.key].notes.length))
-    const sorted = scope.slice().sort((a, b) => a.recordedAt - b.recordedAt)
-    const text = q.trim().toLowerCase()
-    const filtering = text || starred || unsent || types.size !== TYPES.length + 1
-    return sorted.map((c, i) => {
+    const make = (c, i, total, src) => {
       const all = (reviews[c.key] && reviews[c.key].notes) || []
-      const notes = all.filter(
-        (n) =>
-          (n.type === 'BREAK' && !filtering) ||
-          (n.type !== 'BREAK' && types.has(n.type) && (!starred || n.star) && (!unsent || !n.exportedAt) && (!text || (n.text || '').toLowerCase().includes(text)))
-      )
-      return { c, index: i + 1, total: sorted.length, notes, count: all.filter((n) => n.type !== 'BREAK').length }
-    })
-  }, [clips, reviews, project, currentKey, q, starred, unsent, types])
+      const notes = all.filter((n) => {
+        if (n.type === 'BREAK') return !filtering
+        if (!types.has(n.type) || (starred && !n.star) || (unsent && n.exportedAt)) return false
+        const who = scope.personOf(n, c.key)
+        if (hidden.has(who)) return false
+        if (!text) return true
+        return (n.text || '').toLowerCase().includes(text) || who.toLowerCase().includes(text) || LABEL[n.type].toLowerCase().includes(text)
+      })
+      return { c, index: i + 1, total, notes, count: notes.filter((n) => n.type !== 'BREAK').length, src }
+    }
+    const out = scope.yours.map((c, i) => make(c, i, scope.yours.length, null)).concat(scope.others.map((c, i) => make(c, i, scope.others.length, scope.srcOf.get(c.key) || null)))
+    return filtering ? out.filter((g) => g.count) : out
+  }, [scope, reviews, text, starred, unsent, types, hidden, filtering])
+  const isOpen = (g) => !collapsed.has(g.c.key) || !!text // a search shows what it found, folded or not
 
   useEffect(() => {
     if (currentGroupRef.current) currentGroupRef.current.scrollIntoView({ block: 'nearest' })
   }, [currentKey])
+  useEffect(() => setPos(-1), [text])
 
   const visibleIds = groups.flatMap((g) => g.notes.filter((n) => n.type !== 'BREAK').map((n) => n.id))
   const chosen = visibleIds.filter((id) => sel.has(id))
@@ -395,7 +543,7 @@ export default function NotesPanel() {
   // clicked note and this one, in the order they're shown (collapsed
   // recordings are skipped). Works across recordings.
   const anchorRef = useRef(null)
-  const shownIds = groups.filter((g) => !collapsed.has(g.c.key)).flatMap((g) => g.notes.filter((n) => n.type !== 'BREAK').map((n) => n.id))
+  const shownIds = groups.filter(isOpen).flatMap((g) => g.notes.filter((n) => n.type !== 'BREAK').map((n) => n.id))
   function pick(id, e) {
     const a = anchorRef.current
     if (e.shiftKey && a && a !== id && shownIds.includes(a) && shownIds.includes(id)) {
@@ -426,6 +574,56 @@ export default function NotesPanel() {
     200
   )
 
+  // Follow: keep the note being played in view (unless you've just scrolled yourself).
+  useEffect(() => {
+    if (!follow || !activeId || Date.now() - userScroll.current < 3000) return
+    const el = listRef.current && listRef.current.querySelector('.note.active')
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [follow, activeId])
+
+  // Where the list is scrolled to (Top / Bottom grey out when you're already there).
+  function measure() {
+    const el = listRef.current
+    if (!el) return
+    const top = el.scrollTop < 6
+    const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 6
+    setEdge((e) => (e.top === top && e.bottom === bottom ? e : { top, bottom }))
+  }
+  useEffect(measure, [groups, collapsed, zoom, showNotes, showFilters, text])
+
+  const toTop = () => listRef.current && listRef.current.scrollTo({ top: 0, behavior: 'smooth' })
+  const toBottom = () => listRef.current && listRef.current.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
+  function goNow() {
+    if (currentKey && collapsed.has(currentKey)) setCollapsed((s) => { s.delete(currentKey); return s })
+    setTimeout(() => {
+      const el = listRef.current
+      if (!el) return
+      const t = el.querySelector('.note.active') || el.querySelector('.ng.current .note') || el.querySelector('.ng.current')
+      if (t) t.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }, 40)
+  }
+  const allFolded = groups.length > 0 && groups.every((g) => collapsed.has(g.c.key))
+  const foldAll = () => setCollapsed((s) => { groups.forEach((g) => (allFolded ? s.delete(g.c.key) : s.add(g.c.key))); return s })
+
+  // Search: Enter goes to the next match (Shift+Enter the one before), Esc clears.
+  const flat = useMemo(() => groups.flatMap((g) => g.notes.filter((n) => n.type !== 'BREAK').map((n) => ({ n, key: g.c.key }))), [groups])
+  function step(dir) {
+    if (!flat.length) return
+    const i = pos < 0 ? (dir > 0 ? 0 : flat.length - 1) : (pos + dir + flat.length) % flat.length
+    setPos(i)
+    const m = flat[i]
+    if (m.key === currentKey) player.seek(m.n.t)
+    else openClip(m.key, m.n.t)
+    selectNote(m.n.id)
+  }
+  function clearFilters() {
+    setQ('')
+    setTypes(new Set([...TYPES, 'MARKER']))
+    setStarred(false)
+    setUnsent(false)
+    setHidden(new Set())
+  }
+
   async function exportPremiere(kind) {
     const ids = new Set(target)
     const payload = groups
@@ -435,7 +633,13 @@ export default function NotesPanel() {
     if (file) useStore.getState().showToast((kind === 'csv' ? 'CSV' : 'Premiere XML') + ' saved: ' + file)
   }
 
-  const totalNotes = groups.reduce((a, g) => a + g.count, 0)
+  const totalNotes = scope.facets.total
+  const shownNotes = groups.reduce((a, g) => a + g.count, 0)
+  const whoOf = (n, g) => {
+    const name = scope.personOf(n, g.c.key)
+    const rp = (reviews[g.c.key] && reviews[g.c.key].povs) || NONE
+    return { name, color: scope.palette.get(name), choices: !g.src && rp.length ? rp.map((p) => p.name) : null }
+  }
 
   return (
     <aside className={'notes-panel' + (colorBars ? ' color-bars' : '')}>
@@ -519,25 +723,80 @@ export default function NotesPanel() {
             </div>
           )}
         </div>}
-        {showNotes && <button className={'icon-btn small' + (showFilters ? ' on' : '')} onClick={() => setShowFilters(!showFilters)} title="Filter notes">⚲</button>}
         <PanelFullButton />
         <button className="icon-btn small" onClick={toggleNotesPanel} title="Hide notes (Ctrl+Shift+\)">»</button>
       </div>
       {pad && <div className="np-body"><ProjectPad /></div>}
       <div className={'np-body' + (both ? ' both' : '') + (swap ? ' swap' : '') + (both && stack ? ' stack' : '')} ref={bodyRef} style={pad ? { display: 'none' } : undefined}>
       <div className="np-col np-notes-col" style={{ display: showNotes ? undefined : 'none', flexBasis: both ? split * 100 + '%' : undefined }}>
+      <div className="np-tools">
+        <div className="np-tools-row">
+          <div className={'np-search' + (q ? ' has' : '')}>
+            <span className="np-search-ico"><Ico name="search" /></span>
+            <input
+              ref={searchRef}
+              className="np-search-input"
+              value={q}
+              spellCheck={false}
+              placeholder="Search notes…"
+              title="Search the notes' text, who they are about, and their type · Enter = next match · Shift+Enter = previous · Esc = clear · Ctrl+Shift+F focuses this"
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') { e.preventDefault(); step(e.shiftKey ? -1 : 1) }
+                else if (e.key === 'Escape') { e.preventDefault(); if (q) setQ(''); else e.target.blur() }
+              }}
+            />
+            {text && <span className="np-search-count" title="Enter goes to the next match">{pos >= 0 ? pos + 1 + '/' : ''}{flat.length}</span>}
+            {q && <button className="np-search-x" onClick={() => { setQ(''); searchRef.current && searchRef.current.focus() }} title="Clear the search"><Ico name="x" /></button>}
+          </div>
+          <button className={'icon-btn small np-filter-btn' + (showFilters ? ' on' : '')} onClick={() => setShowFilters(!showFilters)} title="Filter by type, star, whose footage…">
+            <Ico name="filter" />
+            {activeFilters > 0 && <span className="np-dot">{activeFilters}</span>}
+          </button>
+        </div>
+        <div className="np-nav">
+          <button onClick={toTop} disabled={edge.top} title="Scroll to the top of the list"><Ico name="top" />Top</button>
+          <button onClick={goNow} disabled={!currentKey} title="Scroll to the note at the playhead — the recording that's open"><Ico name="now" />Now</button>
+          <button onClick={toBottom} disabled={edge.bottom} title="Scroll to the bottom of the list"><Ico name="bottom" />Bottom</button>
+          <span className="grow" />
+          <button onClick={foldAll} disabled={!groups.length || !!text} title={text ? 'A search shows everything it finds' : allFolded ? 'Open every recording’s notes' : 'Fold every recording down to its title'}>
+            <Ico name={allFolded ? 'unfold' : 'fold'} />{allFolded ? 'Unfold all' : 'Fold all'}
+          </button>
+          <button className={'np-follow' + (follow ? ' on' : '')} aria-pressed={follow} onClick={() => useStore.getState().updateSettings({ notesFollow: !follow })} title="Keep the list scrolled to the note being played">
+            <span className="np-follow-dot" />Follow
+          </button>
+        </div>
+      </div>
       {showFilters && (
         <div className="all-filters">
-          <input className="lib-search" placeholder="Search notes…" value={q} onChange={(e) => setQ(e.target.value)} />
           <div className="chips">
             {[...TYPES, 'MARKER'].map((ty) => (
-              <button key={ty} className={'chip' + (types.has(ty) ? ' on' : '')} style={{ '--c': ty === 'MARKER' ? MARKER_COLORS[DEFAULT_MARKER_COLOR].hex : color(ty) }} onClick={() => setTypes((s) => { const n = new Set(s); n.has(ty) ? n.delete(ty) : n.add(ty); return n })}>
-                {LABEL[ty]}
+              <button key={ty} className={'chip' + (types.has(ty) ? ' on' : '') + (scope.facets.types[ty] ? '' : ' zero')} style={{ '--c': ty === 'MARKER' ? MARKER_COLORS[DEFAULT_MARKER_COLOR].hex : color(ty) }} onClick={() => setTypes((s) => { const n = new Set(s); n.has(ty) ? n.delete(ty) : n.add(ty); return n })}>
+                {LABEL[ty]}<span className="n">{scope.facets.types[ty] || 0}</span>
               </button>
             ))}
-            <button className={'chip' + (starred ? ' on' : '')} style={{ '--c': '#f5c542' }} onClick={() => setStarred(!starred)}>★ only</button>
-            <button className={'chip' + (unsent ? ' on' : '')} style={{ '--c': '#4fd1c5' }} onClick={() => setUnsent(!unsent)}>Not sent yet</button>
           </div>
+          <div className="chips">
+            <button className={'chip' + (starred ? ' on' : '')} style={{ '--c': '#f5c542' }} onClick={() => setStarred(!starred)}>★ Starred<span className="n">{scope.facets.star}</span></button>
+            <button className={'chip' + (unsent ? ' on' : '')} style={{ '--c': '#4fd1c5' }} onClick={() => setUnsent(!unsent)} title="Not sent to BijouDocs yet">Not sent yet<span className="n">{scope.facets.unsent}</span></button>
+          </div>
+          {scope.people.length > 1 && (
+            <div className="chips">
+              <span className="chips-label">Whose</span>
+              {scope.people.map((p) => (
+                <button key={p.name} className={'chip' + (hidden.has(p.name) ? '' : ' on') + (p.count ? '' : ' zero')} style={{ '--c': p.color || '#9aa0b4' }} title={hidden.has(p.name) ? 'Show ' + p.name + '’s notes' : 'Hide ' + p.name + '’s notes'} onClick={() => setHidden((s) => { const n = new Set(s); n.has(p.name) ? n.delete(p.name) : n.add(p.name); return n })}>
+                  {p.name}<span className="n">{p.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {filtering && (
+        <div className="np-active">
+          <span className="grow">{shownNotes === totalNotes ? 'All ' : 'Showing '}{shownNotes} of {totalNotes} note{totalNotes === 1 ? '' : 's'}</span>
+          <button className="link-btn" onClick={clearFilters}>Clear {q && activeFilters ? 'search & filters' : q ? 'search' : 'filters'}</button>
         </div>
       )}
 
@@ -560,26 +819,44 @@ export default function NotesPanel() {
         </div>
       )}
 
-      <div className="notes-list grouped" ref={listRef} style={{ zoom }}>
+      <div
+        className="notes-list grouped"
+        ref={listRef}
+        style={{ zoom }}
+        onScroll={measure}
+        onWheel={() => (userScroll.current = Date.now())}
+        onMouseDown={() => (userScroll.current = Date.now())}
+      >
         {!groups.length && (
           <div className="notes-empty">
-            {project ? <p>Add footage to this project, then press <kbd>M</kbd> while watching to drop a beat.</p> : <p>Open a recording and press <kbd>M</kbd> while watching to drop a beat, or type in the box below.</p>}
+            {filtering ? (
+              <>
+                <p>No notes match{text ? <> “<b>{q.trim()}</b>”</> : ' these filters'}.</p>
+                <button className="btn small" onClick={clearFilters}>Clear {q && activeFilters ? 'search & filters' : q ? 'search' : 'filters'}</button>
+              </>
+            ) : (
+              <>
+                <p>{project ? 'Add footage to this project, then watch.' : 'Open a recording and watch.'}</p>
+                <p className="dim small">Drop a beat with <kbd>M</kbd>, a plain note with <kbd>N</kbd>, a marker with <kbd>Shift</kbd>+<kbd>M</kbd> — or type below.</p>
+              </>
+            )}
           </div>
         )}
         {groups.map((g) => {
           const isCur = g.c.key === currentKey
-          const open = !collapsed.has(g.c.key)
+          const open = isOpen(g)
           const ids = g.notes.filter((n) => n.type !== 'BREAK').map((n) => n.id)
           const allOn = ids.length > 0 && ids.every((id) => sel.has(id))
           return (
             <div key={g.c.key} className={'ng' + (isCur ? ' current' : '') + (g.count ? '' : ' empty')} ref={isCur ? currentGroupRef : null}>
               <div className="ng-head">
-                <button className="ng-caret" onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.c.key) ? n.delete(g.c.key) : n.add(g.c.key); return n })}>
+                <button className="ng-caret" onClick={() => setCollapsed((s) => { const n = new Set(s); n.has(g.c.key) ? n.delete(g.c.key) : n.add(g.c.key); return n })} title={open ? 'Fold' : 'Open'}>
                   {open ? '▼' : '▶'}
                 </button>
+                {g.src && <span className="who-tag fixed" style={{ '--w': g.src.color }} title={g.src.name + '’s recording'}>{g.src.name}</span>}
                 <span className="ng-title" onClick={() => !isCur && openClip(g.c.key)} title={g.c.path}>
                   {fmtDay(g.c.recordedAt)} · {clipTitle(g.c)}
-                  {project && <span className="dim"> ({g.index}/{g.total})</span>}
+                  {project && !g.src && <span className="dim"> ({g.index}/{g.total})</span>}
                 </span>
                 <span className="dim small">{g.count || ''}</span>
                 <input type="checkbox" disabled={!ids.length} checked={allOn} onChange={(e) => toggleSel(ids, e.target.checked)} title="Select this recording's notes" />
@@ -596,6 +873,8 @@ export default function NotesPanel() {
                   checked={sel.has(n.id)}
                   onPick={(e) => pick(n.id, e)}
                   onAnchor={() => (anchorRef.current = n.id)}
+                  q={text}
+                  who={n.type === 'BREAK' ? null : whoOf(n, g)}
                 />
               ))}
               {open && isCur && !g.notes.length && <div className="ng-empty dim small">No notes yet — press <kbd>M</kbd> or type below.</div>}

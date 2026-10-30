@@ -2116,3 +2116,49 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .np-body.both.stack .np-split { width: auto; height: 5px; margin: -2px 0; cursor: ns-resize; }
 .np-body.both.stack .np-split::after { left: 0; right: 0; top: 2px; bottom: auto; width: auto; height: 1px; }
 .np-body.both.stack .np-split:hover::after, body.resizing-ns .np-body.both.stack .np-split::after { height: 3px; top: 1px; width: auto; left: 0; }
+
+/* ---------- notes: search, jump buttons, filters, whose footage ---------- */
+.np-tools { display: flex; flex-direction: column; gap: 6px; padding: 8px 8px 7px; border-bottom: 1px solid var(--line-soft); }
+.np-tools-row { display: flex; align-items: center; gap: 6px; }
+.np-search { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; }
+.np-search-ico { position: absolute; left: 8px; display: flex; color: var(--ink-faint); pointer-events: none; }
+.np-search-input { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); font-size: 12px; padding: 5px 56px 5px 27px; outline: none; }
+.np-search-input::placeholder { color: var(--ink-faint); }
+.np-search-input:focus { border-color: var(--cyan); }
+.np-search.has .np-search-input { border-color: rgba(79, 209, 197, 0.5); }
+.np-search-count { position: absolute; right: 26px; font: 500 10.5px var(--mono); color: var(--cyan); pointer-events: none; }
+.np-search-x { position: absolute; right: 3px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 4px; color: var(--ink-faint); padding: 0; }
+.np-search-x:hover { color: var(--ink); background: var(--panel-3); }
+.np-filter-btn { position: relative; flex: none; display: flex; align-items: center; justify-content: center; }
+.np-filter-btn.on { color: var(--ink); background: var(--panel-3); }
+.np-dot { position: absolute; top: -4px; right: -4px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--cyan); color: #06201d; font: 700 9.5px var(--sans); line-height: 14px; text-align: center; }
+.np-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.np-nav button { display: inline-flex; align-items: center; gap: 4px; background: var(--panel-2); border: 1px solid var(--line-soft); border-radius: 6px; color: var(--ink-dim); font: 600 11px var(--sans); padding: 2px 8px 2px 6px; white-space: nowrap; }
+.np-nav button:hover:not(:disabled) { color: var(--ink); border-color: var(--line); background: var(--panel-3); }
+.np-nav button:disabled { opacity: 0.38; cursor: default; }
+.np-follow.on { color: var(--cyan); border-color: rgba(79, 209, 197, 0.45); background: rgba(79, 209, 197, 0.08); }
+.np-follow-dot { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid currentColor; box-sizing: border-box; }
+.np-follow.on .np-follow-dot { background: currentColor; }
+.np-active { display: flex; align-items: center; gap: 10px; padding: 4px 12px; font-size: 11.5px; color: var(--ink-dim); background: var(--panel-2); border-bottom: 1px solid var(--line-soft); }
+.all-filters .chips { align-items: center; }
+.chips-label { font-size: 11px; color: var(--ink-faint); margin-right: 2px; }
+.chip .n { margin-left: 5px; font-size: 10px; opacity: 0.6; }
+.chip.zero:not(.on) { opacity: 0.55; }
+mark.hl { background: rgba(245, 197, 66, 0.3); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* whose footage a note is about */
+.who-tag { flex: none; border: 0; border-radius: 4px; padding: 1px 7px; font: 600 10px var(--sans); background: color-mix(in srgb, var(--w) 20%, transparent); color: color-mix(in srgb, var(--w) 70%, white); max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.who-tag.fixed { cursor: default; }
+.who-tag.you { background: transparent; color: var(--ink-faint); font-weight: 500; box-shadow: inset 0 0 0 1px var(--line); }
+.note:not(:hover):not(.selected) .who-tag.you { opacity: 0.45; }
+.who-tag:hover { filter: brightness(1.2); }
+
+/* the log box: one line of "what it will be" above where you type */
+.logbox { flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 8px 7px; }
+.logbox-meta { display: flex; align-items: center; gap: 7px; min-height: 20px; flex-wrap: wrap; }
+.logbox-meta .logbox-type { margin-top: 0; }
+.logbox-at { font: 500 11px var(--mono); color: var(--ink-faint); }
+.logbox.typing .logbox-at { color: var(--cyan); }
+.logbox-hint { margin-left: auto; font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
+.logbox .logbox-input { flex: none; width: 100%; background: var(--bg); border-color: var(--line); }
+.logbox .logbox-input:focus { border-color: var(--cyan); }

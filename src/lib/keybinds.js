@@ -137,6 +137,11 @@ export const ACTIONS = [
       if (st.settings.sideTab !== 'both') st.setSideTab('transcript')
       setTimeout(() => bus.emit('focusTranscriptSearch'), 0)
     } },
+  { id: 'searchNotes', label: 'Search the notes', cat: 'Notes', keys: ['Ctrl+Shift+F'], run: ({ st, bus }) => {
+      if (st.settings.notesHidden) st.toggleNotesPanel()
+      if (['transcript', 'pad'].includes(st.settings.sideTab)) st.setSideTab('notes')
+      setTimeout(() => bus.emit('focusNotesSearch'), 60)
+    } },
   { id: 'gotoTime', label: 'Go to a time (type it)', cat: 'Playback', keys: ['Ctrl+G'], needsClip: true, run: ({ bus }) => bus.emit('gotoTime') },
   { id: 'addToSection', label: 'Add to the open edit section (I … here, or the whole recording)', cat: 'Edit', keys: ['E'], needsClip: true, run: ({ st, player, osd }) => {
     const pin = st.inPoint && st.inPoint.key === st.currentKey && Math.abs(player.getTime() - st.inPoint.t) >= 0.5 ? st.inPoint.t : null
