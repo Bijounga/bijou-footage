@@ -910,7 +910,6 @@ export const useStore = create(
     updateSeqMarker(id, patch) {
       const sec = get().currentSection()
       if (!sec) return
-      if (patch.color) set((s) => { s.settings.markerColor = patch.color })
       get().applySection({ markers: (sec.markers || []).map((m) => (m.id === id ? { ...m, ...patch } : m)).sort((a, b) => a.t - b.t) })
     },
     deleteSeqMarker(id) {
@@ -1762,9 +1761,9 @@ export const useStore = create(
       get().scheduleSave()
       return count
     },
+    // Recolours that one marker only; the colour new markers get is set from the Marker button's menu.
     setMarkerColor(id, color, key) {
       get().editNote(id, { color }, key)
-      set((s) => { s.settings.markerColor = color })
     },
 
     // kind: 'beat' (auto Setup/But/Therefore like Beat Notes), 'note', 'break',

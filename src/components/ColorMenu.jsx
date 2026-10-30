@@ -4,8 +4,8 @@ import { MARKER_COLORS } from '../lib/beats.js'
 
 // Right-click color picker for markers. Opened from a marker on the
 // timeline or in the notes list (recolors that marker), or from the Marker
-// button (sets the color for new markers). Either way the picked color is
-// what the next markers you drop will use.
+// button (sets the color for new markers). Recoloring a marker leaves the
+// color for new markers alone.
 export default function ColorMenu() {
   const menu = useStore((s) => s.colorMenu)
   const markerColor = useStore((s) => s.settings.markerColor || 'yellow')
@@ -46,7 +46,6 @@ export default function ColorMenu() {
           <button key={k} className={'mk-swatch' + (current === k ? ' on' : '')} style={{ '--c': c.hex }} title={c.label} onClick={() => pick(k)} />
         ))}
       </div>
-      {note && <div className="color-menu-hint">New markers will use this color too</div>}
     </div>
   )
 }
