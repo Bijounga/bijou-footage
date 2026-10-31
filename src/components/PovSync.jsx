@@ -525,6 +525,9 @@ export default function PovSync() {
           mix={mix}
           onMix={own.a || own.b ? onMix : null}
           audible={audible}
+          sideMuted={{ a: mutedM, b: mutedP }}
+          onSideMute={(side) => (side === 'a' ? setMutedM((m) => !m) : setMutedP((m) => !m))}
+          onHearAll={() => { setMutedM(false); setMutedP(false); setMix({ a: {}, b: {} }) }}
         />
         <div className="ps-foot">
           <span className="dim small ps-keys">

@@ -2063,7 +2063,7 @@ button.pov-row:hover, .pov-name:hover { background: var(--panel-3); }
 .ps-paused { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: rgba(255, 255, 255, 0.55); pointer-events: none; }
 .ps-row { justify-content: center; gap: 4px; }
 .ps-follows { min-height: 24px; align-items: center; }
-.sw-show { display: inline-flex; gap: 6px; margin: 0 8px; }
+.sw-show { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px; }
 .sw-show .mini-btn.on { color: var(--ink); }
 .sw-show .mini-btn:not(.on) { opacity: 0.7; }
 .ps-parts { padding: 4px 18px 10px; }
@@ -2166,3 +2166,11 @@ mark.hl { background: rgba(245, 197, 66, 0.3); color: inherit; border-radius: 2p
 /* "Match voice levels" under the last track head (Timeline) */
 .th-balance { margin: 8px 8px 0; padding: 4px 9px; font: 600 11px var(--sans); color: var(--ink-dim); background: var(--panel-3); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
 .th-balance:hover { color: var(--ink); border-color: var(--cyan); }
+
+/* sync window: the header row over each side's tracks */
+.sw-grp { position: absolute; left: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 8px 0 8px; box-sizing: border-box; }
+.sw-grp-name { display: flex; align-items: center; gap: 5px; min-width: 0; padding: 0; background: none; border: none; font: 700 11px var(--sans); color: var(--ink); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw-grp-name:hover { color: var(--cyan); }
+.sw-grp-caret { color: var(--ink-dim); font-size: 10px; width: 9px; }
+.sw-grp.off .sw-grp-name { opacity: 0.55; }
+.sw-grp .th-btn { position: absolute; left: 90px; top: 2px; width: 20px; height: 18px; font-size: 9.5px; }

@@ -10,11 +10,12 @@ import { fmtTime } from '../lib/time.js'
 
 const ROW = 26
 const RULER = 18
+const GH = 22 // the header row above each side: its name, hide / show, mute all
 const LABEL = 136 // track names + their M / S buttons
 const STEPS = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 600, 1800, 3600]
 
 // audible(side, i) → is that track heard; onMix(side, i, 'mute' | 'solo'); mix[side][i] = {mute, solo}
-export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mainColors, povName, povColor = '#f5c542', waiting, onCommit, mix, onMix, audible }) {
+export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mainColors, povName, povColor = '#f5c542', waiting, onCommit, mix, onMix, audible, sideMuted, onSideMute, onHearAll }) {
   const wrapRef = useRef(null)
   const cvRef = useRef(null)
   const [w, setW] = useState(600)
@@ -30,7 +31,9 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
   const allB = B ? B.tracks.map((tr, i) => ({ tr, i })).filter((x) => has(x.tr)) : []
   const rowsA = show.a ? allA : []
   const rowsB = show.b ? allB : []
-  const H = RULER + (rowsA.length + (B ? rowsB.length : show.b ? 3 : 0)) * ROW + (rowsA.length && rowsB.length ? 6 : 2)
+  const hdr = A ? GH : 0
+  const yB0 = RULER + hdr + rowsA.length * ROW + (rowsA.length && rowsB.length ? 3 : 0) // where their header starts
+  const H = RULER + hdr * 2 + (rowsA.length + (B ? rowsB.length : show.b ? 3 : 0)) * ROW + (rowsA.length && rowsB.length ? 6 : 2)
 
   useLayoutEffect(() => {
     const el = wrapRef.current
@@ -125,6 +128,14 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
     let y = RULER
     ctx.textBaseline = 'middle'
     ctx.font = '600 10.5px Inter, sans-serif'
+    // a header strip over each side's rows (its buttons are DOM, over the label column)
+    const strip = (yy, color) => {
+      ctx.fillStyle = 'rgba(255,255,255,0.06)'
+      ctx.fillRect(0, yy, w, GH)
+      ctx.fillStyle = color
+      ctx.fillRect(0, yy, 3, GH)
+    }
+    if (hdr) { strip(y, mainColors[0] || cyan); y += GH }
     for (const r of rowsA) {
       drawRow(r.tr, A.pps, y, mainColors[r.i] || cyan, 0, !audible || audible('a', r.i))
       ctx.globalAlpha = 1
@@ -138,6 +149,7 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
       ctx.fillRect(0, y + 1, w, 1)
       y += 3
     }
+    if (hdr) { strip(y, povColor); y += GH }
     for (const r of rowsB) {
       drawRow(r.tr, B.pps, y, povColor, o, !audible || audible('b', r.i))
       ctx.globalAlpha = 1
@@ -151,7 +163,7 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
       ctx.fillStyle = '#fff'
       ctx.fillRect(Math.round(px), 0, 1, H)
     }
-  }, [A, B, view, w, H, t, o, drag, mainNames.join(), povName, povColor, JSON.stringify(mix || null)])
+  }, [A, B, view, w, H, t, o, drag, mainNames.join(), povName, povColor, JSON.stringify(mix || null), !!(sideMuted && sideMuted.a), !!(sideMuted && sideMuted.b)])
 
   function down(e) {
     if (e.button !== 0) return
@@ -160,7 +172,7 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
     const y = e.clientY - r.top
     if (x < LABEL) return
     const v = viewRef.current
-    const theirs = rowsB.length > 0 && y > RULER + rowsA.length * ROW + 2
+    const theirs = rowsB.length > 0 && y > yB0 - 1
     if (!theirs) {
       // yours / the ruler: the playhead goes here (drag to scrub)
       const seek = (ev) => onSeek(Math.max(0, v.start + (ev.clientX - r.left - LABEL) / v.pps))
@@ -201,10 +213,7 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
     <div className="sw">
       <div className="sw-bar">
         <span className="dim small">{show.a && show.b ? 'Your tracks above, theirs below — drag theirs until the bumps line up · ' : ''}Ctrl+scroll zooms · click to move the playhead</span>
-        <span className="sw-show" title="Show or hide each side’s tracks">
-          <button className={'mini-btn' + (show.a ? ' on' : '')} onClick={() => toggle('a')} aria-pressed={show.a}>{show.a ? '▾' : '▸'} Yours</button>
-          <button className={'mini-btn' + (show.b ? ' on' : '')} onClick={() => toggle('b')} aria-pressed={show.b}>{show.b ? '▾' : '▸'} {clip(povName, 14)}</button>
-        </span>
+        {onHearAll && <button className="mini-btn" onClick={onHearAll} title="Hear every track of both sides: clears every mute and solo">Unmute all</button>}
         <span className="vo-tx-spacer" />
         <button className="mini-btn" onClick={() => zoom(1 / 2)} title="Zoom out">−</button>
         <button className="mini-btn" onClick={() => zoom(2)} title="Zoom in (around the playhead)">+</button>
@@ -212,10 +221,24 @@ export default function SyncWaves({ A, B, off, setOff, t, onSeek, mainNames, mai
       </div>
       <div className="sw-canvas" ref={wrapRef} onMouseDown={down} style={{ height: H }}>
         {A ? <canvas ref={cvRef} /> : <div className="dim small sw-wait">{waiting || 'Getting the waveforms ready…'}</div>}
-        {onMix && A && rowsA.map((r, k) => <RowButtons key={'a' + r.i} top={RULER + k * ROW} m={(mix && mix.a && mix.a[r.i]) || {}} onMix={(what) => onMix('a', r.i, what)} />)}
-        {onMix && B && rowsB.map((r, k) => <RowButtons key={'b' + r.i} top={RULER + rowsA.length * ROW + (rowsA.length ? 3 : 0) + k * ROW} m={(mix && mix.b && mix.b[r.i]) || {}} onMix={(what) => onMix('b', r.i, what)} />)}
+        {A && <GroupHead top={RULER} name="Yours" color={mainColors[0]} open={show.a} onToggle={() => toggle('a')} off={sideMuted && sideMuted.a} onMute={onSideMute && (() => onSideMute('a'))} />}
+        {A && <GroupHead top={yB0} name={clip(povName, 12)} color={povColor} open={show.b} onToggle={() => toggle('b')} off={sideMuted && sideMuted.b} onMute={onSideMute && (() => onSideMute('b'))} />}
+        {onMix && A && rowsA.map((r, k) => <RowButtons key={'a' + r.i} top={RULER + hdr + k * ROW} m={(mix && mix.a && mix.a[r.i]) || {}} onMix={(what) => onMix('a', r.i, what)} />)}
+        {onMix && B && rowsB.map((r, k) => <RowButtons key={'b' + r.i} top={yB0 + hdr + k * ROW} m={(mix && mix.b && mix.b[r.i]) || {}} onMix={(what) => onMix('b', r.i, what)} />)}
         {A && !B && show.b && <div className="sw-wait sw-wait-b small">{waiting || 'Getting their waveform ready…'}</div>}
       </div>
+    </div>
+  )
+}
+
+// The header row of one side: ▾ / ▸ hides or shows its tracks; M mutes all of them (their own M / S stay as set)
+function GroupHead({ top, name, color, open, onToggle, off, onMute }) {
+  return (
+    <div className={'sw-grp' + (off ? ' off' : '')} style={{ top, height: GH, width: LABEL }} onMouseDown={(e) => e.stopPropagation()}>
+      <button className="sw-grp-name" onClick={onToggle} title={open ? 'Hide ' + name + '’s tracks' : 'Show ' + name + '’s tracks'} style={{ '--c': color }}>
+        <span className="sw-grp-caret">{open ? '▾' : '▸'}</span>{name}
+      </button>
+      {onMute && <button className={'th-btn' + (off ? ' on-m' : '')} onClick={onMute} title={off ? 'All of ' + name + '’s tracks are off — click to hear them (their own M / S choices are kept)' : 'Turn off all of ' + name + '’s tracks at once (their own M / S choices are kept)'}>M</button>}
     </div>
   )
 }
