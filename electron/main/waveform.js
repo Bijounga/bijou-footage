@@ -102,6 +102,43 @@ export function audioFiles(clip) {
   return out
 }
 
+// How loud each extracted track really is: {trackIndex: {lufs, peak}} (EBU R128
+// integrated loudness, silence gated out; peak in dBFS). null for a track
+// that is silent. The waveform is drawn on a dB curve, so two tracks can look
+// alike and still sit 12 dB apart. The files never change, so a measure is kept.
+const loudnessMemo = new Map() // file -> {lufs, peak} | null
+
+function measureFile(file) {
+  if (loudnessMemo.has(file)) return Promise.resolve(loudnessMemo.get(file))
+  return new Promise((resolve) => {
+    let err = ''
+    let proc
+    try {
+      proc = spawn(ffmpegPath, ['-hide_banner', '-nostats', '-i', file, '-vn', '-af', 'ebur128=peak=true:framelog=quiet', '-f', 'null', '-'], { windowsHide: true })
+    } catch { return resolve(null) }
+    proc.stderr.on('data', (d) => { err += d.toString() })
+    proc.on('error', () => resolve(null))
+    proc.on('close', () => {
+      const num = (re) => {
+        const m = err.match(re)
+        return m ? parseFloat(m[1]) : NaN
+      }
+      const lufs = num(/^\s+I:\s+(-?[\d.]+) LUFS/m)
+      const peak = num(/^\s+Peak:\s+(-?[\d.]+) dBFS/m)
+      const out = isFinite(lufs) && lufs > -60 ? { lufs, peak: isFinite(peak) ? peak : 0 } : null
+      loudnessMemo.set(file, out)
+      resolve(out)
+    })
+  })
+}
+
+export async function loudness(clip) {
+  const files = audioFiles(clip)
+  const out = {}
+  await Promise.all(Object.entries(files).map(async ([i, f]) => { out[i] = await measureFile(f) }))
+  return out
+}
+
 export function status(clip) {
   if (isComplete(clip)) return 'ready'
   if (running && running.clip.key === clip.key) return 'running'

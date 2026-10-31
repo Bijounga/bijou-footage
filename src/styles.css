@@ -2162,3 +2162,7 @@ mark.hl { background: rgba(245, 197, 66, 0.3); color: inherit; border-radius: 2p
 .logbox-hint { margin-left: auto; font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
 .logbox .logbox-input { flex: none; width: 100%; background: var(--bg); border-color: var(--line); }
 .logbox .logbox-input:focus { border-color: var(--cyan); }
+
+/* "Match voice levels" under the last track head (Timeline) */
+.th-balance { margin: 8px 8px 0; padding: 4px 9px; font: 600 11px var(--sans); color: var(--ink-dim); background: var(--panel-3); border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.th-balance:hover { color: var(--ink); border-color: var(--cyan); }

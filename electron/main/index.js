@@ -529,6 +529,7 @@ function registerIpc() {
   })
   ipcMain.handle('waveform:clearQueue', () => waveform.clearQueue())
   ipcMain.handle('media:audioFiles', (_e, clip) => waveform.audioFiles(clip))
+  ipcMain.handle('media:loudness', (_e, clip) => waveform.loudness(clip))
   ipcMain.handle('cache:setPolicy', (_e, limitGB, mode) => waveform.setCachePolicy(limitGB * 1024 ** 3, mode))
   ipcMain.handle('cache:stats', () => waveform.cacheStats(path.join(userData(), 'transcripts')))
   ipcMain.handle('cache:trim', (_e, keepClip) => waveform.trimCache(keepClip))

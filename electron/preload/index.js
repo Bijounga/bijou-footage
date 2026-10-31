@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('footage', {
   clearWaveformQueue: () => ipcRenderer.invoke('waveform:clearQueue'),
   onWaveformEvent: (cb) => on('waveform:event', cb),
   audioFiles: (clip) => ipcRenderer.invoke('media:audioFiles', clip),
+  loudness: (clip) => ipcRenderer.invoke('media:loudness', clip),
   setCachePolicy: (limitGB, mode) => ipcRenderer.invoke('cache:setPolicy', limitGB, mode),
   cacheStats: () => ipcRenderer.invoke('cache:stats'),
   trimCache: (keepClip) => ipcRenderer.invoke('cache:trim', keepClip),

@@ -53,18 +53,22 @@ function drawShield(ctx, x, top, w, h, color, selected) {
   ctx.stroke()
 }
 
-// Vertical volume fader, 0–200%. Drag, wheel (±5%), double-click = 100%.
+// Vertical volume fader, 0–400%. Drag, wheel (±5%, ±10% past 200%), double-click = 100%.
+// Curved so 100% stays halfway up (and the fine control stays below it) while
+// the top still reaches 400% — a quiet friend on Discord can be 12 dB down.
+const MAX_VOL = 4
 export function Fader({ value, onChange, height }) {
   const ref = useRef(null)
   const trackH = Math.max(20, height - 14)
-  const pos = Math.max(0, Math.min(1, value / 2))
+  const pos = Math.max(0, Math.min(1, Math.sqrt(Math.max(0, value) / MAX_VOL)))
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const onWheel = (e) => {
       e.preventDefault()
       e.stopPropagation()
-      onChange(Math.max(0, Math.min(2, Math.round((value + (e.deltaY < 0 ? 0.05 : -0.05)) * 100) / 100)))
+      const step = value >= 2 ? 0.1 : 0.05
+      onChange(Math.max(0, Math.min(MAX_VOL, Math.round((value + (e.deltaY < 0 ? step : -step)) * 100) / 100)))
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
@@ -75,9 +79,10 @@ export function Fader({ value, onChange, height }) {
     const r = ref.current.getBoundingClientRect()
     const set = (ev) => {
       const f = 1 - (ev.clientY - r.top - 5) / (r.height - 10)
-      const v = Math.max(0, Math.min(2, f * 2))
+      const fc = Math.max(0, Math.min(1, f))
+      const v = MAX_VOL * fc * fc
       // gentle detent at 100%
-      onChange(Math.abs(v - 1) < 0.04 ? 1 : Math.round(v * 100) / 100)
+      onChange(Math.abs(v - 1) < 0.1 ? 1 : Math.round(v * 100) / 100)
     }
     set(e)
     const up = () => {
@@ -1114,6 +1119,11 @@ export default function Timeline() {
                   pov={povClip ? povEntry.key : null}
                 />
               ))}
+              {!povClip && nTracks > 1 && (
+                <button className="th-balance" onClick={() => useStore.getState().balanceVoices()} title="Measure how loud the voice tracks (the ones with A on) really are and set their faders so they sit level — the waveforms look alike even when one is far quieter">
+                  Match voice levels
+                </button>
+              )}
             </div>
           </div>
         </div>

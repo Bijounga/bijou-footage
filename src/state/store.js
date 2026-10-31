@@ -1497,6 +1497,30 @@ export const useStore = create(
       get().pushMixer()
       get().scheduleSave()
     },
+    // Match the voice tracks (the ones with A on) by how loud they really are,
+    // not how the waveform looks. Loud as it can go without the loudest
+    // moment of any of them clipping, so the quiet voice is lifted and the
+    // loud one eased down rather than everything piling up past 0 dB.
+    async balanceVoices() {
+      const clip = get().clip()
+      if (!clip) return
+      const voices = (get().settings.speechShow || []).map((on, i) => (on ? i : -1)).filter((i) => i >= 0 && get().settings.mixer[i])
+      if (voices.length < 2) return get().showToast('Turn on A (show talking) on the voice tracks to match — yours and your friend’s — then try again', 'error')
+      get().showToast('Measuring the voice tracks…')
+      const m = await api.loudness(clip)
+      if (get().currentKey !== clip.key) return
+      const found = voices.filter((i) => m && m[i])
+      if (found.length < 2) return get().showToast('Couldn’t find two voice tracks with sound to compare yet — the audio may still be getting prepared', 'error')
+      const CEILING = -2 // dBFS the loudest peak may reach
+      const target = Math.min(...found.map((i) => m[i].lufs + (CEILING - m[i].peak)))
+      const vols = {}
+      for (const i of found) vols[i] = Math.max(0.05, Math.min(4, Math.round(Math.pow(10, (target - m[i].lufs) / 20) * 100) / 100))
+      set((s) => { for (const i of found) s.settings.mixer[i].vol = vols[i] })
+      get().pushMixer()
+      get().scheduleSave()
+      const names = trackNamesFor(get(), clip.key)
+      get().showToast('Voices matched at ' + Math.round(target) + ' LUFS — ' + found.map((i) => (names[i] || 'Track ' + (i + 1)) + ' ' + Math.round(vols[i] * 100) + '%').join(' · '))
+    },
     toggleMute(i) {
       const clip = get().clip()
       const a = clip && clip.probe && clip.probe.audio[i]
