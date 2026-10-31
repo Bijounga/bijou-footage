@@ -543,28 +543,40 @@ export const useStore = create(
       for (const k in st.reviews) for (const p of st.reviews[k].povs || []) povKeys.add(p.key)
       const mine = st.clips.filter((c) => c.probe && !want.has(norm(c.key)) && !povKeys.has(c.key))
       const placed = [] // {main, key}
+      const skipped = [] // why a picked file wasn't added: {name, why}
       let stray = 0
+      const fileName = (k) => k.split(/[\\/]/).pop()
+      const recName = (k) => fileName(k).replace(/\.[^.]+$/, '')
       set((s) => {
+        const mainClip = s.clips.find((x) => x.key === main)
+        const found = new Set(s.clips.map((c) => norm(c.key)))
+        for (const p of picked) if (!found.has(norm(p))) skipped.push({ name: fileName(p), why: 'isn’t a video the app can read (or is in an excluded folder)' })
         for (const c of s.clips) {
-          if (!want.has(norm(c.key)) || c.key === main) continue
-          // the recording it overlaps most — the open one wins a tie
+          if (!want.has(norm(c.key))) continue
+          if (c.key === main) { skipped.push({ name: fileName(c.key), why: 'is the recording you have open' }); continue }
+          // the open recording if it really overlaps the file in time, else the
+          // recording it overlaps most — the open one wins a tie
           let target = null
           let best = 0
-          for (const m of mine) {
-            const o = overlap(m, c) + (m.key === main ? 1 : 0)
-            if (o > best) { best = o; target = m.key }
+          if (mainClip && overlap(mainClip, c) > 0) target = main
+          else {
+            for (const m of mine) {
+              const o = overlap(m, c) + (m.key === main ? 1 : 0)
+              if (o > best) { best = o; target = m.key }
+            }
           }
           if (!target) { target = main; stray++ }
           const r = s.reviews[target] || (s.reviews[target] = emptyReview())
           if (!r.povs) r.povs = []
-          if (r.povs.some((p) => p.key === c.key) || r.povs.length >= 8) continue
+          if (r.povs.some((p) => p.key === c.key)) { skipped.push({ name: fileName(c.key), why: target === main ? 'is already a POV on this recording' : 'is already a POV of ' + recName(target) + ' — the recording it overlaps' }); continue }
+          if (r.povs.length >= 8) { skipped.push({ name: fileName(c.key), why: 'would be a 9th POV (8 is the most per recording)' }); continue }
           const targetClip = s.clips.find((x) => x.key === target)
           r.povs.push({ key: c.key, name: povName(c), off: guessOffset(targetClip || {}, c), synced: false })
           placed.push({ main: target, key: c.key })
         }
       })
       get().scheduleSave()
-      if (!placed.length) return get().showToast('Already added')
+      if (!placed.length) return get().showToast(skipped.length ? skipped.map((x) => x.name + ' ' + x.why).join(' · ') : 'Nothing was added', 'error')
       const here = placed.filter((p) => p.main === main)
       const elsewhere = placed.length - here.length
       if (elsewhere) {
