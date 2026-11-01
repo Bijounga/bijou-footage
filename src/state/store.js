@@ -1963,7 +1963,7 @@ export const useStore = create(
     setInPoint() {
       const t = player.getTime()
       set((s) => { s.inPoint = { key: s.currentKey, t } })
-      get().showToast('In point set — O makes a range beat ending here · E sends in → here to the edit section')
+      get().showToast('In point set — O makes a range beat ending here · E sends in → here to the edit section · Esc clears it')
     },
     clearInPoint() {
       set((s) => { s.inPoint = null })

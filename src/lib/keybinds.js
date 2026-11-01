@@ -199,7 +199,7 @@ export const ACTIONS = [
     id: 'cycleType', label: 'Change selected beat type', cat: 'Notes', keys: ['T'], needsClip: true,
     run: ({ st, e }) => { const n = selectedNote(st); if (n && n.type !== 'BREAK' && n.type !== 'MARKER') st.editNote(n.id, { type: cycleType(n.type, e.shiftKey ? -1 : 1) }) }
   },
-  { id: 'deselect', label: 'Deselect note', cat: 'Notes', keys: ['Escape'], run: ({ st }) => { if (st.selectedNoteId) st.selectNote(null) } },
+  { id: 'deselect', label: 'Deselect note · clear the in point', cat: 'Notes', keys: ['Escape'], run: ({ st, osd }) => { if (st.selectedNoteId) st.selectNote(null); else if (st.inPoint) { st.clearInPoint(); osd('In point cleared') } } },
   { id: 'undo', label: 'Undo (notes)', cat: 'Notes', keys: ['Ctrl+Z'], run: ({ st }) => { if (st.povFocus && alignHistoryInfo().canUndo) undoAlign(); else st.undoNotes() } },
   { id: 'redo', label: 'Redo (notes)', cat: 'Notes', keys: ['Ctrl+Shift+Z', 'Ctrl+Y'], run: ({ st }) => st.redoNotes() },
   {
