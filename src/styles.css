@@ -309,8 +309,8 @@ input[type='range']::-webkit-slider-thumb {
 .tl-main-body canvas { display: block; position: absolute; left: 0; top: 0; }
 .tl-overlay { cursor: text; }
 .hover-preview {
-  position: absolute;
-  z-index: 20;
+  position: fixed;
+  z-index: 80;
   pointer-events: none;
   background: #000;
   border: 1px solid rgba(255, 255, 255, 0.25);

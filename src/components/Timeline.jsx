@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore, TRACK_COLORS, DEFAULT_LANE_H, useTrackColors, useTrackNames } from '../state/store.js'
 import { player } from '../lib/player.js'
 import { bus, onTick, usePlayerTime } from '../lib/hooks.js'
@@ -119,13 +120,17 @@ function HoverPreview({ subs, wrapRef, canvasRef }) {
     subs.current.add(fn)
     return () => subs.current.delete(fn)
   }, [subs])
-  return (
+  // Drawn on the page itself (not inside the timeline): it pops up over the video, and in the
+  // themes with glass panels the player area paints over anything that lives in the timeline.
+  const w = wrapRef.current
+  const wr = hover && w ? w.getBoundingClientRect() : null
+  return createPortal(
     <div
       className="hover-preview"
       style={{
-        display: hover ? 'block' : 'none',
-        left: hover ? Math.max(4, Math.min((wrapRef.current ? wrapRef.current.clientWidth : 0) - 204, hover.left - 100)) : 0,
-        top: hover ? hover.top - 128 : 0
+        display: hover && wr ? 'block' : 'none',
+        left: hover && wr ? wr.left + Math.max(4, Math.min(w.clientWidth - 204, hover.left - 100)) : 0,
+        top: hover && wr ? wr.top + hover.top - 128 : 0
       }}
     >
       <canvas ref={canvasRef} width="192" height="108" />
@@ -133,7 +138,8 @@ function HoverPreview({ subs, wrapRef, canvasRef }) {
         {hover ? fmtTime(hover.t) : ''}
         {hover && hover.note && <span className="hp-note"> · {hover.note.text || LABEL[hover.note.type]}</span>}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
