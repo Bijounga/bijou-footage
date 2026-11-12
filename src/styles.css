@@ -2174,3 +2174,12 @@ mark.hl { background: rgba(245, 197, 66, 0.3); color: inherit; border-radius: 2p
 .sw-grp-caret { color: var(--ink-dim); font-size: 10px; width: 9px; }
 .sw-grp.off .sw-grp-name { opacity: 0.55; }
 .sw-grp .th-btn { position: absolute; left: 90px; top: 2px; width: 20px; height: 18px; font-size: 9.5px; }
+
+/* Export clip dialog */
+.cx-modal { width: min(460px, 92vw); }
+.cx-time { display: flex; align-items: center; gap: 8px; }
+.cx-time > span { width: 34px; }
+.cx-time input { width: 96px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; font-family: var(--mono); outline: none; user-select: text; }
+.cx-tracks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.cx-track { gap: 5px; }
+.cx-modal select { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; color: inherit; }

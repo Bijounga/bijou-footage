@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store.js'
 import TranscriptPanel from './TranscriptPanel.jsx'
 import ProjectPad from './ProjectPad.jsx'
@@ -448,6 +448,17 @@ export default function NotesPanel() {
     window.addEventListener('mousedown', close)
     return () => window.removeEventListener('mousedown', close)
   }, [exportOpen])
+  // The menu hangs from the button's right edge; when the button is near the panel's left
+  // edge that would push it out behind the video, so hang it from the left edge instead.
+  useLayoutEffect(() => {
+    if (!exportOpen || !exportRef.current) return
+    const m = exportRef.current.querySelector('.np-export-menu')
+    const panel = exportRef.current.closest('.notes-panel')
+    if (!m || !panel) return
+    m.style.left = 'auto'
+    m.style.right = '0'
+    if (m.getBoundingClientRect().left < panel.getBoundingClientRect().left + 4) { m.style.left = '0'; m.style.right = 'auto' }
+  }, [exportOpen])
   useEffect(() => bus.on('focusNotesSearch', () => { const el = searchRef.current; if (el) { el.focus(); el.select() } }), [])
 
   // What's in the list: your recordings in story order (with "n/N"), then — when the project has POV
@@ -715,6 +726,10 @@ export default function NotesPanel() {
               </button>
               <button disabled={!target.length} onClick={() => { setExportOpen(false); exportPremiere('csv') }}>
                 <span>CSV…</span>
+              </button>
+              <div className="menu-sep" />
+              <button disabled={!currentKey} onClick={() => { setExportOpen(false); useStore.getState().openClipExport() }} title="Save a piece of this recording as a video — from the in point (I) to the playhead, or the selected range. Can mix all the audio tracks into one.">
+                <span>Clip as video…</span><span className="dim small">in → out</span>
               </button>
               <div className="menu-sep" />
               <button disabled={!visibleIds.length} onClick={() => { setExportOpen(false); setSel(allSelected ? new Set() : new Set(visibleIds)) }}>

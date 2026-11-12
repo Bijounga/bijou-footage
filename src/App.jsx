@@ -9,6 +9,7 @@ import PlayerView from './components/PlayerView.jsx'
 import Timeline from './components/Timeline.jsx'
 import NotesPanel from './components/NotesPanel.jsx'
 import { ExportModal, SettingsModal } from './components/Modals.jsx'
+import ClipExportModal from './components/ClipExportModal.jsx'
 import KeybindsModal from './components/Keybinds.jsx'
 import AddFootageModal from './components/AddFootage.jsx'
 import ColorMenu from './components/ColorMenu.jsx'
@@ -237,6 +238,7 @@ export default function App() {
       </section>
       {!notesHidden && panelOutside && <NotesPanel />}
       {modal === 'export' && <ExportModal />}
+      {modal === 'clip' && <ClipExportModal />}
       {modal === 'addFootage' && <AddFootageModal />}
       <ColorMenu />
       <CacheReminder />

@@ -240,6 +240,7 @@ export const useStore = create(
     selectedNoteId: null,
     editingNoteId: null,
     inPoint: null,
+    clipExport: null, // {start, end} while the Export clip dialog is open
     modal: null, // 'settings' | 'export' | 'help'
     exportSelection: null, // note ids chosen in All notes
     toast: null,
@@ -1978,6 +1979,26 @@ export const useStore = create(
       const [a, b] = ip.t < t ? [ip.t, t] : [t, ip.t]
       get().addNote('beat', { t: a, end: b })
       set((s) => { s.inPoint = null })
+    },
+    // Export clip: in point → playhead, else the selected range beat, else the whole recording.
+    openClipExport() {
+      const { currentKey: key, inPoint: ip, selectedNoteId } = get()
+      const clip = get().clip()
+      if (!clip) return
+      const dur = (clip.probe && clip.probe.duration) || 0
+      const t = player.getTime()
+      const note = selectedNoteId && ((get().reviews[key] || {}).notes || []).find((n) => n.id === selectedNoteId)
+      let start = 0
+      let end = dur
+      if (ip && ip.key === key) {
+        start = ip.t
+        end = Math.abs(t - ip.t) >= 0.5 ? t : dur
+        if (end < start) [start, end] = [end, start]
+      } else if (note && note.end != null && note.end > note.t) {
+        start = note.t
+        end = note.end
+      }
+      set((s) => { s.clipExport = { start, end }; s.modal = 'clip' })
     },
     markExported(ids) {
       const now = Date.now()

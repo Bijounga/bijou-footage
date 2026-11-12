@@ -97,6 +97,9 @@ contextBridge.exposeInMainWorld('footage', {
   pickProjectsDir: (current) => ipcRenderer.invoke('dialog:pickProjectsDir', current),
   defaultProjectsDir: () => ipcRenderer.invoke('app:defaultProjectsDir'),
   exportSection: (payload) => ipcRenderer.invoke('export:section', payload),
+  exportClip: (opts) => ipcRenderer.invoke('export:clip', opts),
+  exportClipCancel: () => ipcRenderer.invoke('export:clipCancel'),
+  onExportClip: (cb) => on('export:clip:event', cb),
   summarize: (id, payload) => ipcRenderer.invoke('llm:summarize', id, payload),
   onLlmEvent: (cb) => on('llm:event', cb)
 })

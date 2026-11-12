@@ -176,6 +176,7 @@ export const ACTIONS = [
   { id: 'sceneBreak', label: 'Add scene break', cat: 'Notes', keys: ['Shift+B'], needsClip: true, run: ({ st, osd }) => { st.addNote('break'); osd('Scene break') } },
   { id: 'inPoint', label: 'Set in point (for a range beat)', cat: 'Notes', keys: ['I'], needsClip: true, run: ({ st }) => st.setInPoint() },
   { id: 'rangeBeat', label: 'Add range beat (in point → here)', cat: 'Notes', keys: ['O'], needsClip: true, run: ({ st }) => st.addRange() },
+  { id: 'exportClip', label: 'Export a clip as a video (in point → here, or the selected range)', cat: 'Notes', keys: ['Ctrl+Shift+E'], needsClip: true, run: ({ st }) => st.openClipExport() },
   { id: 'logBox', label: 'Type in the log box', cat: 'Notes', keys: ['/'], needsClip: true, run: ({ st, bus }) => { if (st.settings.notesHidden) st.toggleNotesPanel(); setTimeout(() => bus.emit('focusLog'), 0) } },
   {
     id: 'editSelected', label: 'Edit selected note / marker', cat: 'Notes', keys: ['Enter'], needsClip: true,

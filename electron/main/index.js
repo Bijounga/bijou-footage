@@ -13,6 +13,7 @@ import * as projects from './projects.js'
 import * as vo from './voiceover.js'
 import * as voEnh from './voEnhance.js'
 import * as bijou from './bijou.js'
+import * as clipExport from './clipExport.js'
 import { buildXml, buildCsv, buildSequenceXml } from './premiereXml.js'
 import { buildPanelFile } from './premierePanel.js'
 import * as panelInstall from './premierePanelInstall.js'
@@ -614,6 +615,18 @@ function registerIpc() {
     fs.writeFileSync(r.filePath, buildSequenceXml({ ...payload, markers, vo: voItems }), 'utf8')
     return r.filePath
   })
+  // A piece of a recording as its own video file (in → out, audio mixed to one track if asked)
+  ipcMain.handle('export:clip', async (_e, o) => {
+    const base = (o.name || 'clip').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]/g, '-')
+    const r = await dialog.showSaveDialog(win, {
+      title: 'Export clip',
+      defaultPath: `${base} clip.mp4`,
+      filters: [{ name: 'MP4 video', extensions: ['mp4'] }]
+    })
+    if (r.canceled || !r.filePath) return { cancelled: true }
+    return clipExport.exportClip(tools().ffmpeg, { ...o, out: r.filePath }, (ev) => send('export:clip:event', ev))
+  })
+  ipcMain.handle('export:clipCancel', () => clipExport.cancelExport())
   ipcMain.handle('llm:installed', () => llm.installed())
   ipcMain.handle('llm:summarize', (_e, id, payload) => llm.summarize(id, payload).catch(() => null))
   ipcMain.handle('transcript:search', (_e, query, clips) => transcribe.search(query, clips))
