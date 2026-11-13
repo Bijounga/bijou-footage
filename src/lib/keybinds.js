@@ -98,6 +98,10 @@ export const ACTIONS = [
     run: ({ player, osd }) => { player.faster(); osd((player.rate < 0 ? '◀◀ ' : '▶ ') + Math.abs(player.rate) + '×') }
   },
   {
+    id: 'realtime', label: 'Real time (1× until you stop, then back to watch speed)', cat: 'Playback', keys: ['Shift+L'], needsClip: true,
+    run: ({ player, osd }) => { player.realtime(); osd(player.shuttling ? '▶ 1× until you stop' : '▶ ' + player.rate + '×') }
+  },
+  {
     id: 'shuttleBack', label: 'Shuttle slower / reverse', cat: 'Playback', keys: ['J'], needsClip: true,
     run: ({ player, osd }) => { player.slower(); osd((player.rate < 0 ? '◀◀ ' : '▶ ') + Math.abs(player.rate) + '×') }
   },

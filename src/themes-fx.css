@@ -7,9 +7,9 @@
 
 /* ---- each theme's materials ---- */
 [data-theme='aero'] {
-  --fx-wall: linear-gradient(to top, rgba(88, 190, 70, 0.55) 0%, rgba(120, 205, 90, 0.25) 14%, rgba(140, 215, 110, 0) 34%),
-    linear-gradient(180deg, rgba(6, 42, 69, 0.45) 0%, rgba(10, 77, 120, 0.2) 40%, rgba(255, 255, 255, 0) 100%),
-    url('./assets/aero-sky.jpg') center / cover no-repeat;
+  --fx-wall: var(--theme-wallpaper-overlay, linear-gradient(to top, rgba(88, 190, 70, 0.55) 0%, rgba(120, 205, 90, 0.25) 14%, rgba(140, 215, 110, 0) 34%)),
+    var(--theme-wallpaper-overlay, linear-gradient(180deg, rgba(6, 42, 69, 0.45) 0%, rgba(10, 77, 120, 0.2) 40%, rgba(255, 255, 255, 0) 100%)),
+    var(--theme-wallpaper, url('./assets/aero-sky.jpg')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #cfe6f7;
   --fx-panel: rgba(234, 246, 255, 0.72);
   --fx-panel-edge: rgba(255, 255, 255, 0.9);
   --fx-blur: blur(18px) saturate(1.4);
@@ -26,7 +26,7 @@
   --fx-bar-ink: var(--ink);
 }
 [data-theme='aeroDark'] {
-  --fx-wall: url('./assets/aero-night.jpg') center / cover no-repeat, #0a1120;
+  --fx-wall: var(--theme-wallpaper, url('./assets/aero-night.jpg')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #0a1120;
   --fx-panel: rgba(16, 26, 44, 0.72);
   --fx-panel-edge: rgba(120, 180, 255, 0.22);
   --fx-blur: blur(18px) saturate(1.3);
@@ -43,8 +43,8 @@
   --fx-bar-ink: var(--ink);
 }
 [data-theme='vaporwave'] {
-  --fx-wall: linear-gradient(to top, #1f0a45 0%, rgba(58, 20, 110, 0.85) 14%, rgba(120, 50, 160, 0.35) 28%, rgba(160, 90, 190, 0) 40%),
-    url('./assets/vapor-clouds.png') center / cover no-repeat, #8a8fd0;
+  --fx-wall: var(--theme-wallpaper-overlay, linear-gradient(to top, #1f0a45 0%, rgba(58, 20, 110, 0.85) 14%, rgba(120, 50, 160, 0.35) 28%, rgba(160, 90, 190, 0) 40%)),
+    var(--theme-wallpaper, url('./assets/vapor-clouds.png')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #8a8fd0;
   --fx-panel: rgba(240, 228, 255, 0.86);
   --fx-panel-edge: rgba(255, 255, 255, 0.75);
   --fx-blur: blur(14px) saturate(1.3);
@@ -61,7 +61,7 @@
   --fx-bar-ink: #ffffff;
 }
 [data-theme='dos'] {
-  --fx-wall: url('./assets/dos-bg.jpg') center / cover no-repeat, #008080;
+  --fx-wall: var(--theme-wallpaper, url('./assets/dos-bg.jpg')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #008080;
   --fx-panel: #c0c0c0;
   --fx-panel-edge: #ffffff;
   --fx-blur: none;
@@ -130,7 +130,7 @@
 }
 
 /* ---- shared: wallpaper, floating panels, buttons, selection ---- */
-:is([data-theme='aero'], [data-theme='aeroDark'], [data-theme='vaporwave'], [data-theme='dos'], [data-theme='y2kChrome'], [data-theme='y2kDark'], [data-theme='aqua'], [data-theme='luna'], [data-theme='cuttingRoom'], [data-theme='doodleClub']) {
+:is([data-theme='aero'], [data-theme='aeroDark'], [data-theme='vaporwave'], [data-theme='dos'], [data-theme='y2kChrome'], [data-theme='y2kDark'], [data-theme='aqua'], [data-theme='luna'], [data-theme='cuttingRoom'], [data-theme='doodleClub'], [data-theme='inkWash'], [data-theme='cyanotype'], [data-theme='cardCatalog'], [data-theme='risoZine'], [data-theme='spellbound'], [data-theme='ronin'], [data-theme='minecraft'], [data-theme='terraria'], [data-theme='xp']) {
   & body { background: var(--fx-wall); }
   & #root > .app {
     gap: 8px;
@@ -215,6 +215,7 @@
 /* Vaporwave: the neon floor grid rising from the bottom of the wallpaper. */
 [data-theme='vaporwave'] #root > .app { position: relative; isolation: isolate; }
 [data-theme='vaporwave'] #root > .app::before {
+  display: var(--theme-overlay-display, block);
   content: '';
   position: absolute;
   left: -50%;
@@ -297,7 +298,7 @@
    a thick ink outline, the felt-tip rainbow logo, pastel buttons, a
    light-blue "on" and a marker-yellow play button. */
 [data-theme='doodleClub'] {
-  --fx-wall: url('./assets/doodle-club-tile.png') 0 0 / 400px 400px repeat, #2459a6;
+  --fx-wall: var(--theme-wallpaper, url('./assets/doodle-club-tile.png')) var(--theme-wallpaper-pos, 0 0) / var(--theme-wallpaper-size, 400px 400px) var(--theme-wallpaper-repeat, repeat), #2459a6;
   --fx-panel: #fffbe9;
   --fx-panel-edge: #27283b;
   --fx-blur: none;
@@ -509,11 +510,11 @@
 /* The LCD's digits are amber whatever the theme colors its spans. */
 :is([data-theme='y2kChrome'], [data-theme='y2kDark']) .t-time * { color: inherit; }
 
-/* Y2K Chrome's back wall: the amber LCD's dark brown, backlit at the edges. */
+/* Y2K Chrome's back wall: the amber LCD's dark brown, backlit at the edges (or the background picked in Settings). */
 [data-theme='y2kChrome'] {
-  --fx-wall: radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
+  --fx-wall: var(--theme-wallpaper, radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
     radial-gradient(ellipse 40% 120% at 100% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
-    radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%);
+    radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%)) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat);
 }
 /* Transport knobs: full-size and spaced out, like real hardware keys. */
 :is([data-theme='y2kChrome'], [data-theme='y2kDark']) {
@@ -546,11 +547,11 @@
 }
 /* Review's ruler is drawn in the same canvas: keep the pixel grid off it (Timeline.jsx RULER_H). */
 [data-variant='lcd'] .tl-main-body::after { top: 40px; }
-/* Gunmetal's back wall: the same LCD brown as Y2K Chrome. */
+/* Gunmetal's back wall: the same LCD brown as Y2K Chrome (or the background picked in Settings). */
 [data-theme='y2kDark'] {
-  --fx-wall: radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
+  --fx-wall: var(--theme-wallpaper, radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
     radial-gradient(ellipse 40% 120% at 100% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%),
-    radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%);
+    radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%)) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat);
 }
 /* Settings → "Pixel grid over the LCD timeline" off: the screen stays, the grid goes. */
 [data-variant='lcd'][data-lcd-grid='off'] :is(.tl-main-body, .et-rows)::after { display: none; }
@@ -690,4 +691,418 @@
   & .type-pill { filter: saturate(1.1); }
   & .note .tc { color: #0f6e45; }
   & .tag { color: #333; }
+}
+
+/* ==== BijouDocs' illustrated themes, as editors ====
+   The same wallpapers, materials and lettering as in BijouDocs. Each block
+   gives the shared recipe above its materials, then adds its own touches. */
+@font-face { font-family: 'Shippori Mincho B1'; src: url('./assets/fonts/shippori-mincho-b1-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'IM Fell English'; src: url('./assets/fonts/im-fell-english-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IM Fell English'; src: url('./assets/fonts/im-fell-english-latin-400-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Courier Prime'; src: url('./assets/fonts/courier-prime-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Courier Prime'; src: url('./assets/fonts/courier-prime-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Bricolage Grotesque'; src: url('./assets/fonts/bricolage-grotesque-latin-wght-normal.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: 'Grenze Gotisch'; src: url('./assets/fonts/grenze-gotisch-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Almendra'; src: url('./assets/fonts/almendra-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Potta One'; src: url('./assets/fonts/potta-one-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Yusei Magic'; src: url('./assets/fonts/yusei-magic-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Pixelify Sans'; src: url('./assets/fonts/pixelify-sans-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Pixelify Sans'; src: url('./assets/fonts/pixelify-sans-latin-700-normal.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Fredoka'; src: url('./assets/fonts/fredoka-latin-wght-normal.woff2') format('woff2'); font-weight: 300 700; font-display: swap; }
+
+/* ---- Ink Wash: washi panels on Tōhaku's pines, sumi ink, vermilion seals ---- */
+[data-theme='inkWash'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/ink-pines-left.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #e9e1cd;
+  --fx-panel: url('./assets/paper-fibre.png') 0 0 / 480px 480px, rgba(243, 237, 221, 0.95);
+  --fx-panel-edge: rgba(29, 27, 24, 0.2);
+  --fx-blur: none;
+  --fx-shadow: 0 16px 30px -18px rgba(40, 30, 10, 0.55);
+  --fx-btn: transparent;
+  --fx-btn-edge: rgba(29, 27, 24, 0.3);
+  --fx-btn-shadow: none;
+  --fx-on: #b3261e;
+  --fx-on-ink: #fff5e6;
+  --fx-glow: inset 0 0 0 1.5px rgba(255, 245, 230, 0.55);
+  --fx-radius: 2px;
+  --fx-btn-radius: 2px;
+  --fx-bar: transparent;
+  --fx-bar-ink: var(--ink);
+  --tfx-head: 'Shippori Mincho B1', 'Yu Mincho', Georgia, serif;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(29, 27, 24, 0.1); filter: none; box-shadow: none; }
+  & .lib-top { border-bottom: 0; background: url('./assets/ink-stroke.png') 0 100% / 100% 8px no-repeat; }
+  & ::selection { background: rgba(179, 38, 30, 0.22); color: #1d1b18; }
+}
+
+/* ---- Cyanotype: Prussian-blue chrome on Anna Atkins's ferns; what is on is a paper label ---- */
+[data-theme='cyanotype'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/cyan-ferns.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #17385a;
+  --fx-panel: rgba(17, 40, 63, 0.93);
+  --fx-panel-edge: rgba(168, 216, 240, 0.24);
+  --fx-blur: none;
+  --fx-shadow: 0 16px 30px -16px rgba(4, 12, 22, 0.8);
+  --fx-btn: transparent;
+  --fx-btn-edge: rgba(168, 216, 240, 0.34);
+  --fx-btn-shadow: none;
+  --fx-on: #f6f1e3;
+  --fx-on-ink: #14263d;
+  --fx-glow: 0 6px 14px -8px rgba(4, 12, 22, 0.9);
+  --fx-radius: 2px;
+  --fx-btn-radius: 2px;
+  --fx-bar: transparent;
+  --fx-bar-ink: var(--ink);
+  --tfx-head: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(168, 216, 240, 0.14); filter: none; box-shadow: none; }
+  & .lib-day, & .ch-name { font-style: italic; }
+  & ::selection { background: rgba(168, 216, 240, 0.34); color: #fff; }
+}
+
+/* ---- Card Catalog: manila panels on a wall of library drawers, typed labels, stamp-pad indigo ---- */
+[data-theme='cardCatalog'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/card-drawer-wall.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #a9803f;
+  --fx-panel: linear-gradient(#c8423a, #c8423a) 0 0 / 100% 3px no-repeat, url('./assets/paper-fibre.png') 0 0 / 480px 480px, #e9d7ab;
+  --fx-panel-edge: #a8925c;
+  --fx-blur: none;
+  --fx-shadow: 0 2px 0 rgba(35, 31, 26, 0.18), 0 16px 28px -16px rgba(30, 18, 4, 0.75);
+  --fx-btn: #fbf7ea;
+  --fx-btn-edge: #8a7a55;
+  --fx-btn-shadow: 0 1px 0 rgba(35, 31, 26, 0.25);
+  --fx-on: #34338a;
+  --fx-on-ink: #f6f1e0;
+  --fx-glow: none;
+  --fx-radius: 3px;
+  --fx-btn-radius: 3px;
+  --fx-bar: transparent;
+  --fx-bar-ink: var(--ink);
+  --tfx-head: 'Courier Prime', 'Courier New', monospace;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #fffdf4; filter: none; }
+  & ::selection { background: #ffe36e; color: #231f1a; }
+}
+
+/* ---- Riso Zine: grainy paper, ink outlines, a coral plate and a teal plate out of register ---- */
+[data-theme='risoZine'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/riso-coral-teal.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #f4efe4;
+  --fx-panel: url('./assets/paper-fibre.png') 0 0 / 480px 480px, #f4efe4;
+  --fx-panel-edge: #1c1930;
+  --fx-blur: none;
+  --fx-shadow: 4px 4px 0 rgba(0, 131, 138, 0.9);
+  --fx-btn: #fbf7ee;
+  --fx-btn-edge: #1c1930;
+  --fx-btn-shadow: none;
+  --fx-on: #f15060;
+  --fx-on-ink: #1c1930;
+  --fx-glow: 3px 3px 0 rgba(0, 131, 138, 0.9);
+  --fx-radius: 0px;
+  --fx-btn-radius: 0px;
+  --fx-bar: transparent;
+  --fx-bar-ink: var(--ink);
+  --tfx-head: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
+
+  & .app > .library, & .app > .notes-panel, & .app > .center > .upper > .notes-panel,
+  & .player-area, & .edit-upper > .em, & .timeline, & .et { border-width: 2px; }
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small { border-width: 1.5px; transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease-out; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { filter: none; transform: translate(-1px, -1px); box-shadow: 2px 2px 0 rgba(0, 131, 138, 0.9); }
+  & .btn:active:not(:disabled), & .t-btn:active, & .mini-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+  & .t-btn.play { border-radius: 999px; }
+  & .brand-name { font-weight: 800; letter-spacing: -0.02em; text-shadow: 2px 2px 0 rgba(241, 80, 96, 0.85); }
+  & .lib-top { border-bottom: 2px solid #1c1930; }
+  & ::selection { background: rgba(241, 80, 96, 0.34); color: #1c1930; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='risoZine'] :is(.btn, .t-btn, .mini-btn, .snap-btn) { transition: none; transform: none !important; }
+}
+
+/* ---- Spellbound: night stone and gold on the old library ---- */
+[data-theme='spellbound'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/wiz-long-room.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #2a1c10;
+  --fx-panel: rgba(22, 17, 27, 0.94);
+  --fx-panel-edge: rgba(233, 196, 106, 0.3);
+  --fx-blur: none;
+  --fx-shadow: 0 18px 34px -16px rgba(0, 0, 0, 0.9);
+  --fx-btn: transparent;
+  --fx-btn-edge: rgba(233, 196, 106, 0.4);
+  --fx-btn-shadow: none;
+  --fx-on: #e9c46a;
+  --fx-on-ink: #120e16;
+  --fx-glow: none;
+  --fx-radius: 3px;
+  --fx-btn-radius: 3px;
+  --fx-bar: transparent;
+  --fx-bar-ink: #e9c46a;
+  --tfx-head: 'Almendra', 'Book Antiqua', Georgia, serif;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(233, 196, 106, 0.16); color: #e9c46a; filter: none; box-shadow: none; }
+  & .brand-name, & .titlebar-title { font-family: 'Grenze Gotisch', Georgia, serif; font-weight: 700; font-size: 19px; color: #e9c46a; }
+  & .lib-top { border-bottom: 0; background: linear-gradient(90deg, rgba(184, 137, 43, 0), #b8892b 12%, #d9b25a 50%, #b8892b 88%, rgba(184, 137, 43, 0)) 0 100% / 100% 2px no-repeat; }
+  & ::selection { background: rgba(233, 196, 106, 0.34); color: #fff; }
+}
+
+/* ---- Ronin: sumi black, brush lettering, crimson, the Great Wave ---- */
+[data-theme='ronin'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/ronin-great-wave.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #1b2a3a;
+  --fx-panel: rgba(16, 16, 18, 0.95);
+  --fx-panel-edge: rgba(242, 237, 227, 0.24);
+  --fx-blur: none;
+  --fx-shadow: 0 18px 34px -16px rgba(0, 0, 0, 0.9);
+  --fx-btn: transparent;
+  --fx-btn-edge: rgba(242, 237, 227, 0.4);
+  --fx-btn-shadow: none;
+  --fx-on: #c8102e;
+  --fx-on-ink: #ffffff;
+  --fx-glow: none;
+  --fx-radius: 0px;
+  --fx-btn-radius: 0px;
+  --fx-bar: transparent;
+  --fx-bar-ink: var(--ink);
+  --tfx-head: 'Potta One', 'Segoe UI', sans-serif;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(242, 237, 227, 0.14); filter: none; box-shadow: none; }
+  & .lib-top { border-bottom: 2px solid #c8102e; }
+  & ::selection { background: rgba(255, 90, 82, 0.4); color: #fff; }
+}
+
+/* ---- Minecraft: inventory-grey plates on a meadow, dirt title strip, green for what is on ---- */
+[data-theme='minecraft'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/mc-meadow.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #2a2018;
+  --fx-panel: #c6c6c6;
+  --fx-panel-edge: #000000;
+  --fx-blur: none;
+  --fx-shadow: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #555555, 0 6px 0 rgba(0, 0, 0, 0.35);
+  --fx-btn: #6f6f6f;
+  --fx-btn-edge: #000000;
+  --fx-btn-shadow: inset 2px 2px 0 #a8a8a8, inset -2px -2px 0 #3f3f3f;
+  --fx-on: #3a7a22;
+  --fx-on-ink: #ffffff;
+  --fx-glow: inset 2px 2px 0 #6ec24a, inset -2px -2px 0 #1f4a12;
+  --fx-radius: 0px;
+  --fx-btn-radius: 0px;
+  --fx-bar: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)), url('./assets/mc-dirt.png') 0 0 / 64px 64px repeat;
+  --fx-bar-ink: #ffffff;
+  --tfx-head: 'Minecrafter', 'Minecraft', 'Pixelify Sans', sans-serif;
+
+  & body { font-feature-settings: 'liga' 0, 'calt' 0; }
+  & .lib-top { image-rendering: pixelated; text-shadow: 2px 2px 0 #3f3f3f; }
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small { color: #ffffff; text-shadow: 1px 1px 0 #3f3f3f; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #5c6bb5; filter: none; box-shadow: inset 2px 2px 0 #aab4e6, inset -2px -2px 0 #3a4684; }
+  & .timeline, & .et, & .player-area, & .edit-upper > .em { border-width: 2px; }
+  & ::selection { background: #3a7a22; color: #fff; }
+}
+
+/* ---- Terraria: indigo menu panels with a dark outline, gold for what is on ---- */
+[data-theme='terraria'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/tr-pine-forest.webp')) var(--theme-wallpaper-pos, center bottom) / cover no-repeat, #4a90df;
+  --fx-panel: rgba(53, 58, 133, 0.94);
+  --fx-panel-edge: #12154a;
+  --fx-blur: none;
+  --fx-shadow: inset 0 0 0 2px rgba(120, 130, 230, 0.55), 0 8px 0 rgba(10, 11, 48, 0.45);
+  --fx-btn: #3f4597;
+  --fx-btn-edge: #12154a;
+  --fx-btn-shadow: inset 0 0 0 1px rgba(130, 140, 240, 0.6);
+  --fx-on: #ffd84a;
+  --fx-on-ink: #2a1d00;
+  --fx-glow: inset 0 0 0 1px rgba(255, 245, 190, 0.8);
+  --fx-radius: 10px;
+  --fx-btn-radius: 8px;
+  --fx-bar: transparent;
+  --fx-bar-ink: #ffffff;
+  --tfx-head: 'Andy', 'Fredoka', 'Trebuchet MS', sans-serif;
+
+  & body { font-weight: 500; }
+  & .app > .library, & .app > .notes-panel, & .app > .center > .upper > .notes-panel,
+  & .player-area, & .edit-upper > .em, & .timeline, & .et { border-width: 2px; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #5158b8; color: #ffd84a; filter: none; }
+  & .brand-name { color: #ffd84a; text-shadow: -1px -1px 0 #0a0b30, 1px -1px 0 #0a0b30, -1px 1px 0 #0a0b30, 1px 1px 0 #0a0b30, 0 2px 0 #0a0b30; font-size: 17px; }
+  & ::selection { background: #ffd84a; color: #2a1d00; }
+}
+
+/* ---- Windows XP: Bliss, beige plates, Luna-blue bars, push buttons with the orange hover ---- */
+[data-theme='xp'] {
+  --fx-wall: var(--theme-wallpaper, url('./assets/xp-bliss.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #3a6ea5;
+  --fx-panel: #ece9d8;
+  --fx-panel-edge: #0054e3;
+  --fx-blur: none;
+  --fx-shadow: 0 8px 22px rgba(0, 20, 70, 0.45);
+  --fx-btn: linear-gradient(180deg, #ffffff 0%, #f3f1e7 55%, #dedbcb 100%);
+  --fx-btn-edge: #003c74;
+  --fx-btn-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  --fx-on: #316ac5;
+  --fx-on-ink: #ffffff;
+  --fx-glow: none;
+  --fx-radius: 8px 8px 3px 3px;
+  --fx-btn-radius: 3px;
+  --fx-bar: linear-gradient(180deg, #0a5fe0 0%, #2a7bf0 8%, #0a56d6 40%, #0349c4 88%, #0a3fa8 100%);
+  --fx-bar-ink: #ffffff;
+  --tfx-head: 'Trebuchet MS', 'Tahoma', sans-serif;
+
+  & body { -webkit-text-stroke: 0.25px currentColor; }
+  & .app > .library, & .app > .notes-panel, & .app > .center > .upper > .notes-panel,
+  & .player-area, & .edit-upper > .em, & .timeline, & .et { border-width: 3px; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { filter: none; box-shadow: inset 0 0 0 2px #f7b84a; }
+  & .lib-top { font-weight: 700; text-shadow: 1px 1px 0 rgba(0, 20, 80, 0.7); }
+  & .t-btn.play { background: linear-gradient(180deg, #7bd66a 0%, #3ba52c 50%, #2a8a1e 100%); color: #fff; border-color: #1c5e14; }
+  & ::selection { background: #316ac5; color: #fff; }
+}
+
+/* Headings and tabs take each theme's display face. */
+:is([data-theme='inkWash'], [data-theme='cyanotype'], [data-theme='cardCatalog'], [data-theme='risoZine'], [data-theme='spellbound'], [data-theme='ronin'], [data-theme='minecraft'], [data-theme='terraria'], [data-theme='xp']) {
+  & .brand-name, & .lib-day, & .ch-name, & .titlebar-title { font-family: var(--tfx-head); }
+}
+
+/* ==== The other half of each illustrated theme ====
+   Same world in the opposite light: the base theme's rules still apply, and
+   these swap the materials (and anything above that names a colour outright). */
+
+/* Ink Wash · Night: the same paper by lamplight — dark washi, pale ink, the seal still red. */
+[data-theme='inkWash'][data-variant='dark'] {
+  --fx-wall: linear-gradient(rgba(10, 9, 7, 0.58), rgba(10, 9, 7, 0.58)), var(--theme-wallpaper, url('./assets/ink-pines-left.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #14130f;
+  --fx-panel: url('./assets/paper-fibre.png') 0 0 / 480px 480px, rgba(28, 26, 22, 0.96);
+  --fx-panel-edge: rgba(236, 229, 211, 0.18);
+  --fx-shadow: 0 18px 34px -16px rgba(0, 0, 0, 0.85);
+  --fx-btn-edge: rgba(236, 229, 211, 0.3);
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(236, 229, 211, 0.1); }
+  & .lib-top { background: linear-gradient(rgba(236, 229, 211, 0.3), rgba(236, 229, 211, 0.3)) 0 100% / 100% 1px no-repeat; }
+  & ::selection { background: rgba(226, 87, 76, 0.4); color: #fff; }
+}
+
+/* Cyanotype · Paper: the caption label instead of the print — cream stock, blue ink; what is on is printed blue. */
+[data-theme='cyanotype'][data-variant='light'] {
+  --fx-panel: url('./assets/paper-fibre.png') 0 0 / 480px 480px, rgba(246, 241, 227, 0.96);
+  --fx-panel-edge: #cfc5aa;
+  --fx-shadow: 0 0 0 1px rgba(10, 24, 40, 0.4), 0 16px 30px -16px rgba(4, 12, 22, 0.7);
+  --fx-btn-edge: rgba(20, 38, 61, 0.35);
+  --fx-on: #14304b;
+  --fx-on-ink: #f6f1e3;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(20, 38, 61, 0.08); }
+  & ::selection { background: rgba(23, 80, 127, 0.24); color: #14263d; }
+}
+
+/* Card Catalog · Walnut: the reading room after closing — walnut panels, brass for what is on. */
+[data-theme='cardCatalog'][data-variant='dark'] {
+  --fx-wall: linear-gradient(rgba(20, 12, 4, 0.55), rgba(20, 12, 4, 0.55)), var(--theme-wallpaper, url('./assets/card-drawer-wall.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #1f150b;
+  --fx-panel: linear-gradient(#8a6a2f, #8a6a2f) 0 0 / 100% 3px no-repeat, #2e2114;
+  --fx-panel-edge: #6f5320;
+  --fx-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 16px 28px -16px rgba(0, 0, 0, 0.85);
+  --fx-btn: #3a2a1a;
+  --fx-btn-edge: #8a6a2f;
+  --fx-btn-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --fx-on: #e8c35a;
+  --fx-on-ink: #231f1a;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #4a3722; }
+  & ::selection { background: #e8c35a; color: #231f1a; }
+}
+
+/* Riso Zine · Black: the same two inks on black stock. */
+[data-theme='risoZine'][data-variant='dark'] {
+  --fx-wall: linear-gradient(rgba(20, 18, 31, 0.62), rgba(20, 18, 31, 0.62)), var(--theme-wallpaper, url('./assets/riso-coral-teal.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #14121f;
+  --fx-panel: #1c1930;
+  --fx-panel-edge: #f4efe4;
+  --fx-shadow: 4px 4px 0 rgba(241, 80, 96, 0.9);
+  --fx-btn: #25213d;
+  --fx-btn-edge: #f4efe4;
+  --fx-glow: 3px 3px 0 rgba(63, 208, 214, 0.9);
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { box-shadow: 2px 2px 0 rgba(63, 208, 214, 0.9); }
+  & .lib-top { border-bottom-color: #f4efe4; }
+  & ::selection { background: rgba(241, 80, 96, 0.5); color: #fff; }
+}
+
+/* Spellbound · Parchment: the library by day — parchment panels, sepia ink, wax red for what is on. */
+[data-theme='spellbound'][data-variant='light'] {
+  --fx-panel: url('./assets/paper-fibre.png') 0 0 / 480px 480px, rgba(247, 239, 217, 0.97);
+  --fx-panel-edge: #b89a5e;
+  --fx-shadow: inset 0 0 34px rgba(138, 92, 34, 0.16), 0 18px 34px -16px rgba(0, 0, 0, 0.7);
+  --fx-btn-edge: #b89a5e;
+  --fx-on: #7a1626;
+  --fx-on-ink: #f7e9d2;
+  --fx-bar-ink: #7a1626;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(122, 22, 38, 0.1); color: #7a1626; }
+  & .brand-name { color: #7a1626; }
+  & ::selection { background: rgba(201, 162, 39, 0.4); color: #2a1d10; }
+}
+
+/* Ronin · Paper: black ink on white, the crimson unchanged. */
+[data-theme='ronin'][data-variant='light'] {
+  --fx-panel: url('./assets/paper-fibre.png') 0 0 / 480px 480px, #faf7f0;
+  --fx-panel-edge: #141414;
+  --fx-shadow: 0 18px 34px -16px rgba(0, 0, 0, 0.65);
+  --fx-btn-edge: rgba(20, 20, 20, 0.45);
+
+  & .app > .library, & .app > .notes-panel, & .app > .center > .upper > .notes-panel,
+  & .player-area, & .edit-upper > .em, & .timeline, & .et { border-width: 2px; }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: rgba(20, 20, 20, 0.1); }
+  & ::selection { background: rgba(200, 16, 46, 0.22); color: #141414; }
+}
+
+/* Windows XP · Noir: the charcoal skin with orange highlights. */
+[data-theme='xp'][data-variant='dark'] {
+  --fx-wall: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), var(--theme-wallpaper, url('./assets/xp-bliss.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #1a1a1a;
+  --fx-panel: #2b2b2b;
+  --fx-panel-edge: #111111;
+  --fx-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
+  --fx-btn: linear-gradient(180deg, #505050 0%, #3a3a3a 55%, #2c2c2c 100%);
+  --fx-btn-edge: #0e0e0e;
+  --fx-btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --fx-on: #f08a2c;
+  --fx-on-ink: #1a0d00;
+  --fx-bar: linear-gradient(180deg, #5a5a5a 0%, #3c3c3c 10%, #2a2a2a 55%, #1c1c1c 100%);
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { box-shadow: inset 0 0 0 2px #ff8a2a; }
+  & .lib-top { text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8); }
+  & ::selection { background: #f08a2c; color: #1a0d00; }
+}
+
+/* Minecraft · Deepslate: the same bevelled plates cut from dark stone. */
+[data-theme='minecraft'][data-variant='dark'] {
+  --fx-wall: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), var(--theme-wallpaper, url('./assets/mc-meadow.webp')) var(--theme-wallpaper-pos, center) / cover no-repeat, #101012;
+  --fx-panel: #2c2c30;
+  --fx-shadow: inset 2px 2px 0 #55555c, inset -2px -2px 0 #121214, 0 6px 0 rgba(0, 0, 0, 0.5);
+  --fx-btn: #4a4a50;
+  --fx-btn-shadow: inset 2px 2px 0 #6a6a72, inset -2px -2px 0 #26262a;
+}
+
+/* Terraria · Day: the menu in daylight — sky-blue panels, indigo ink, gold still marks what is on. */
+[data-theme='terraria'][data-variant='light'] {
+  --fx-panel: rgba(223, 230, 255, 0.96);
+  --fx-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75), 0 8px 0 rgba(10, 11, 48, 0.35);
+  --fx-btn: #eef1ff;
+  --fx-btn-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+  --fx-bar-ink: #171a52;
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #ffffff; color: #2a35b0; }
+  & ::selection { background: #ffd84a; color: #2a1d00; }
+}
+
+/* Terraria · Underground: the menu down in the caverns — near-black panels, gold still marks what is on. */
+[data-theme='terraria'][data-variant='dark'] {
+  --fx-wall: linear-gradient(rgba(4, 5, 18, 0.66), rgba(4, 5, 18, 0.66)), var(--theme-wallpaper, url('./assets/tr-pine-forest.webp')) var(--theme-wallpaper-pos, center bottom) / cover no-repeat, #07081c;
+  --fx-panel: rgba(17, 19, 46, 0.96);
+  --fx-panel-edge: #05061a;
+  --fx-shadow: inset 0 0 0 2px rgba(80, 88, 170, 0.45), 0 8px 0 rgba(0, 0, 0, 0.5);
+  --fx-btn: #181b3d;
+  --fx-btn-edge: #05061a;
+  --fx-btn-shadow: inset 0 0 0 1px rgba(90, 100, 190, 0.5);
+
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover { background: #262a5a; }
+}
+
+/* Frutiger Aero · Black: Windows Vista's black glass — near-black panels with a cool sheen, a cyan glow for what is on. */
+[data-theme='aeroDark'][data-variant='black'] {
+  --fx-wall: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), var(--theme-wallpaper, url('./assets/aero-night.jpg')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #020305;
+  --fx-panel: linear-gradient(180deg, rgba(40, 48, 60, 0.55) 0%, rgba(8, 10, 14, 0.9) 6%, rgba(4, 5, 8, 0.92) 100%);
+  --fx-panel-edge: rgba(150, 175, 205, 0.22);
+  --fx-blur: blur(20px) saturate(1.2);
+  --fx-shadow: 0 12px 34px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --fx-btn: linear-gradient(to bottom, rgba(90, 100, 115, 0.55) 0%, rgba(30, 34, 42, 0.7) 50%, rgba(10, 12, 16, 0.8) 51%, rgba(22, 26, 32, 0.8) 100%);
+  --fx-btn-edge: rgba(0, 0, 0, 0.9);
+  --fx-btn-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --fx-on: linear-gradient(to bottom, rgba(120, 225, 245, 0.95) 0%, rgba(40, 170, 210, 0.9) 50%, rgba(10, 120, 170, 0.92) 51%, rgba(30, 150, 195, 0.9) 100%);
+  --fx-on-ink: #001820;
+  --fx-glow: 0 0 14px rgba(63, 208, 232, 0.55);
+  --fx-bar: linear-gradient(to bottom, rgba(60, 68, 80, 0.7), rgba(6, 8, 12, 0.85));
 }

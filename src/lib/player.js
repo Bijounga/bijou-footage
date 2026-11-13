@@ -780,6 +780,21 @@ class Player {
     if (next != null) this.setRate(next)
   }
 
+  // Real time (Shift+L): 1× until playback stops, then back to the watch
+  // speed, like a shuttle. From stopped it starts playing at 1×; pressed
+  // again while at 1× it goes back to the watch speed.
+  realtime() {
+    if (!this.clip) return
+    if (this.playing && this.shuttling && this.rate === 1) {
+      this.shuttling = false
+      this.setRate(this.baseRate)
+      return
+    }
+    this.shuttling = true
+    this.setRate(1)
+    if (!this.playing) this.play()
+  }
+
   // Shuttle back (J): step down the ladder, through 1× into reverse skim.
   // From stopped: start reversing.
   slower() {

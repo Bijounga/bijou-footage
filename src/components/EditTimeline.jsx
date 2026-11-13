@@ -414,7 +414,7 @@ export default function EditTimeline({ section }) {
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
   }
-  useStore((s) => s.settings.themeId) // redraw the clips when the theme (their look) changes
+  useStore((s) => s.settings.theme + '|' + (s.settings.clipStyle || '')) // redraw the clips when the theme (their look) changes
   const blocks = clipBlocks()
   const colors = useTrackColors()
   const mixer = useStore((s) => s.settings.mixer)

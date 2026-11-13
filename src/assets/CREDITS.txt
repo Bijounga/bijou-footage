@@ -1,0 +1,11 @@
+Theme backgrounds shared with BijouDocs (see its src/assets/bg/CREDITS.txt for the full list).
+
+ink-pines-left.webp — "Hasegawa Tohaku - Pine Trees (Shōrin-zu byōbu) - left hand screen.jpg" by Hasegawa Tōhaku (16th century; Tokyo National Museum) — Public domain — https://commons.wikimedia.org/wiki/File%3AHasegawa_Tohaku_-_Pine_Trees_(Sh%C5%8Drin-zu_by%C5%8Dbu)_-_left_hand_screen.jpg
+cyan-ferns.webp — "Anna Atkins, Ferns. Specimen of Cyanotype, 1840s, NGA 136477.jpg" by Anna Atkins (National Gallery of Art) — CC0 — https://commons.wikimedia.org/wiki/File%3AAnna_Atkins%2C_Ferns._Specimen_of_Cyanotype%2C_1840s%2C_NGA_136477.jpg
+card-drawer-wall.webp — "Firestone Library Princeton card cat.jpg" by Andreas Praefcke — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AFirestone_Library_Princeton_card_cat.jpg
+wiz-long-room.webp — "Long Room Interior, Trinity College Dublin, Ireland - Diliff.jpg" by Diliff — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALong_Room_Interior%2C_Trinity_College_Dublin%2C_Ireland_-_Diliff.jpg
+ronin-great-wave.webp — "Great Wave off Kanagawa2.jpg" by after Katsushika Hokusai — Public domain — https://commons.wikimedia.org/wiki/File%3AGreat_Wave_off_Kanagawa2.jpg
+
+mc-meadow.webp — Minecraft wiki screenshot (Meadow_Birch.jpg); tr-pine-forest.webp — Terraria's own background layers; xp-bliss.webp — Microsoft's Bliss.
+riso-coral-teal.webp, paper-fibre.png, ink-stroke.png — original artwork drawn for BijouDocs (SVG rendered with sharp).
+Fonts in fonts/ are SIL OFL 1.1 (licences alongside).

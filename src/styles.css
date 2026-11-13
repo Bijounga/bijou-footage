@@ -942,8 +942,16 @@ body { transition: background-color 0.2s; }
 }
 .theme-card:hover { border-color: var(--ink-faint); }
 .theme-card.on { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
-.theme-swatch { display: flex; gap: 4px; width: 100%; height: 30px; border-radius: 5px; padding: 5px; box-sizing: border-box; border: 1px solid rgba(128, 128, 128, 0.25); }
+.theme-swatch { display: flex; width: 100%; height: 30px; border-radius: 5px; overflow: hidden; box-sizing: border-box; border: 1px solid rgba(128, 128, 128, 0.25); }
+/* a family with a light and a dark side shows both, split down the middle */
+.theme-swatch-half { flex: 1; display: flex; gap: 4px; padding: 5px; box-sizing: border-box; min-width: 0; }
 .theme-swatch i { flex: 1; border-radius: 3px; }
+.theme-vars { display: flex; flex-wrap: wrap; gap: 6px; }
+.theme-var { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); font-size: 12px; color: var(--ink); }
+.theme-var:hover { border-color: var(--ink-faint); }
+.theme-var.on { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); font-weight: 600; }
+.theme-var-dot { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid; box-sizing: border-box; display: grid; place-items: center; }
+.theme-var-dot i { width: 6px; height: 6px; border-radius: 50%; }
 .theme-name { font-weight: 600; font-size: 12px; }
 .theme-note { font-size: 10px; color: var(--ink-faint); }
 /* Light themes: the hard-coded dark hovers would glare, soften them. */
@@ -2183,3 +2191,11 @@ mark.hl { background: rgba(245, 197, 66, 0.3); color: inherit; border-radius: 2p
 .cx-tracks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .cx-track { gap: 5px; }
 .cx-modal select { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; color: inherit; }
+
+/* Settings → Appearance: the active theme's backgrounds */
+.theme-bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.theme-bg { aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2) center / cover no-repeat; padding: 0; }
+.theme-bg:hover { border-color: var(--ink-faint); }
+.theme-bg.on { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan); }
+.clip-style-seg { max-width: 380px; }
+.clip-style-seg button { padding: 5px 0; font-size: 12px; }

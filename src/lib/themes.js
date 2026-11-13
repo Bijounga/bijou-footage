@@ -207,8 +207,234 @@ export const BUILT_IN_THEMES = [
     dark: false,
     font: "'Trebuchet MS', 'Segoe UI', sans-serif",
     colors: { '--bg': '#fffbe9', '--panel': '#fffbe9', '--panel-2': '#ffffff', '--panel-3': '#f5ecc4', '--ink': '#202031', '--ink-dim': '#4a4960', '--ink-faint': '#6a6879', '--line': '#d6cca6', '--line-soft': '#ece3c2', '--cyan': '#1f5fbf', '--amber': '#aa5100', '--pink': '#b92a65', '--danger': '#c8302b', '--green': '#23782a' }
+  },
+  // ---- BijouDocs' illustrated themes (looks in themes-fx.css) ----
+  {
+    id: 'inkWash',
+    name: 'Ink Wash',
+    note: 'BijouDocs',
+    dark: false,
+    colors: { '--bg': '#ece5d3', '--panel': '#f3eddd', '--panel-2': '#f8f3e6', '--panel-3': '#e6dec9', '--ink': '#1d1b18', '--ink-dim': '#4f4a41', '--ink-faint': '#6b6457', '--line': '#cfc5ad', '--line-soft': '#e0d8c3', '--cyan': '#b3261e', '--amber': '#8a5a12', '--pink': '#a03a5e', '--danger': '#8f1d16', '--green': '#3f6b3a', '--playhead': '#b3261e' }
+  },
+  {
+    id: 'cyanotype',
+    name: 'Cyanotype',
+    note: 'BijouDocs',
+    dark: true,
+    colors: { '--bg': '#0f2236', '--panel': '#14304b', '--panel-2': '#1a3a59', '--panel-3': '#224667', '--ink': '#e6eef5', '--ink-dim': '#b9cbdb', '--ink-faint': '#8fa8bf', '--line': '#2f5478', '--line-soft': '#234463', '--cyan': '#a8d8f0', '--amber': '#ecc67e', '--pink': '#f2a8bc', '--danger': '#ff9486', '--green': '#9fd9ac' }
+  },
+  {
+    id: 'cardCatalog',
+    name: 'Card Catalog',
+    note: 'BijouDocs',
+    dark: false,
+    font: "'Courier Prime', 'Courier New', monospace",
+    colors: { '--bg': '#d9c7a0', '--panel': '#e9d7ab', '--panel-2': '#f1e3be', '--panel-3': '#dcc88f', '--ink': '#231f1a', '--ink-dim': '#4a4032', '--ink-faint': '#5e523c', '--line': '#bfa973', '--line-soft': '#d4c08c', '--cyan': '#34338a', '--amber': '#8a4b08', '--pink': '#a8325a', '--danger': '#b3271f', '--green': '#2f6b3a', '--playhead': '#34338a' }
+  },
+  {
+    id: 'risoZine',
+    name: 'Riso Zine',
+    note: 'BijouDocs',
+    dark: false,
+    font: "'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#ebe4d6', '--panel': '#f4efe4', '--panel-2': '#fbf7ee', '--panel-3': '#e7dfcf', '--ink': '#1c1930', '--ink-dim': '#46425c', '--ink-faint': '#645f79', '--line': '#cfc6b4', '--line-soft': '#e0d8c8', '--cyan': '#0b6e86', '--amber': '#b3420b', '--pink': '#c81e58', '--danger': '#c22a2a', '--green': '#1f7a4a', '--playhead': '#f15060' }
+  },
+  {
+    id: 'spellbound',
+    name: 'Spellbound',
+    note: 'BijouDocs',
+    dark: true,
+    colors: { '--bg': '#120e16', '--panel': '#1a1520', '--panel-2': '#221b2a', '--panel-3': '#2c2336', '--ink': '#f1e6cf', '--ink-dim': '#cbbd9f', '--ink-faint': '#a39474', '--line': '#4a3b2a', '--line-soft': '#33283a', '--cyan': '#e9c46a', '--amber': '#f0a04b', '--pink': '#e58aa0', '--danger': '#ff8a78', '--green': '#8fd3a6', '--playhead': '#e9c46a' }
+  },
+  {
+    id: 'ronin',
+    name: 'Ronin',
+    note: 'BijouDocs',
+    dark: true,
+    font: "'Yusei Magic', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#0e0e10', '--panel': '#151517', '--panel-2': '#1c1c1f', '--panel-3': '#26262a', '--ink': '#f2ede3', '--ink-dim': '#c9c3b6', '--ink-faint': '#9a948a', '--line': '#3a3a3f', '--line-soft': '#2a2a2e', '--cyan': '#ff5a52', '--amber': '#f0b35a', '--pink': '#f28ab0', '--danger': '#ff7a6e', '--green': '#8fd3a6', '--playhead': '#ff5a52' }
+  },
+  {
+    id: 'minecraft',
+    name: 'Minecraft',
+    note: 'BijouDocs',
+    dark: false,
+    font: "'Minecraft', 'Pixelify Sans', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#2a2018', '--panel': '#c6c6c6', '--panel-2': '#b3b3b3', '--panel-3': '#8b8b8b', '--ink': '#1e1e1e', '--ink-dim': '#363636', '--ink-faint': '#4a4a4a', '--line': '#373737', '--line-soft': '#8b8b8b', '--cyan': '#1d5a12', '--amber': '#7a5200', '--pink': '#8a1f55', '--danger': '#b01818', '--green': '#14561f', '--playhead': '#1d5a12' }
+  },
+  {
+    id: 'terraria',
+    name: 'Terraria',
+    note: 'BijouDocs',
+    dark: true,
+    font: "'Andy', 'Fredoka', 'Trebuchet MS', system-ui, sans-serif",
+    colors: { '--bg': '#20245e', '--panel': '#353a85', '--panel-2': '#3f4597', '--panel-3': '#4c53ad', '--ink': '#ffffff', '--ink-dim': '#dfe2ff', '--ink-faint': '#b3b9f0', '--line': '#12154a', '--line-soft': '#2a2f74', '--cyan': '#ffd84a', '--amber': '#ffb03a', '--pink': '#ff6b86', '--danger': '#ff5c5c', '--green': '#67e07a', '--playhead': '#ffd84a' }
+  },
+  {
+    id: 'xp',
+    name: 'Windows XP',
+    note: 'BijouDocs',
+    dark: false,
+    font: "'Tahoma', 'Segoe UI', Verdana, sans-serif",
+    colors: { '--bg': '#3a6ea5', '--panel': '#ece9d8', '--panel-2': '#f4f3ee', '--panel-3': '#d6d2c2', '--ink': '#000000', '--ink-dim': '#2b2b2b', '--ink-faint': '#555555', '--line': '#aca899', '--line-soft': '#d6d2c2', '--cyan': '#1c4fb8', '--amber': '#b87800', '--pink': '#b0306b', '--danger': '#c1121f', '--green': '#2e7d32', '--playhead': '#1c4fb8' }
+  },
+  // ---- the other half of each illustrated theme: same world, opposite light.
+  // base + variant: they wear the base theme's look (and backgrounds) with
+  // their own materials, [data-theme=base][data-variant=dark|light] in themes-fx.css.
+  {
+    id: 'inkWashDark',
+    base: 'inkWash',
+    variant: 'dark',
+    name: 'Ink Wash Night',
+    note: 'Paper by lamplight',
+    dark: true,
+    colors: { '--bg': '#14130f', '--panel': '#1c1a16', '--panel-2': '#24211c', '--panel-3': '#2e2a24', '--ink': '#ece5d3', '--ink-dim': '#c2b9a4', '--ink-faint': '#968d79', '--line': '#3d382f', '--line-soft': '#2b2721', '--cyan': '#e2574c', '--amber': '#d9a441', '--pink': '#d98aa6', '--danger': '#f07a6c', '--green': '#8fbf86', '--playhead': '#e2574c' }
+  },
+  {
+    id: 'cyanotypeLight',
+    base: 'cyanotype',
+    variant: 'light',
+    name: 'Cyanotype Paper',
+    note: 'Blue ink on cream',
+    dark: false,
+    colors: { '--bg': '#e9e3d2', '--panel': '#f6f1e3', '--panel-2': '#efe9d8', '--panel-3': '#dfd6bd', '--ink': '#14263d', '--ink-dim': '#3d5470', '--ink-faint': '#586e88', '--line': '#c6bca2', '--line-soft': '#dcd4bd', '--cyan': '#17507f', '--amber': '#8a5a12', '--pink': '#a8325a', '--danger': '#a8281e', '--green': '#2f6b3a', '--playhead': '#17507f' }
+  },
+  {
+    id: 'cardCatalogDark',
+    base: 'cardCatalog',
+    variant: 'dark',
+    name: 'Card Catalog Walnut',
+    note: 'Walnut and brass',
+    dark: true,
+    font: "'Courier Prime', 'Courier New', monospace",
+    colors: { '--bg': '#1f150b', '--panel': '#2e2114', '--panel-2': '#3a2a1a', '--panel-3': '#4a3722', '--ink': '#f3e6c4', '--ink-dim': '#d1c09a', '--ink-faint': '#a8966f', '--line': '#5c4628', '--line-soft': '#3f2f1c', '--cyan': '#e8c35a', '--amber': '#f0a04b', '--pink': '#e58aa0', '--danger': '#ff8a78', '--green': '#9fd08a', '--playhead': '#e8c35a' }
+  },
+  {
+    id: 'risoZineDark',
+    base: 'risoZine',
+    variant: 'dark',
+    name: 'Riso Zine Black',
+    note: 'Black paper, same inks',
+    dark: true,
+    font: "'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#14121f', '--panel': '#1c1930', '--panel-2': '#25213d', '--panel-3': '#302b4d', '--ink': '#f4efe4', '--ink-dim': '#cfc8dc', '--ink-faint': '#9f98b5', '--line': '#3d3760', '--line-soft': '#2b2646', '--cyan': '#3fd0d6', '--amber': '#ffb35c', '--pink': '#ff8fa0', '--danger': '#ff7a7a', '--green': '#7fe0a4', '--playhead': '#f15060' }
+  },
+  {
+    id: 'spellboundLight',
+    base: 'spellbound',
+    variant: 'light',
+    name: 'Spellbound Parchment',
+    note: 'The library by day',
+    dark: false,
+    colors: { '--bg': '#e6d9b8', '--panel': '#f7efd9', '--panel-2': '#efe4c8', '--panel-3': '#dccfa9', '--ink': '#2a1d10', '--ink-dim': '#55402a', '--ink-faint': '#6e5638', '--line': '#c4b089', '--line-soft': '#dccfab', '--cyan': '#7a1626', '--amber': '#8a5210', '--pink': '#9c2f55', '--danger': '#a3241a', '--green': '#2c6a3c', '--playhead': '#7a1626' }
+  },
+  {
+    id: 'roninLight',
+    base: 'ronin',
+    variant: 'light',
+    name: 'Ronin Paper',
+    note: 'Black ink on white',
+    dark: false,
+    font: "'Yusei Magic', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#e9e4d8', '--panel': '#faf7f0', '--panel-2': '#f0ece2', '--panel-3': '#ddd7c8', '--ink': '#141414', '--ink-dim': '#45423c', '--ink-faint': '#666159', '--line': '#c9c3b4', '--line-soft': '#dedacd', '--cyan': '#b80f2a', '--amber': '#8a5210', '--pink': '#a8325a', '--danger': '#a3241a', '--green': '#2c6a3c', '--playhead': '#c8102e' }
+  },
+  {
+    id: 'xpDark',
+    base: 'xp',
+    variant: 'dark',
+    name: 'Windows XP Noir',
+    note: 'Charcoal and orange',
+    dark: true,
+    font: "'Tahoma', 'Segoe UI', Verdana, sans-serif",
+    colors: { '--bg': '#1a1a1a', '--panel': '#2b2b2b', '--panel-2': '#353535', '--panel-3': '#444444', '--ink': '#f0f0f0', '--ink-dim': '#c8c8c8', '--ink-faint': '#9a9a9a', '--line': '#555555', '--line-soft': '#3a3a3a', '--cyan': '#ff8a2a', '--amber': '#f0b35a', '--pink': '#f28ab0', '--danger': '#ff6b5a', '--green': '#7fd66a', '--playhead': '#ff8a2a' }
+  },
+  {
+    id: 'minecraftDark',
+    base: 'minecraft',
+    variant: 'dark',
+    name: 'Minecraft Deepslate',
+    note: 'Dark stone menus',
+    dark: true,
+    font: "'Minecraft', 'Pixelify Sans', 'Segoe UI', system-ui, sans-serif",
+    colors: { '--bg': '#101012', '--panel': '#2c2c30', '--panel-2': '#36363b', '--panel-3': '#45454b', '--ink': '#ececec', '--ink-dim': '#c4c4c8', '--ink-faint': '#9a9aa0', '--line': '#55555c', '--line-soft': '#3a3a40', '--cyan': '#6fd24a', '--amber': '#f0b340', '--pink': '#f08ac0', '--danger': '#ff5c5c', '--green': '#6fd24a', '--playhead': '#6fd24a' }
+  },
+  {
+    id: 'terrariaLight',
+    base: 'terraria',
+    variant: 'light',
+    name: 'Terraria Day',
+    note: 'Sky-blue menus',
+    dark: false,
+    font: "'Andy', 'Fredoka', 'Trebuchet MS', system-ui, sans-serif",
+    colors: { '--bg': '#9cc4f5', '--panel': '#dfe6ff', '--panel-2': '#eef1ff', '--panel-3': '#c8d2fa', '--ink': '#171a52', '--ink-dim': '#343a86', '--ink-faint': '#5158a0', '--line': '#6a74c8', '--line-soft': '#b8c2f2', '--cyan': '#2a35b0', '--amber': '#a85a00', '--pink': '#c2305a', '--danger': '#c62828', '--green': '#1f7a3a', '--playhead': '#2a35b0' }
+  },
+  {
+    id: 'terrariaDark',
+    base: 'terraria',
+    variant: 'dark',
+    name: 'Terraria Underground',
+    note: 'The cavern layer',
+    dark: true,
+    font: "'Andy', 'Fredoka', 'Trebuchet MS', system-ui, sans-serif",
+    colors: { '--bg': '#07081c', '--panel': '#11132e', '--panel-2': '#181b3d', '--panel-3': '#22264f', '--ink': '#eef0ff', '--ink-dim': '#c3c8f0', '--ink-faint': '#9298cc', '--line': '#05061a', '--line-soft': '#1a1d42', '--cyan': '#ffd84a', '--amber': '#ffb03a', '--pink': '#ff6b86', '--danger': '#ff5c5c', '--green': '#67e07a', '--playhead': '#ffd84a' }
+  },
+  {
+    id: 'aeroBlack',
+    base: 'aeroDark',
+    variant: 'black',
+    name: 'Frutiger Aero Black',
+    note: 'Vista black glass',
+    dark: true,
+    font: "'Segoe UI', 'Corbel', system-ui, sans-serif",
+    colors: { '--bg': '#020305', '--panel': '#07090d', '--panel-2': '#0d1117', '--panel-3': '#161c25', '--ink': '#f2f6fa', '--ink-dim': '#b4bfcc', '--ink-faint': '#808b99', '--line': '#232b36', '--line-soft': '#141a22', '--cyan': '#3fd0e8', '--amber': '#e0b84f', '--pink': '#ff7ab8', '--danger': '#ff6b6b', '--green': '#6bcf7f', '--playhead': '#3fd0e8' }
   }
 ]
+
+// Themes that are one look in several lights are shown as one card with a
+// variation picker: theme id → [family id, the variation's label].
+const FAMILY_OF = {
+  light: ['classic', 'Light'], dark: ['classic', 'Dark'], midnight: ['classic', 'Midnight'], black: ['classic', 'Black'],
+  fable: ['fable', 'Parchment'], fantasy: ['fable', 'Tavern'],
+  aero: ['aero', 'Light'], aeroDark: ['aero', 'Dark'],
+  y2kChrome: ['y2k', 'Chrome'], y2kLcd: ['y2k', 'Chrome LCD'], y2kDark: ['y2k', 'Gunmetal'], y2kDarkLcd: ['y2k', 'Gunmetal LCD'],
+  premiereLight: ['premiere', 'Light'], premiere: ['premiere', 'Dark'], premiereDarker: ['premiere', 'Darker'], premiereBlack: ['premiere', 'Black'],
+  inkWash: ['inkWash', 'Light'], inkWashDark: ['inkWash', 'Night'],
+  cyanotypeLight: ['cyanotype', 'Paper'], cyanotype: ['cyanotype', 'Blue'],
+  cardCatalog: ['cardCatalog', 'Manila'], cardCatalogDark: ['cardCatalog', 'Walnut'],
+  risoZine: ['risoZine', 'Paper'], risoZineDark: ['risoZine', 'Black'],
+  spellboundLight: ['spellbound', 'Parchment'], spellbound: ['spellbound', 'Night'],
+  roninLight: ['ronin', 'Paper'], ronin: ['ronin', 'Ink'],
+  xp: ['xp', 'Luna'], xpDark: ['xp', 'Noir'],
+  minecraft: ['minecraft', 'Stone'], minecraftDark: ['minecraft', 'Deepslate'],
+  terrariaLight: ['terraria', 'Day'], terraria: ['terraria', 'Night'], terrariaDark: ['terraria', 'Underground'],
+  aeroBlack: ['aero', 'Black']
+}
+const FAMILY_NAME = { classic: 'Bijou', fable: 'Fable', aero: 'Frutiger Aero', y2k: 'Y2K', premiere: 'Premiere', inkWash: 'Ink Wash', cyanotype: 'Cyanotype', cardCatalog: 'Card Catalog', risoZine: 'Riso Zine', spellbound: 'Spellbound', ronin: 'Ronin', xp: 'Windows XP', minecraft: 'Minecraft', terraria: 'Terraria' }
+
+// [{id, name, note, members: [{theme, label}], light, dark}] in list order;
+// a theme outside FAMILY_OF is a family of one. light / dark: the first
+// member of each kind, for the card's split swatch.
+export function themeFamilies(themes) {
+  const out = []
+  const byId = new Map()
+  for (const t of themes) {
+    const f = FAMILY_OF[t.id]
+    const fid = f ? f[0] : 'solo:' + t.id
+    let fam = byId.get(fid)
+    if (!fam) {
+      fam = { id: fid, name: f ? FAMILY_NAME[f[0]] : t.name, note: t.note, members: [], light: null, dark: null }
+      byId.set(fid, fam)
+      out.push(fam)
+    }
+    fam.members.push({ theme: t, label: f ? f[1] : t.name })
+    if (t.dark === false) fam.light = fam.light || t
+    else fam.dark = fam.dark || t
+  }
+  // light first, then darker and darker
+  for (const fam of out) fam.members.sort((a, b) => (a.theme.dark === false ? 0 : 1) - (b.theme.dark === false ? 0 : 1))
+  return out
+}
+export const familyOf = (themeId) => (FAMILY_OF[themeId] ? FAMILY_OF[themeId][0] : 'solo:' + themeId)
 
 // Relative luminance, to tell whether an imported custom theme is dark.
 function isDarkHex(hex) {
@@ -256,8 +482,25 @@ export function blockFill(hex, lift = 0.25) {
   return `rgb(${ch(r)}, ${ch(g)}, ${ch(b)})`
 }
 
-export function applyTheme(theme) {
+// bg: the chosen background for this theme (lib/themeBackgrounds.js), if it has any.
+// clipStyle: 'blocks' / 'waves' overrides the theme's own way of drawing clips.
+export function applyTheme(theme, bg, clipStyle) {
   const root = document.documentElement
+  // An absolute URL: a relative url() inside a custom property can resolve against the wrong folder.
+  const wall = ['--theme-wallpaper', '--theme-wallpaper-pos', '--theme-wallpaper-size', '--theme-wallpaper-repeat', '--theme-wallpaper-overlay', '--theme-overlay-display']
+  for (const k of wall) root.style.removeProperty(k)
+  if (bg) {
+    root.style.setProperty('--theme-wallpaper', bg.css || 'url("' + new URL(bg.url, document.baseURI).href + '")')
+    root.style.setProperty('--theme-wallpaper-pos', bg.position || (bg.tile ? '0 0' : 'center'))
+    if (bg.tile) {
+      root.style.setProperty('--theme-wallpaper-size', bg.tile + 'px ' + bg.tile + 'px')
+      root.style.setProperty('--theme-wallpaper-repeat', 'repeat')
+    }
+    if (bg.overlay === false) {
+      root.style.setProperty('--theme-wallpaper-overlay', 'linear-gradient(transparent, transparent)')
+      root.style.setProperty('--theme-overlay-display', 'none')
+    }
+  }
   const colors = (theme && theme.colors) || BUILT_IN_THEMES[0].colors
   // A token this theme doesn't set goes back to the stylesheet's default —
   // otherwise the last theme's (e.g. Premiere's blue playhead) would stay.
@@ -266,7 +509,7 @@ export function applyTheme(theme) {
     else root.style.removeProperty(k)
   }
   playhead = colors['--playhead'] || '#ffffff'
-  blocks = !!(theme && theme.clips === 'blocks')
+  blocks = clipStyle === 'blocks' ? true : clipStyle === 'waves' ? false : !!(theme && theme.clips === 'blocks')
   lightUi = !!(theme && theme.dark === false)
   root.dataset.clips = blocks ? 'blocks' : ''
   // Some themes bring their own UI font (BijouDocs' MS-DOS → Tahoma…).

@@ -10,7 +10,8 @@ import { player } from '../lib/player.js'
 import { bus } from '../lib/hooks.js'
 import { onEvent as voTxEvent } from '../lib/voTranscripts.js'
 import { guessOffset, overlap } from '../lib/povSync.js'
-import { BUILT_IN_THEMES, fromBijouCustom, applyTheme } from '../lib/themes.js'
+import { BUILT_IN_THEMES, fromBijouCustom, applyTheme, familyOf } from '../lib/themes.js'
+import { activeBackground } from '../lib/themeBackgrounds.js'
 
 const api = window.footage
 
@@ -1364,7 +1365,7 @@ export const useStore = create(
     applyCurrentTheme() {
       const id = get().settings.theme
       const theme = get().allThemes().find((t) => t.id === id) || BUILT_IN_THEMES[0]
-      applyTheme(theme)
+      applyTheme(theme, activeBackground(theme.base || theme.id, get().settings.themeBg), get().settings.clipStyle)
       // Keep the min/max/close buttons (hidden-title-bar mode) on-theme.
       api.setOverlayColors({ color: theme.colors['--panel'], symbolColor: theme.colors['--ink'] }).catch(() => {})
     },
@@ -1372,8 +1373,23 @@ export const useStore = create(
       const list = await api.customThemes().catch(() => [])
       set((s) => { s.bijouThemes = fromBijouCustom(list) })
     },
+    // How the timelines draw clips, for every theme: '' (the theme's own), 'blocks' (Premiere's solid clips) or 'waves'.
+    setClipStyle(style) {
+      set((s) => { s.settings.clipStyle = style })
+      get().applyCurrentTheme()
+      get().scheduleSave()
+    },
+    // The background picked for a theme that has several (Settings → Appearance).
+    setThemeBg(themeId, bgId) {
+      set((s) => { s.settings.themeBg = { ...(s.settings.themeBg || {}), [themeId]: bgId } })
+      get().applyCurrentTheme()
+      get().scheduleSave()
+    },
     setTheme(id) {
-      set((s) => { s.settings.theme = id })
+      set((s) => {
+        s.settings.theme = id
+        s.settings.themeLast = { ...(s.settings.themeLast || {}), [familyOf(id)]: id } // the variation to come back to
+      })
       get().applyCurrentTheme()
       get().scheduleSave()
     },

@@ -3,7 +3,8 @@ import { useStore, DEFAULT_TRACK_NAMES, TRACK_COLORS, useTrackColors, fmtBytes }
 import { fmtTime, fmtDay, fmtClock } from '../lib/time.js'
 import { LABEL } from '../lib/beats.js'
 import { useBeatColor } from './NotesPanel.jsx'
-import { BUILT_IN_THEMES } from '../lib/themes.js'
+import { BUILT_IN_THEMES, themeFamilies } from '../lib/themes.js'
+import { THEME_BACKGROUNDS, activeBackground } from '../lib/themeBackgrounds.js'
 import { UpdatesSection } from './Updates.jsx'
 import { ToolsSection } from './ToolsSetup.jsx'
 
@@ -254,6 +255,17 @@ export function SettingsModal() {
   const buildAll = useStore((s) => s.buildAllWaveforms)
   const bijouThemes = useStore((s) => s.bijouThemes)
   const allThemes = [...BUILT_IN_THEMES, ...bijouThemes]
+  // One card per family of themes (the same look in several lights); the open family's variations sit under the grid.
+  const families = themeFamilies(allThemes)
+  const curTheme = allThemes.find((t) => t.id === (settings.theme || 'dark')) || allThemes[0]
+  const curFamily = families.find((f) => f.members.some((m) => m.theme.id === curTheme.id)) || families[0]
+  const bgKey = curTheme.base || curTheme.id
+  // Clicking a family goes back to the variation last used in it.
+  const pickMember = (f) => {
+    const last = (settings.themeLast || {})[f.id]
+    const m = f.members.find((x) => x.theme.id === last)
+    return (m || f.members[0]).theme
+  }
   const setTheme = useStore((s) => s.setTheme)
   const refreshBijouThemes = useStore((s) => s.refreshBijouThemes)
   const frameless = useStore((s) => s.frameless)
@@ -324,24 +336,72 @@ export function SettingsModal() {
               <section>
                 <h3>Theme</h3>
                 <div className="theme-grid">
-                  {allThemes.map((t) => (
-                    <button key={t.id} className={'theme-card' + ((settings.theme || 'dark') === t.id ? ' on' : '')} onClick={() => setTheme(t.id)} title={t.note ? t.name + ' — ' + t.note : t.name}>
-                      <span className="theme-swatch" style={{ background: t.colors['--bg'] }}>
+                  {families.map((f) => {
+                    const on = f.id === curFamily.id
+                    const split = f.light && f.dark
+                    const sw = (t) => (
+                      <span className="theme-swatch-half" style={{ background: t.colors['--bg'] }}>
                         <i style={{ background: t.colors['--panel'] }} />
-                        <i style={{ background: t.colors['--panel-3'] }} />
                         <i style={{ background: t.colors['--cyan'] }} />
-                        <i style={{ background: t.colors['--ink'] }} />
+                        {!split && <i style={{ background: t.colors['--panel-3'] }} />}
+                        {!split && <i style={{ background: t.colors['--ink'] }} />}
                       </span>
-                      <span className="theme-name">{t.name}</span>
-                      {t.note && <span className="theme-note">{t.note}</span>}
-                    </button>
-                  ))}
+                    )
+                    return (
+                      <button key={f.id} className={'theme-card' + (on ? ' on' : '')} onClick={() => !on && setTheme(pickMember(f).id)} title={f.members.length > 1 ? f.name + ' — ' + f.members.map((m) => m.label).join(', ') : f.note ? f.name + ' — ' + f.note : f.name}>
+                        <span className={'theme-swatch' + (split ? ' split' : '')}>
+                          {split ? <>{sw(f.light)}{sw(f.dark)}</> : sw(f.members[0].theme)}
+                        </span>
+                        <span className="theme-name">{f.name}</span>
+                        <span className="theme-note">{f.members.length > 1 ? f.members.length + ' variations' : f.note}</span>
+                      </button>
+                    )
+                  })}
                 </div>
+                {curFamily.members.length > 1 && (
+                  <>
+                    <h3>Variation</h3>
+                    <div className="theme-vars">
+                      {curFamily.members.map((m) => (
+                        <button key={m.theme.id} className={'theme-var' + (m.theme.id === curTheme.id ? ' on' : '')} onClick={() => setTheme(m.theme.id)} title={m.theme.note ? m.theme.name + ' — ' + m.theme.note : m.theme.name}>
+                          <span className="theme-var-dot" style={{ background: m.theme.colors['--panel'], borderColor: m.theme.colors['--ink'] }}>
+                            <i style={{ background: m.theme.colors['--cyan'] }} />
+                          </span>
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {THEME_BACKGROUNDS[bgKey] && (
+                  <>
+                    <h3>Background</h3>
+                    <div className="theme-bg-grid">
+                      {THEME_BACKGROUNDS[bgKey].map((b) => (
+                        <button
+                          key={b.id}
+                          className={'theme-bg' + (activeBackground(bgKey, settings.themeBg).id === b.id ? ' on' : '')}
+                          style={{ backgroundImage: 'url("' + b.url + '")' }}
+                          onClick={() => useStore.getState().setThemeBg(bgKey, b.id)}
+                          title={b.label}
+                          aria-label={b.label}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
                 {/Lcd$/.test(settings.theme || '') && (
                   <label className="check">
                     <input type="checkbox" checked={settings.lcdGrid !== false} onChange={(e) => updateSettings({ lcdGrid: e.target.checked })} /> Pixel grid over the LCD timeline (off: easier to read clip names and waveforms)
                   </label>
                 )}
+                <h3>Timeline clips</h3>
+                <div className="seg clip-style-seg">
+                  {[['', 'Theme default'], ['blocks', 'Blocks'], ['waves', 'Waveforms']].map(([v, l]) => (
+                    <button key={v} className={(settings.clipStyle || '') === v ? 'on' : ''} onClick={() => useStore.getState().setClipStyle(v)}>{l}</button>
+                  ))}
+                </div>
+                <p className="dim small">Blocks: each clip a solid block in its track's colour with a dark waveform inside, as in Premiere. Waveforms: a bright waveform on the lane. Theme default: Premiere uses blocks, the rest waveforms.</p>
                 <p className="dim small">Includes BijouDocs' themes, and any custom themes you make there. The video area always stays black.</p>
               </section>
             </>

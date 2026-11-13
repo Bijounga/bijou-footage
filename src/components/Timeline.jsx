@@ -258,7 +258,7 @@ export default function Timeline() {
   const inPoint = useStore((s) => s.inPoint)
   const selectNote = useStore((s) => s.selectNote)
   const snapOn = useStore((s) => s.settings.snap !== false)
-  const themeId = useStore((s) => s.settings.theme)
+  const themeId = useStore((s) => s.settings.theme + '|' + (s.settings.clipStyle || '')) // redraw when the look of the clips changes
   const speechShow = useStore((s) => s.settings.speechShow) || []
   const speechSkip = useStore((s) => s.settings.speechSkip) || []
   const speechSens = useStore((s) => s.settings.speechSensitivity ?? 0.5)
