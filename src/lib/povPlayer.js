@@ -24,6 +24,31 @@ function want(c) {
   return t + offsetAt(c, t)
 }
 
+// The last keyframe at or before t in a recording's keyframe index (probe.keyframes: a list of times, or an
+// even interval); null without an index.
+function keyBefore(kf, t) {
+  if (!kf) return null
+  if (!kf.times) return kf.interval > 0 ? kf.phase + Math.floor((t - kf.phase) / kf.interval) * kf.interval : null
+  const list = kf.times
+  let lo = 0
+  let hi = list.length - 1
+  if (hi < 0 || list[0] > t) return null
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1
+    if (list[mid] <= t + 0.0005) lo = mid
+    else hi = mid - 1
+  }
+  return list[lo]
+}
+
+// Catching up costs decoding: every frame between where a POV is and where it should be has to be decoded, on
+// the same hardware decoder your own recording is playing through. All the POVs that are behind share this much
+// extra speed (in ×) between them, so a jump ahead (Skip silence makes one every few seconds) can't starve your
+// recording of the decoder — measured: one POV catching up at 10× dropped a third of its own frames and doubled
+// the main picture's.
+const CATCH_BUDGET = 2
+let behindNow = 1 // how many POV pictures are behind right now (followAll counts)
+
 function inRange(c, t) {
   return t >= 0 && t <= (c.dur || (c.el && c.el.duration) || Infinity) - 0.05
 }
@@ -76,7 +101,15 @@ function follow(c, quick) {
     el.currentTime = t
     el.playbackRate = rate
   } else if (drift < -dead) {
-    el.playbackRate = Math.min(10, rate + Math.min(8, -drift / 0.5)) // behind: close the gap in about half a second
+    // Behind. If there's a keyframe between here and there, hop onto it: one frame to decode instead of every
+    // frame up to it. Then play a little faster for the rest.
+    const k = c.kf && !el.seeking ? keyBefore(c.kf, t) : null
+    if (k != null && k - el.currentTime > 0.75) {
+      el.currentTime = k
+      el.playbackRate = rate
+      return
+    }
+    el.playbackRate = Math.min(10, rate + Math.min(Math.max(0.5, CATCH_BUDGET / behindNow), -drift / 0.5))
   } else if (drift > dead) {
     el.playbackRate = Math.max(0.0625, rate * 0.25) // ahead: let the clock catch up
   } else if (el.playbackRate !== rate) el.playbackRate = rate
@@ -106,6 +139,12 @@ function seekTo(c, t, quick) {
 }
 
 function followAll(quick) {
+  let n = 0
+  for (const c of cams.values()) {
+    const el = c.el
+    if (el && el.tagName !== 'AUDIO' && !el.paused && el.currentTime - want(c) < -0.25) n++
+  }
+  behindNow = Math.max(1, n)
   for (const c of cams.values()) follow(c, quick)
 }
 
@@ -139,9 +178,9 @@ export function bigPovVideo() {
 }
 
 // A POV's <video> joins (or updates: a new offset). Returns a remover.
-export function registerPov(key, el, { off, pts, gap, dur, onRange }) {
+export function registerPov(key, el, { off, pts, gap, dur, kf, onRange }) {
   const prev = cams.get(key)
-  cams.set(key, { el, off, pts, gap, dur, onRange, lastOk: prev ? prev.lastOk : undefined })
+  cams.set(key, { el, off, pts, gap, dur, kf, onRange, lastOk: prev ? prev.lastOk : undefined })
   start()
   follow(cams.get(key), false)
   return () => {

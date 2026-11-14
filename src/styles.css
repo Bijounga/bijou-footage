@@ -2199,3 +2199,5 @@ mark.hl { background: rgba(245, 197, 66, 0.3); color: inherit; border-radius: 2p
 .theme-bg.on { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan); }
 .clip-style-seg { max-width: 380px; }
 .clip-style-seg button { padding: 5px 0; font-size: 12px; }
+/* Long note lists: rows off screen skip layout and paint until they're scrolled near. */
+.notes-list .note { content-visibility: auto; contain-intrinsic-size: auto 48px; }

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store.js'
 import TranscriptPanel from './TranscriptPanel.jsx'
 import ProjectPad from './ProjectPad.jsx'
@@ -54,7 +54,7 @@ export function useBeatColor() {
 // Color for a whole note (markers have their own color).
 function useNoteColor() {
   const colors = useStore((s) => s.beatColors)
-  return (n) => noteHex(n, colors)
+  return useMemo(() => (n) => noteHex(n, colors), [colors]) // stable, so the rows it's handed to can skip re-rendering
 }
 
 export function markerLabel(n) {
@@ -128,7 +128,10 @@ function WhoTag({ name, color, choices, onPick }) {
   )
 }
 
-function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, onAnchor, q, who }) {
+// Memoised: a long recording has hundreds of these, and the panel re-renders
+// whenever a note is added or the playhead reaches the next one. onPick /
+// onAnchor are stable and take the note's id.
+const NoteRow = React.memo(function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, onAnchor, q, who }) {
   const selected = useStore((s) => s.selectedNoteId === n.id)
   const editing = useStore((s) => s.editingNoteId === n.id)
   const selectNote = useStore((s) => s.selectNote)
@@ -176,10 +179,10 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
         if (e.button !== 0 || e.target.closest('button, textarea, input')) return
         if (e.shiftKey || e.ctrlKey || e.metaKey) {
           e.preventDefault()
-          onPick(e)
+          onPick(n.id, e)
           return
         }
-        onAnchor() // a plain click is the starting point for Shift+click
+        onAnchor(n.id) // a plain click is the starting point for Shift+click
         jump()
       }}
       onDoubleClick={(e) => {
@@ -200,7 +203,7 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
           checked={checked}
           readOnly
           onMouseDown={(e) => e.shiftKey && e.preventDefault()}
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPick(e) }}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPick(n.id, e) }}
           title="Select · Shift+click to select a range · Ctrl+click to toggle"
         />
         <button className="tc" onClick={(e) => { e.stopPropagation(); jump() }} title="Jump here">
@@ -262,7 +265,16 @@ function NoteRow({ n, clipKey, isCurrentClip, active, color, checked, onPick, on
       )}
     </div>
   )
+}, sameRow)
+// who is rebuilt each render: compare what it says, not the object.
+function sameRow(a, b) {
+  if (a.n !== b.n || a.clipKey !== b.clipKey || a.isCurrentClip !== b.isCurrentClip || a.active !== b.active || a.color !== b.color || a.checked !== b.checked || a.onPick !== b.onPick || a.onAnchor !== b.onAnchor || a.q !== b.q) return false
+  const x = a.who, y = b.who
+  if (x === y) return true
+  if (!x || !y) return false
+  return x.name === y.name && x.color === y.color && (x.choices || NONE).join('') === (y.choices || NONE).join('')
 }
+
 
 // "Type what happened": the note is stamped when you START typing, so a slow typist still lands on the
 // moment itself. Doesn't pause. Shows where it will land, and whose footage it is about.
@@ -646,6 +658,11 @@ export default function NotesPanel() {
 
   const totalNotes = scope.facets.total
   const shownNotes = groups.reduce((a, g) => a + g.count, 0)
+  // The rows' handlers: the same functions for the panel's whole life (see NoteRow).
+  const pickRef = useRef(pick)
+  pickRef.current = pick
+  const onPickRow = useCallback((id, e) => pickRef.current(id, e), [])
+  const onAnchorRow = useCallback((id) => { anchorRef.current = id }, [])
   const whoOf = (n, g) => {
     const name = scope.personOf(n, g.c.key)
     const rp = (reviews[g.c.key] && reviews[g.c.key].povs) || NONE
@@ -886,8 +903,8 @@ export default function NotesPanel() {
                   active={isCur && n.id === activeId}
                   color={noteColor}
                   checked={sel.has(n.id)}
-                  onPick={(e) => pick(n.id, e)}
-                  onAnchor={() => (anchorRef.current = n.id)}
+                  onPick={onPickRow}
+                  onAnchor={onAnchorRow}
                   q={text}
                   who={n.type === 'BREAK' ? null : whoOf(n, g)}
                 />

@@ -162,7 +162,7 @@ export function PovCam({ pov, index, rect, big, layout, stageRef }) {
   useEffect(() => {
     const el = ref.current
     if (!el || !clip) return
-    return registerPov(pov.key, el, { off: pov.off || 0, pts: pov.pts, gap: pov.gap, dur: clip.probe && clip.probe.duration, onRange: setInRange })
+    return registerPov(pov.key, el, { off: pov.off || 0, pts: pov.pts, gap: pov.gap, dur: clip.probe && clip.probe.duration, kf: clip.probe && clip.probe.keyframes, onRange: setInRange })
   }, [pov.key, pov.off, pov.pts, pov.gap, clip && clip.path])
   // big: the viewer window shows it too
   useEffect(() => {
