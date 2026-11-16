@@ -373,6 +373,16 @@ export function SettingsModal() {
                     </div>
                   </>
                 )}
+                {curFamily.id === 'liquidGlass' && (
+                  <>
+                    <h3>Glass</h3>
+                    <label className="glass-frost">
+                      <span>Clear</span>
+                      <input type="range" min="0" max="100" value={settings.glassFrost ?? 60} onChange={(e) => useStore.getState().setGlassFrost(+e.target.value)} style={{ '--v': (settings.glassFrost ?? 60) + '%' }} aria-label="Frosted" />
+                      <span>Frosted</span>
+                    </label>
+                  </>
+                )}
                 {THEME_BACKGROUNDS[bgKey] && (
                   <>
                     <h3>Background</h3>

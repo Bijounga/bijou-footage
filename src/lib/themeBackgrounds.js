@@ -122,7 +122,34 @@ const BRUSHED_CHROME = 'repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.12
 const BRUSHED_GUNMETAL = 'repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, rgba(0, 0, 0, 0.08) 1px 2px), linear-gradient(180deg, #2a2e34 0%, #16191d 100%)'
 const AMBER_LCD = 'radial-gradient(ellipse 40% 120% at 0% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%), radial-gradient(ellipse 40% 120% at 100% 50%, rgba(255, 150, 0, 0.12), rgba(255, 150, 0, 0) 70%), radial-gradient(ellipse 100% 90% at 50% 45%, #2e1a02 0%, #170c00 70%, #0b0600 100%)'
 
+import glassTahoeDay from '../assets/bg/glass-tahoe-day.webp'
+import glassTahoeSunset from '../assets/bg/glass-tahoe-sunset.webp'
+import glassTahoeDusk from '../assets/bg/glass-tahoe-dusk.webp'
+import glassTahoeWinter from '../assets/bg/glass-tahoe-winter.webp'
+import glassYosemite from '../assets/bg/glass-yosemite.webp'
+import glassYosemiteFog from '../assets/bg/glass-yosemite-fog.webp'
+import glassBigSur from '../assets/bg/glass-big-sur.webp'
+import glassWave from '../assets/bg/glass-wave.webp'
+import glassTide from '../assets/bg/glass-abstract-tide.webp'
+import glassBloom from '../assets/bg/glass-abstract-bloom.webp'
+import glassPearl from '../assets/bg/glass-abstract-pearl.webp'
+import glassAurora from '../assets/bg/glass-abstract-aurora.webp'
 export const THEME_BACKGROUNDS = {
+  // Lake Tahoe (macOS 26's namesake), then California landscapes in the spirit of the Mac wallpapers (CC0 photos), then abstract silk bands drawn for Bijou Footage.
+  liquidGlass: [
+    { id: 'tahoe-day', label: 'Emerald Bay', url: glassTahoeDay },
+    { id: 'tahoe-sunset', label: 'Tahoe sunset', url: glassTahoeSunset },
+    { id: 'tahoe-winter', label: 'Tahoe winter', url: glassTahoeWinter },
+    { id: 'tahoe-dusk', label: 'Tahoe dusk', url: glassTahoeDusk },
+    { id: 'yosemite', label: 'Yosemite', url: glassYosemite },
+    { id: 'big-sur', label: 'Big Sur', url: glassBigSur },
+    { id: 'wave', label: 'Wave', url: glassWave },
+    { id: 'yosemite-fog', label: 'Yosemite fog', url: glassYosemiteFog },
+    { id: 'tide', label: 'Tide', url: glassTide },
+    { id: 'bloom', label: 'Bloom', url: glassBloom },
+    { id: 'pearl', label: 'Pearl', url: glassPearl },
+    { id: 'aurora', label: 'Aurora', url: glassAurora }
+  ],
   dos: [
     { id: 'clouds', label: 'Clouds', url: dosClouds },
     { id: 'bliss', label: 'Bliss (Windows XP)', url: xpBliss },

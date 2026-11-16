@@ -390,6 +390,30 @@ export const BUILT_IN_THEMES = [
   }
 ]
 
+// ---- Liquid Glass: Bijou's own, after Apple's glass interface (looks in themes-fx.css,
+// the Frosted slider in Settings sets --lg-frost) ----
+export const GLASS_THEMES = [
+  {
+    id: 'liquidGlass',
+    name: 'Liquid Glass',
+    note: 'Light glass',
+    dark: false,
+    font: "'Inter Glass', 'Inter', -apple-system, 'Segoe UI Variable Text', 'Segoe UI', sans-serif",
+    colors: { '--bg': '#e9ebf2', '--panel': '#f4f5f9', '--panel-2': '#ffffff', '--panel-3': '#e4e6ee', '--ink': '#1d1d1f', '--ink-dim': '#3d3d42', '--ink-faint': '#4a4a4f', '--line': '#cfd2db', '--line-soft': '#e2e4eb', '--cyan': '#0055c2', '--amber': '#934400', '--pink': '#b00c50', '--danger': '#c40013', '--green': '#0f5a25', '--playhead': '#0a84ff' }
+  },
+  {
+    id: 'liquidGlassDark',
+    base: 'liquidGlass',
+    variant: 'dark',
+    name: 'Liquid Glass Dark',
+    note: 'Dark glass',
+    dark: true,
+    font: "'Inter Glass', 'Inter', -apple-system, 'Segoe UI Variable Text', 'Segoe UI', sans-serif",
+    colors: { '--bg': '#0b0b0f', '--panel': '#1c1c1f', '--panel-2': '#242428', '--panel-3': '#2e2e33', '--ink': '#f5f5f7', '--ink-dim': '#c7c7cc', '--ink-faint': '#a8a8ae', '--line': '#3a3a3f', '--line-soft': '#2a2a2e', '--cyan': '#3d9bff', '--amber': '#ff9f0a', '--pink': '#ff375f', '--danger': '#ff453a', '--green': '#30d158', '--playhead': '#0a84ff' }
+  }
+]
+BUILT_IN_THEMES.splice(1, 0, ...GLASS_THEMES) // right after Dark: it's one of Bijou's own
+
 // Themes that are one look in several lights are shown as one card with a
 // variation picker: theme id → [family id, the variation's label].
 const FAMILY_OF = {
@@ -407,9 +431,10 @@ const FAMILY_OF = {
   xp: ['xp', 'Luna'], xpDark: ['xp', 'Noir'],
   minecraft: ['minecraft', 'Stone'], minecraftDark: ['minecraft', 'Deepslate'],
   terrariaLight: ['terraria', 'Day'], terraria: ['terraria', 'Night'], terrariaDark: ['terraria', 'Underground'],
-  aeroBlack: ['aero', 'Black']
+  aeroBlack: ['aero', 'Black'],
+  liquidGlass: ['liquidGlass', 'Light'], liquidGlassDark: ['liquidGlass', 'Dark']
 }
-const FAMILY_NAME = { classic: 'Bijou', fable: 'Fable', aero: 'Frutiger Aero', y2k: 'Y2K', premiere: 'Premiere', inkWash: 'Ink Wash', cyanotype: 'Cyanotype', cardCatalog: 'Card Catalog', risoZine: 'Riso Zine', spellbound: 'Spellbound', ronin: 'Ronin', xp: 'Windows XP', minecraft: 'Minecraft', terraria: 'Terraria' }
+const FAMILY_NAME = { classic: 'Bijou', fable: 'Fable', aero: 'Frutiger Aero', y2k: 'Y2K', premiere: 'Premiere', inkWash: 'Ink Wash', cyanotype: 'Cyanotype', cardCatalog: 'Card Catalog', risoZine: 'Riso Zine', spellbound: 'Spellbound', ronin: 'Ronin', xp: 'Windows XP', minecraft: 'Minecraft', terraria: 'Terraria', liquidGlass: 'Liquid Glass' }
 
 // [{id, name, note, members: [{theme, label}], light, dark}] in list order;
 // a theme outside FAMILY_OF is a family of one. light / dark: the first

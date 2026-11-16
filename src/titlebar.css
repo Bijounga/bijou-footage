@@ -337,3 +337,9 @@ body.has-titlebar #root { height: calc(100% - var(--titlebar-h)); }
 /* Aero Black: Vista's black glass bar. */
 [data-theme='aeroDark'][data-variant='black'] { --titlebar-bg: linear-gradient(180deg, #3a414c 0%, #15191f 50%, #050608 51%, #0d1014 100%); --titlebar-border: #000000; }
 [data-theme='terraria'][data-variant='dark'] { --titlebar-bg: #07081c; --titlebar-border: #000000; --caption-bg: #181b3d; --caption-bg-hover: #262a5a; --caption-close-bg: #181b3d; }
+/* Liquid Glass: a strip of glass with traffic-light window buttons (yellow, green, red; their marks show on hover). */
+[data-theme='liquidGlass'] { --titlebar-bg: rgb(var(--lg-tint) / calc(var(--lg-fill) - 0.12)); --titlebar-border: transparent; --titlebar-text: var(--ink); --titlebar-weight: 600; --caption-top: 9px; --caption-width: 14px; --caption-close-width: 14px; --caption-height: 14px; --caption-gap: 8px; --caption-inset: 14px; --caption-radius: 50%; --caption-border: rgb(0 0 0 / 0.14); --caption-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35); --caption-icon: transparent; --caption-stroke: 1.6; --caption-close-border: rgb(0 0 0 / 0.14); --caption-close-bg: #ff5f57; --caption-close-bg-hover: #ff5f57; --caption-close-bg-active: #e0443e; --caption-close-icon-hover: rgb(0 0 0 / 0.55); }
+[data-theme='liquidGlass'][data-variant='dark'] { --titlebar-border: rgb(255 255 255 / 0.08); --caption-border: rgb(0 0 0 / 0.4); --caption-close-border: rgb(0 0 0 / 0.4); }
+[data-theme='liquidGlass'] .titlebar-caption { border-top: 1px solid var(--caption-border); }
+[data-theme='liquidGlass'] .titlebar-close { border-top-color: var(--caption-close-border); }
+[data-theme='liquidGlass'] .titlebar { -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(1.6); backdrop-filter: blur(var(--lg-blur)) saturate(1.6); }

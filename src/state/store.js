@@ -12,6 +12,7 @@ import { onEvent as voTxEvent } from '../lib/voTranscripts.js'
 import { guessOffset, overlap } from '../lib/povSync.js'
 import { BUILT_IN_THEMES, fromBijouCustom, applyTheme, familyOf } from '../lib/themes.js'
 import { activeBackground } from '../lib/themeBackgrounds.js'
+import { startRefraction, stopRefraction } from '../lib/glassRefraction.js'
 
 const api = window.footage
 
@@ -1366,12 +1367,23 @@ export const useStore = create(
       const id = get().settings.theme
       const theme = get().allThemes().find((t) => t.id === id) || BUILT_IN_THEMES[0]
       applyTheme(theme, activeBackground(theme.base || theme.id, get().settings.themeBg), get().settings.clipStyle)
+      document.documentElement.style.setProperty('--lg-frost', String(get().settings.glassFrost ?? 60))
+      if ((theme.base || theme.id) === 'liquidGlass') startRefraction() // the side panels bend the picture at their rim
+      else stopRefraction()
       // Keep the min/max/close buttons (hidden-title-bar mode) on-theme.
       api.setOverlayColors({ color: theme.colors['--panel'], symbolColor: theme.colors['--ink'] }).catch(() => {})
     },
     async refreshBijouThemes() {
       const list = await api.customThemes().catch(() => [])
       set((s) => { s.bijouThemes = fromBijouCustom(list) })
+    },
+    // Liquid Glass: how frosted the glass is, 0 (clear) to 100 (frosted). Only a CSS variable changes, so
+    // dragging the slider repaints the glass and nothing else.
+    setGlassFrost(v) {
+      const n = Math.max(0, Math.min(100, Math.round(v)))
+      set((s) => { s.settings.glassFrost = n })
+      document.documentElement.style.setProperty('--lg-frost', String(n))
+      get().scheduleSave()
     },
     // How the timelines draw clips, for every theme: '' (the theme's own), 'blocks' (Premiere's solid clips) or 'waves'.
     setClipStyle(style) {

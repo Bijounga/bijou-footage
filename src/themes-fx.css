@@ -130,7 +130,7 @@
 }
 
 /* ---- shared: wallpaper, floating panels, buttons, selection ---- */
-:is([data-theme='aero'], [data-theme='aeroDark'], [data-theme='vaporwave'], [data-theme='dos'], [data-theme='y2kChrome'], [data-theme='y2kDark'], [data-theme='aqua'], [data-theme='luna'], [data-theme='cuttingRoom'], [data-theme='doodleClub'], [data-theme='inkWash'], [data-theme='cyanotype'], [data-theme='cardCatalog'], [data-theme='risoZine'], [data-theme='spellbound'], [data-theme='ronin'], [data-theme='minecraft'], [data-theme='terraria'], [data-theme='xp']) {
+:is([data-theme='aero'], [data-theme='aeroDark'], [data-theme='vaporwave'], [data-theme='dos'], [data-theme='y2kChrome'], [data-theme='y2kDark'], [data-theme='aqua'], [data-theme='luna'], [data-theme='cuttingRoom'], [data-theme='doodleClub'], [data-theme='inkWash'], [data-theme='cyanotype'], [data-theme='cardCatalog'], [data-theme='risoZine'], [data-theme='spellbound'], [data-theme='ronin'], [data-theme='minecraft'], [data-theme='terraria'], [data-theme='xp'], [data-theme='liquidGlass']) {
   & body { background: var(--fx-wall); }
   & #root > .app {
     gap: 8px;
@@ -1106,3 +1106,276 @@
   --fx-glow: 0 0 14px rgba(63, 208, 232, 0.55);
   --fx-bar: linear-gradient(to bottom, rgba(60, 68, 80, 0.7), rgba(6, 8, 12, 0.85));
 }
+
+/* ==== Liquid Glass ====
+   Bijou's own, after Apple's glass. Built to the recipe of the iOS 26 glass kits
+   (Figma "iOS26 Glass shapes", "Calendar Glass Effect", "Glass Effect"): an
+   almost-clear pane over a picture — a light fill fading downward with 15%
+   a background blur of 8 → 20 → 40 (the Frosted slider), and three rims
+   stacked: a soft wide glow inside the edge, a fine mid rim, and a crisp 2px
+   highlight bright at the top-left and bottom-right corners and gone between.
+   The side panels also bend what's behind them at their rim, like a lens
+   (lib/glassRefraction.js: an SVG displacement map as the backdrop filter).
+   Colour is kept for meaning: the system blue marks what's selected. */
+@font-face {
+  font-family: 'Inter Glass';
+  src: url('./assets/fonts/inter-latin-opsz-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+[data-theme='liquidGlass'] {
+  --lg-frost: 60;
+  --lg-tint: 255 255 255;
+  --lg-fill: calc(0.06 + var(--lg-frost) * 0.0055);
+  --lg-blur: calc(3px + var(--lg-frost) * 0.37px);
+  /* Clear glass keeps the picture but calms it: lighter and lower-contrast behind dark text. */
+  --lg-lift-bd: calc(1.7 - var(--lg-frost) * 0.0058);
+  --lg-calm-bd: calc(0.48 + var(--lg-frost) * 0.0052);
+  --lg-filter: blur(var(--lg-blur)) saturate(1.7) brightness(var(--lg-lift-bd)) contrast(var(--lg-calm-bd));
+  --lg-rim-crisp: linear-gradient(135deg, rgb(255 255 255 / 1) 0%, rgb(255 255 255 / 0.25) 22%, rgb(255 255 255 / 0.05) 50%, rgb(255 255 255 / 0.2) 78%, rgb(255 255 255 / 0.85) 100%);
+  /* The pane's thickness: a lit top-left lip, a fainter bottom-right one, a glow inside the edge. */
+  --lg-rim-soft: inset 2px 2px 1px -1px rgb(255 255 255 / 0.7), inset -2px -2px 1px -1px rgb(255 255 255 / 0.4), inset 0 0 0 1px rgb(255 255 255 / 0.16), inset 0 0 24px rgb(255 255 255 / 0.2);
+  --lg-edge: rgb(255 255 255 / 0.85);
+  --lg-edge-side: rgb(255 255 255 / 0.35);
+  --lg-edge-low: rgb(255 255 255 / 0.18);
+  --lg-hair: rgb(0 0 0 / 0.09);
+  --lg-lift: 0 24px 56px -24px rgb(0 0 0 / 0.42), 0 3px 10px -4px rgb(0 0 0 / 0.14);
+  --lg-sep: rgb(60 60 67 / 0.12);
+  --lg-recess: rgb(118 118 128 / 0.12);
+  --lg-cap: linear-gradient(180deg, rgb(255 255 255 / 0.62), rgb(255 255 255 / 0.34));
+  --lg-cap-hover: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.55));
+  --lg-pill: rgb(255 255 255 / 0.96);
+  --lg-pill-lift: 0 2px 8px rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.06);
+  --lg-hover: rgb(0 0 0 / 0.045);
+  --lg-blue: #007aff;
+  --lg-select: rgb(0 122 255 / 0.13);
+  --lg-select-strong: rgb(0 122 255 / 0.2);
+  --lg-thumb: rgb(0 0 0 / 0.22);
+
+  --fx-wall: var(--theme-wallpaper, url('./assets/bg/glass-tahoe-day.webp')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #6f8db0;
+  --fx-panel: linear-gradient(160deg, rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.12)) 0%, rgb(var(--lg-tint) / var(--lg-fill)) 45%, rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.05)) 100%);
+  --fx-panel-edge: transparent;
+  --fx-blur: var(--lg-filter);
+  --fx-shadow: var(--lg-rim-soft), 0 0 0 0.5px var(--lg-hair), var(--lg-lift);
+  --fx-radius: 22px;
+  --fx-btn: var(--lg-cap);
+  --fx-btn-edge: transparent;
+  --fx-btn-shadow: var(--lg-cap-edge);
+  --fx-on: var(--lg-select-strong);
+  --fx-on-ink: var(--cyan);
+  --fx-glow: inset 0 0 0 0.5px rgb(0 122 255 / 0.35);
+  --fx-btn-radius: 999px;
+  --fx-bar: transparent;
+  --fx-bar-ink: var(--ink);
+
+  & body { font-optical-sizing: auto; letter-spacing: -0.006em; }
+  & #root > .app { gap: 9px; padding: 9px; }
+  & .lib-top { border-bottom: 0; }
+  & .brand-name { font-weight: 650; letter-spacing: -0.02em; }
+  & .ch-name { font-weight: 600; letter-spacing: -0.014em; }
+
+  /* Capsules: a lit top edge, a hairline outline. They give a little when pressed. */
+  & .btn, & .t-btn, & .mini-btn, & .snap-btn, & .icon-btn.small {
+    transition: transform 0.5s cubic-bezier(0.2, 1.6, 0.35, 1), background 0.2s, box-shadow 0.2s, color 0.2s;
+  }
+  & .btn:hover:not(:disabled), & .t-btn:hover, & .mini-btn:hover, & .snap-btn:hover {
+    background: var(--lg-cap-hover);
+    filter: none;
+    box-shadow: var(--lg-cap-edge);
+  }
+  & .btn:active:not(:disabled), & .t-btn:active, & .mini-btn:active, & .snap-btn:active, & .icon-btn.small:active {
+    transform: scale(0.95);
+    transition-duration: 0.1s;
+  }
+  /* What's on: a blue tint and blue ink, not a block of colour. */
+  & .snap-btn.on, & .layout-btn.on, & .viewer-btn.on, & .sketch-tool.on {
+    background: var(--lg-select-strong);
+    color: var(--cyan);
+    box-shadow: inset 0 0 0 0.5px rgb(0 122 255 / 0.35);
+  }
+  /* The one solid button: the primary action. */
+  & .btn.primary {
+    background: linear-gradient(180deg, #1a8cff, #0071e3);
+    color: #ffffff;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 0 0 0.5px rgb(0 60 140 / 0.5), 0 4px 10px -4px rgb(0 113 227 / 0.6);
+  }
+  & .btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #2b95ff, #0a78ea); }
+  /* Play: a round glass button with a blue glyph. */
+  & .t-btn.play {
+    border-radius: 999px;
+    min-width: 38px;
+    background: var(--lg-cap-hover);
+    color: var(--lg-blue);
+    box-shadow: var(--lg-cap-edge), 0 4px 12px -6px rgb(0 0 0 / 0.25);
+  }
+
+  /* Segmented controls: a recessed track, the chosen segment a raised pill. */
+  & .seg, & .np-tabs, & .ws-switch {
+    background: var(--lg-recess);
+    border: 0;
+    border-radius: 999px;
+    padding: 2px;
+  }
+  & .seg button, & .np-tabs button, & .ws-switch button {
+    border-radius: 999px;
+    color: var(--ink-dim);
+    transition: background 0.25s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.25s, color 0.2s;
+  }
+  & .seg button.on, & .np-tabs button.on, & .ws-switch .on {
+    background: var(--lg-pill);
+    color: var(--ink);
+    border-color: transparent;
+    box-shadow: var(--lg-pill-lift);
+  }
+
+  /* Sidebar: rows on the glass, the open one tinted blue, as on a Mac. */
+  & .lib-row, & .bin-row { border-radius: 10px; border-color: transparent; transition: background 0.15s; }
+  & .lib-row:hover:not(.active), & .bin-row:hover:not(.active) { background: var(--lg-hover); }
+  & .lib-row.active, & .bin-row.active { background: var(--lg-select-strong); color: var(--ink); box-shadow: none; }
+  & .lib-row.active *, & .bin-row.active * { color: inherit; }
+  & .lib-row.active .lib-name { color: var(--ink); font-weight: 600; }
+  & .lib-day {
+    background: rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.08));
+    color: var(--ink-faint);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+  }
+  & .tag { background: var(--lg-recess); color: var(--ink-dim); border-color: transparent; }
+  & .who-tag.you { background: var(--lg-pill); color: var(--ink-dim); border-color: transparent; box-shadow: 0 0 0 0.5px var(--lg-hair); }
+
+  /* Notes: rows on the glass, hairlines between them; the one playing tinted, the selected one outlined. */
+  & .note {
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: inset 0 -1px 0 var(--lg-sep);
+    transition: background 0.18s;
+  }
+  & .note:hover { background: var(--lg-hover); }
+  & .note.active { background: var(--lg-select); box-shadow: none; }
+  & .note.selected { background: var(--lg-select-strong); box-shadow: inset 0 0 0 1px rgb(0 122 255 / 0.55); }
+  & .ng-head { background: rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.08)); border-radius: 10px; }
+
+  /* Fields: recessed, a blue ring when focused. */
+  & .lib-search, & .np-search-input {
+    background: var(--lg-recess);
+    border: 1px solid transparent;
+    border-radius: 9px;
+    transition: box-shadow 0.15s, background 0.15s;
+  }
+  & .lib-search:focus, & .np-search-input:focus {
+    background: rgb(var(--lg-tint) / 0.9);
+    border-color: transparent;
+    box-shadow: 0 0 0 3px rgb(0 122 255 / 0.32);
+  }
+
+  /* Menus and dialogs: the same glass, thicker, floating higher. */
+  & .menu {
+    background: rgb(var(--lg-tint) / 0.74);
+    border: 0;
+    border-radius: 12px;
+    padding: 5px;
+    -webkit-backdrop-filter: blur(30px) saturate(1.8);
+    backdrop-filter: blur(30px) saturate(1.8);
+    box-shadow: inset 0 1px 0 var(--lg-edge), 0 0 0 0.5px var(--lg-hair), 0 20px 50px -14px rgb(0 0 0 / 0.35);
+  }
+  & .menu button { border-radius: 7px; }
+  & .menu button:hover:not(:disabled) { background: var(--lg-blue); color: #ffffff; }
+  & .modal-scrim { background: rgb(0 0 0 / 0.18); }
+  & .modal {
+    background: rgb(var(--lg-tint) / 0.66);
+    border: 0;
+    border-radius: 24px;
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    backdrop-filter: blur(40px) saturate(1.8);
+    box-shadow: inset 0 1px 0 var(--lg-edge), 0 0 0 0.5px var(--lg-hair), 0 40px 90px -28px rgb(0 0 0 / 0.5);
+    overflow: hidden;
+  }
+  & .modal-head { border-bottom-color: transparent; }
+
+  /* The browser's own parts, in the same material. */
+  & ::-webkit-scrollbar { width: 11px; height: 11px; }
+  & ::-webkit-scrollbar-thumb { background: var(--lg-thumb); border: 3px solid transparent; background-clip: padding-box; border-radius: 999px; }
+  & :focus-visible { outline: 3px solid rgb(0 122 255 / 0.45); outline-offset: 1px; }
+  & ::selection { background: rgb(0 122 255 / 0.25); color: inherit; }
+  & input[type='range'] { accent-color: var(--lg-blue); }
+}
+
+/* The crisp rim: a 2px gradient stroke on its own layer (masked to the edge, so the inside stays clear). */
+[data-theme='liquidGlass'] :is(.app > .library, .notes-panel, .player-area, .timeline, .et, .edit-upper > .em, .modal, .menu)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-rim-crisp);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 5;
+}
+[data-theme='liquidGlass'] :is(.app > .library, .player-area, .edit-upper > .em, .modal) { position: relative; }
+/* The side panels bend what's behind them at the rim (the filter is drawn for each panel's size). */
+[data-theme='liquidGlass'] [data-lg-refract] {
+  --fx-blur: var(--lg-refract) var(--lg-filter);
+}
+/* Where you read and edit (the player's frame, the timelines), the glass is thicker, so the picture never fights the text. */
+[data-theme='liquidGlass'] :is(.player-area, .timeline, .et, .edit-upper > .em) {
+  background: linear-gradient(160deg, rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.36)), rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.28)));
+}
+/* Capsule controls: the same three rims, small. */
+[data-theme='liquidGlass'] { --lg-cap-edge: inset 1px 1px 0 rgb(255 255 255 / 0.95), inset -1px -1px 0 rgb(255 255 255 / 0.45), inset 0 0 6px rgb(255 255 255 / 0.35), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 3px 10px -4px rgb(0 0 0 / 0.22); }
+
+/* Dark glass: smoked, the edges quieter, the shadow deeper. */
+[data-theme='liquidGlass'][data-variant='dark'] {
+  --lg-tint: 18 20 26;
+  --lg-fill: calc(0.1 + var(--lg-frost) * 0.0052);
+  --lg-lift-bd: calc(0.5 + var(--lg-frost) * 0.0028);
+  --lg-calm-bd: calc(0.6 + var(--lg-frost) * 0.004);
+  --lg-filter: blur(var(--lg-blur)) saturate(1.5) brightness(var(--lg-lift-bd)) contrast(var(--lg-calm-bd));
+  --lg-rim-crisp: linear-gradient(135deg, rgb(255 255 255 / 0.7) 0%, rgb(255 255 255 / 0.12) 22%, rgb(255 255 255 / 0.02) 50%, rgb(255 255 255 / 0.1) 78%, rgb(255 255 255 / 0.45) 100%);
+  --lg-rim-soft: inset 2px 2px 1px -1px rgb(255 255 255 / 0.22), inset -2px -2px 1px -1px rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.07), inset 0 0 24px rgb(255 255 255 / 0.05);
+  --lg-edge: rgb(255 255 255 / 0.2);
+  --lg-edge-side: rgb(255 255 255 / 0.08);
+  --lg-edge-low: rgb(255 255 255 / 0.04);
+  --lg-hair: rgb(0 0 0 / 0.55);
+  --lg-lift: 0 18px 44px -20px rgb(0 0 0 / 0.65);
+  --lg-sep: rgb(255 255 255 / 0.07);
+  --lg-recess: rgb(118 118 128 / 0.24);
+  --lg-cap: linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.07));
+  --lg-cap-hover: linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.11));
+  --lg-pill: rgb(255 255 255 / 0.18);
+  --lg-pill-lift: 0 2px 8px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --lg-hover: rgb(255 255 255 / 0.06);
+  --lg-blue: #0a84ff;
+  --lg-select: rgb(10 132 255 / 0.18);
+  --lg-select-strong: rgb(10 132 255 / 0.28);
+  --lg-thumb: rgb(255 255 255 / 0.22);
+  --fx-wall: var(--theme-wallpaper, url('./assets/bg/glass-tahoe-day.webp')) var(--theme-wallpaper-pos, center) / var(--theme-wallpaper-size, cover) var(--theme-wallpaper-repeat, no-repeat), #111216;
+  --fx-blur: var(--lg-filter);
+  --lg-cap-edge: inset 1px 1px 0 rgb(255 255 255 / 0.28), inset -1px -1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.5), 0 3px 10px -4px rgb(0 0 0 / 0.5);
+}
+[data-theme='liquidGlass'][data-variant='dark'] .t-btn.play { color: #5aacff; }
+[data-theme='liquidGlass'][data-variant='dark'] [data-lg-refract] {
+  --fx-blur: var(--lg-refract) var(--lg-filter);
+}
+
+/* The title bar is clear; the window buttons are traffic lights. */
+[data-theme='liquidGlass'] .titlebar-caption svg { width: 7px; height: 7px; stroke-width: 1.6; }
+[data-theme='liquidGlass'] .titlebar-caption:nth-child(1) { --caption-bg: #febc2e; --caption-bg-hover: #febc2e; --caption-bg-active: #d9a01f; }
+[data-theme='liquidGlass'] .titlebar-caption:nth-child(2) { --caption-bg: #28c840; --caption-bg-hover: #28c840; --caption-bg-active: #1fa733; }
+[data-theme='liquidGlass'] .titlebar-captions:hover .titlebar-caption { color: rgb(0 0 0 / 0.55); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='liquidGlass'] :is(.btn, .t-btn, .mini-btn, .snap-btn, .icon-btn.small) { transition: none; }
+  [data-theme='liquidGlass'] :is(.btn, .t-btn, .mini-btn, .snap-btn, .icon-btn.small):active { transform: none; }
+}
+
+/* Settings: the Glass controls. */
+.glass-frost { display: flex; align-items: center; gap: 12px; max-width: 420px; font-size: 12px; color: var(--ink-dim); }
+.glass-frost input { flex: 1; }
+
+/* Rounded panels: the header column's painted corners follow the panel's curve (they poked out square). */
+.app .timeline .tl-ruler-head { border-top-left-radius: max(0px, calc(var(--fx-radius, 0px) - 1px)); }
+.et .et-heads { border-top-left-radius: max(0px, calc(var(--fx-radius, 0px) - 1px)); border-bottom-left-radius: max(0px, calc(var(--fx-radius, 0px) - 1px)); }

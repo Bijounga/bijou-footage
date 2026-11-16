@@ -468,6 +468,8 @@ body.resizing-ns, body.resizing-ns * { cursor: ns-resize !important; user-select
 .note:hover { border-color: var(--line); }
 .notes-panel.color-bars .note:hover { border-left-color: var(--c); }
 .note.active { background: #22252e; }
+/* light themes: a tint of the accent instead of the dark default (it was near-black there) */
+[data-theme-kind='light'] .note.active { background: color-mix(in srgb, var(--cyan) 12%, var(--panel-2)); }
 .note.selected { border-color: #4a4d5a; box-shadow: 0 0 0 1px #4a4d5a; }
 .notes-panel.color-bars .note.selected { border-left-color: var(--c); }
 .note-top { display: flex; align-items: center; gap: 6px; }
@@ -729,6 +731,7 @@ body.resizing-ns, body.resizing-ns * { cursor: ns-resize !important; user-select
 .note-check { margin: 0; accent-color: var(--cyan); opacity: 0.35; }
 .note:hover .note-check, .note.checked .note-check { opacity: 1; }
 .note .tc { color: #7fd6a8; }
+[data-theme-kind='light'] .note .tc { color: var(--green); } /* the mint is for dark panels */
 .note-actions { display: flex; align-items: center; gap: 1px; }
 .note-actions .act { background: none; border: none; color: var(--ink-faint); font-size: 12px; padding: 0 3px; opacity: 0; }
 .note:hover .note-actions .act, .note.selected .note-actions .act { opacity: 1; }
@@ -772,6 +775,7 @@ body.resizing-ew, body.resizing-ew * { cursor: ew-resize !important; user-select
 .marker-btn .mk-shield { margin-right: 1px; }
 .mk-wrap { position: relative; }
 .type-pill.marker-pill { background: color-mix(in srgb, var(--c) 20%, transparent); color: color-mix(in srgb, var(--c) 75%, white); cursor: pointer; }
+[data-theme-kind='light'] .type-pill.marker-pill { background: color-mix(in srgb, var(--c) 18%, transparent); color: color-mix(in srgb, var(--c) 62%, black); }
 .mk-palette {
   position: absolute;
   top: calc(100% + 4px);
