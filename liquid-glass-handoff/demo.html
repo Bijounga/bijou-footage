@@ -1,0 +1,79 @@
+<!doctype html>
+<html data-lg lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Liquid Glass Demo</title>
+<link rel="stylesheet" href="./liquid-glass.css" />
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { display: grid; grid-template-columns: 260px 1fr 300px; gap: 10px; padding: 10px; box-sizing: border-box; font-size: 13px; }
+  .lg-panel { padding: 14px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  h1 { font-size: 15px; font-weight: 650; letter-spacing: -0.02em; margin: 0; }
+  .muted { color: var(--lg-ink-faint); font-size: 11px; }
+  .lg-row { padding: 8px 10px; }
+  .work { flex: 1; border-radius: 12px; background: #000; display: grid; place-items: center; color: #777; }
+  .bgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .bgs button { aspect-ratio: 16/9; border: 0; border-radius: 8px; background-size: cover; background-position: center; cursor: pointer; box-shadow: 0 0 0 0.5px var(--lg-hair); }
+  .bgs button.on { box-shadow: 0 0 0 2px var(--lg-blue); }
+  label { display: flex; align-items: center; gap: 8px; }
+  input[type='range'] { flex: 1; }
+  .menu { position: absolute; right: 24px; top: 70px; width: 180px; padding: 5px; display: none; }
+  .menu.open { display: block; }
+  .menu div { padding: 6px 10px; border-radius: 7px; }
+  .menu div:hover { background: var(--lg-blue); color: #fff; }
+</style>
+</head>
+<body class="lg-wall">
+  <aside class="lg-panel lg-refract">
+    <h1>Library</h1>
+    <input class="lg-field" placeholder="Search…" style="padding:7px 10px" />
+    <div class="lg-seg"><button class="on">All</button><button>Started</button><button>Done</button></div>
+    <div class="lg-row active">Project one<div class="muted">4h 22m · 12 notes</div></div>
+    <div class="lg-row">Project two<div class="muted">1h 08m · 3 notes</div></div>
+    <div class="lg-row">Project three<div class="muted">52m · 0 notes</div></div>
+  </aside>
+
+  <main class="lg-panel lg-thick">
+    <div style="display:flex;gap:8px;align-items:center">
+      <h1 style="flex:1">Workspace</h1>
+      <button class="lg-btn">Share</button>
+      <button class="lg-btn" id="menuBtn">More ▾</button>
+      <button class="lg-btn lg-primary">Export</button>
+    </div>
+    <div class="work">Opaque working surface (video / canvas / editor)</div>
+    <div class="lg-float menu" id="menu"><div>Rename</div><div>Duplicate</div><div>Delete</div></div>
+  </main>
+
+  <aside class="lg-panel lg-refract">
+    <h1>Appearance</h1>
+    <div class="lg-seg" id="variant"><button class="on" data-v="light">Light</button><button data-v="dark">Dark</button></div>
+    <label><span class="muted">Clear</span><input type="range" min="0" max="100" value="60" id="frost" /><span class="muted">Frosted</span></label>
+    <div class="muted">Background</div>
+    <div class="bgs" id="bgs"></div>
+  </aside>
+
+<script type="module">
+  import { startRefraction } from './liquid-glass-refraction.js'
+  const root = document.documentElement
+  const BGS = ['tahoe-day', 'tahoe-sunset', 'tahoe-winter', 'tahoe-dusk', 'yosemite', 'big-sur', 'wave', 'yosemite-fog', 'abstract-tide', 'abstract-bloom', 'abstract-pearl', 'abstract-aurora']
+  const grid = document.getElementById('bgs')
+  BGS.forEach((id, i) => {
+    const b = document.createElement('button')
+    const url = `./backgrounds/glass-${id}.webp`
+    b.style.backgroundImage = `url(${url})`
+    b.title = id
+    if (i === 0) b.classList.add('on')
+    b.onclick = () => { root.style.setProperty('--lg-wallpaper', `url(${url})`); grid.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)) }
+    grid.appendChild(b)
+  })
+  document.getElementById('frost').oninput = (e) => root.style.setProperty('--lg-frost', e.target.value)
+  document.querySelectorAll('#variant button').forEach((b) => b.onclick = () => {
+    if (b.dataset.v === 'dark') root.setAttribute('data-lg-variant', 'dark'); else root.removeAttribute('data-lg-variant')
+    document.querySelectorAll('#variant button').forEach((x) => x.classList.toggle('on', x === b))
+  })
+  document.getElementById('menuBtn').onclick = () => document.getElementById('menu').classList.toggle('open')
+  startRefraction()
+</script>
+</body>
+</html>

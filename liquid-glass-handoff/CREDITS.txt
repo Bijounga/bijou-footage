@@ -1,0 +1,16 @@
+Liquid Glass backgrounds
+
+Photos — Wikimedia Commons, CC0 1.0 (free to use, no attribution required; credited as a courtesy):
+glass-tahoe-day.webp — "Emerald Bay, Lake Tahoe 03.jpg" by Blake Everett
+glass-tahoe-sunset.webp — "Lake Tahoe Sunset (39995495833).jpg" by Felix Stahlberg
+glass-tahoe-dusk.webp — "Calm lake at Emerald Bay (Unsplash).jpg" by Levi Bare
+glass-tahoe-winter.webp — "Camp Richardson Beach, Lake Tahoe.jpg" by Blake Everett
+glass-yosemite.webp — "Scenic view of Yosemite Valley (Unsplash).jpg" by John Salzarulo
+glass-big-sur.webp — "Rocky coastline at Big Sur, CA (Unsplash).jpg" by Thomas Marban
+glass-wave.webp — "Blue ocean wave (Unsplash).jpg" by Austin Schmid
+glass-yosemite-fog.webp — "Foggy Yosemite Valley Floor (Unsplash).jpg" by John Towner
+
+Abstracts — original artwork drawn for Bijou Footage (gen-abstract.cjs):
+glass-abstract-tide.webp, glass-abstract-bloom.webp, glass-abstract-pearl.webp, glass-abstract-aurora.webp
+
+Font — fonts/inter-latin-opsz-normal.woff2: Inter by Rasmus Andersson, SIL OFL 1.1 (fonts/LICENSE-inter.txt).

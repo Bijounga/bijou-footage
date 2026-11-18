@@ -1,0 +1,204 @@
+/* =====================================================================
+   Liquid Glass — portable theme (from Bijou Footage v0.15.11)
+   ---------------------------------------------------------------------
+   Turn it on:   <html data-lg>                      (light)
+                 <html data-lg data-lg-variant="dark"> (dark)
+   Frost slider: document.documentElement.style.setProperty('--lg-frost', v)  // 0 = Clear … 100 = Frosted
+   Background:   document.documentElement.style.setProperty('--lg-wallpaper', `url(${src})`)
+
+   Classes (map these onto your app's existing elements, or copy the rules onto your own selectors):
+     .lg-wall      the root that shows the picture (body / #root / app shell)
+     .lg-panel     a big glass pane (sidebar, inspector, toolbar card)
+     .lg-thick     add to a panel where people read dense content (editor, table, timeline)
+     .lg-refract   add to a large panel to bend the picture at its rim (needs liquid-glass-refraction.js; Chromium only)
+     .lg-float     menus, popovers, dialogs (fixed frost: they float over content)
+     .lg-btn       glass capsule button      .lg-btn.lg-primary  the one solid blue action
+     .lg-seg       segmented control (children: button, chosen one .on)
+     .lg-row       list row (.active = open/selected)
+     .lg-field     text input / search
+   ===================================================================== */
+
+@font-face {
+  font-family: 'Inter Glass';
+  src: url('./fonts/inter-latin-opsz-normal.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+[data-lg] {
+  /* ---- the one knob ---- */
+  --lg-frost: 60;
+
+  /* ---- material (light) ---- */
+  --lg-tint: 255 255 255;
+  --lg-fill: calc(0.06 + var(--lg-frost) * 0.0055);          /* Clear 0.06 → Frosted 0.61 */
+  --lg-blur: calc(3px + var(--lg-frost) * 0.37px);           /* Clear 3px  → Frosted 40px */
+  /* Readability WITHOUT milk: at Clear the picture behind is lifted and calmed so dark text reads on it. */
+  --lg-lift-bd: calc(1.7 - var(--lg-frost) * 0.0058);        /* brightness 1.7 → 1.12 */
+  --lg-calm-bd: calc(0.48 + var(--lg-frost) * 0.0052);       /* contrast   0.48 → 1.0 */
+  --lg-filter: blur(var(--lg-blur)) saturate(1.7) brightness(var(--lg-lift-bd)) contrast(var(--lg-calm-bd));
+
+  /* the pane's edge: crisp 1px gradient rim (bright top-left & bottom-right) + thickness lips + inner glow */
+  --lg-rim-crisp: linear-gradient(135deg, rgb(255 255 255 / 1) 0%, rgb(255 255 255 / 0.25) 22%, rgb(255 255 255 / 0.05) 50%, rgb(255 255 255 / 0.2) 78%, rgb(255 255 255 / 0.85) 100%);
+  --lg-rim-soft: inset 2px 2px 1px -1px rgb(255 255 255 / 0.7), inset -2px -2px 1px -1px rgb(255 255 255 / 0.4), inset 0 0 0 1px rgb(255 255 255 / 0.16), inset 0 0 24px rgb(255 255 255 / 0.2);
+  --lg-hair: rgb(0 0 0 / 0.09);
+  --lg-lift: 0 24px 56px -24px rgb(0 0 0 / 0.42), 0 3px 10px -4px rgb(0 0 0 / 0.14);
+  --lg-edge: rgb(255 255 255 / 0.85);
+
+  /* controls */
+  --lg-cap: linear-gradient(180deg, rgb(255 255 255 / 0.62), rgb(255 255 255 / 0.34));
+  --lg-cap-hover: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.55));
+  --lg-cap-edge: inset 1px 1px 0 rgb(255 255 255 / 0.95), inset -1px -1px 0 rgb(255 255 255 / 0.45), inset 0 0 6px rgb(255 255 255 / 0.35), 0 0 0 0.5px rgb(0 0 0 / 0.12), 0 3px 10px -4px rgb(0 0 0 / 0.22);
+  --lg-pill: rgb(255 255 255 / 0.96);
+  --lg-pill-lift: 0 2px 8px rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.06);
+  --lg-recess: rgb(118 118 128 / 0.12);
+  --lg-sep: rgb(60 60 67 / 0.12);
+  --lg-hover: rgb(0 0 0 / 0.045);
+  --lg-thumb: rgb(0 0 0 / 0.22);
+
+  /* colour is for meaning only: system blue = selected/primary */
+  --lg-blue: #007aff;
+  --lg-select: rgb(0 122 255 / 0.13);
+  --lg-select-strong: rgb(0 122 255 / 0.2);
+
+  /* ink (Apple label colours, nudged darker so they hold on glass) */
+  --lg-ink: #1d1d1f;
+  --lg-ink-dim: #3d3d42;
+  --lg-ink-faint: #4a4a4f;
+
+  --lg-radius: 22px;
+  --lg-wall-fallback: #6f8db0;
+
+  color: var(--lg-ink);
+  font-family: 'Inter Glass', 'Inter', -apple-system, 'SF Pro Text', 'Segoe UI Variable', system-ui, sans-serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.006em;
+}
+
+/* ---- dark: smoked glass, quieter rims, deeper shadow ---- */
+[data-lg][data-lg-variant='dark'] {
+  --lg-tint: 18 20 26;
+  --lg-fill: calc(0.1 + var(--lg-frost) * 0.0052);
+  --lg-lift-bd: calc(0.5 + var(--lg-frost) * 0.0028);        /* dims the picture behind light text */
+  --lg-calm-bd: calc(0.6 + var(--lg-frost) * 0.004);
+  --lg-filter: blur(var(--lg-blur)) saturate(1.5) brightness(var(--lg-lift-bd)) contrast(var(--lg-calm-bd));
+  --lg-rim-crisp: linear-gradient(135deg, rgb(255 255 255 / 0.7) 0%, rgb(255 255 255 / 0.12) 22%, rgb(255 255 255 / 0.02) 50%, rgb(255 255 255 / 0.1) 78%, rgb(255 255 255 / 0.45) 100%);
+  --lg-rim-soft: inset 2px 2px 1px -1px rgb(255 255 255 / 0.22), inset -2px -2px 1px -1px rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.07), inset 0 0 24px rgb(255 255 255 / 0.05);
+  --lg-hair: rgb(0 0 0 / 0.55);
+  --lg-lift: 0 18px 44px -20px rgb(0 0 0 / 0.65);
+  --lg-edge: rgb(255 255 255 / 0.2);
+  --lg-cap: linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.07));
+  --lg-cap-hover: linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.11));
+  --lg-cap-edge: inset 1px 1px 0 rgb(255 255 255 / 0.28), inset -1px -1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.5), 0 3px 10px -4px rgb(0 0 0 / 0.5);
+  --lg-pill: rgb(255 255 255 / 0.18);
+  --lg-pill-lift: 0 2px 8px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --lg-recess: rgb(118 118 128 / 0.24);
+  --lg-sep: rgb(255 255 255 / 0.07);
+  --lg-hover: rgb(255 255 255 / 0.06);
+  --lg-thumb: rgb(255 255 255 / 0.22);
+  --lg-blue: #0a84ff;
+  --lg-select: rgb(10 132 255 / 0.18);
+  --lg-select-strong: rgb(10 132 255 / 0.28);
+  --lg-ink: #f5f5f7;
+  --lg-ink-dim: #d1d1d6;
+  --lg-ink-faint: #a8a8ae;
+  --lg-wall-fallback: #111216;
+}
+
+/* ---- the picture ---- */
+[data-lg] .lg-wall {
+  background: var(--lg-wallpaper, url('./backgrounds/glass-tahoe-day.webp')) center / cover no-repeat fixed, var(--lg-wall-fallback);
+}
+
+/* ---- glass panes ---- */
+[data-lg] .lg-panel {
+  position: relative;
+  border: 0;
+  border-radius: var(--lg-radius);
+  background: linear-gradient(160deg, rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.12)) 0%, rgb(var(--lg-tint) / var(--lg-fill)) 45%, rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.05)) 100%);
+  -webkit-backdrop-filter: var(--lg-filter);
+  backdrop-filter: var(--lg-filter);
+  box-shadow: var(--lg-rim-soft), 0 0 0 0.5px var(--lg-hair), var(--lg-lift);
+}
+/* thicker where people read dense content, so the picture never fights the text */
+[data-lg] .lg-panel.lg-thick {
+  background: linear-gradient(160deg, rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.36)), rgb(var(--lg-tint) / calc(var(--lg-fill) + 0.28)));
+}
+/* refraction: the JS sets --lg-refract: url(#id) and data-lg-refract on the element */
+[data-lg] .lg-panel[data-lg-refract] {
+  -webkit-backdrop-filter: var(--lg-refract) var(--lg-filter);
+  backdrop-filter: var(--lg-refract) var(--lg-filter);
+}
+
+/* the crisp rim: a 1px gradient stroke on its own layer, masked to the edge */
+[data-lg] :is(.lg-panel, .lg-float)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--lg-rim-crisp);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---- floating glass: menus, popovers, dialogs (fixed frost, independent of the slider) ---- */
+[data-lg] .lg-float {
+  position: relative;
+  border: 0;
+  border-radius: 14px;
+  background: rgb(var(--lg-tint) / 0.72);
+  -webkit-backdrop-filter: blur(36px) saturate(1.8);
+  backdrop-filter: blur(36px) saturate(1.8);
+  box-shadow: inset 0 1px 0 var(--lg-edge), 0 0 0 0.5px var(--lg-hair), 0 30px 70px -20px rgb(0 0 0 / 0.45);
+}
+
+/* ---- capsule buttons ---- */
+[data-lg] .lg-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: var(--lg-ink);
+  background: var(--lg-cap);
+  box-shadow: var(--lg-cap-edge);
+  transition: transform 0.5s cubic-bezier(0.2, 1.6, 0.35, 1), background 0.2s, box-shadow 0.2s;
+}
+[data-lg] .lg-btn:hover:not(:disabled) { background: var(--lg-cap-hover); }
+[data-lg] .lg-btn:active:not(:disabled) { transform: scale(0.95); transition-duration: 0.1s; }
+[data-lg] .lg-btn.on { background: var(--lg-select-strong); color: var(--lg-blue); box-shadow: inset 0 0 0 0.5px rgb(0 122 255 / 0.35); }
+[data-lg] .lg-btn.lg-primary {
+  background: linear-gradient(180deg, #1a8cff, #0071e3);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 0 0 0.5px rgb(0 60 140 / 0.5), 0 4px 10px -4px rgb(0 113 227 / 0.6);
+}
+[data-lg] .lg-btn.lg-primary:hover:not(:disabled) { background: linear-gradient(180deg, #2b95ff, #0a78ea); }
+
+/* ---- segmented control: recessed track, the chosen segment a raised pill ---- */
+[data-lg] .lg-seg { display: inline-flex; padding: 2px; border-radius: 999px; background: var(--lg-recess); }
+[data-lg] .lg-seg > button { border: 0; background: transparent; border-radius: 999px; padding: 4px 12px; color: var(--lg-ink-dim); transition: background 0.25s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.25s, color 0.2s; }
+[data-lg] .lg-seg > button.on { background: var(--lg-pill); color: var(--lg-ink); box-shadow: var(--lg-pill-lift); }
+
+/* ---- list rows: on the glass, hairline between, selected tinted blue (Mac sidebar) ---- */
+[data-lg] .lg-row { border-radius: 10px; box-shadow: inset 0 -1px 0 var(--lg-sep); transition: background 0.15s; }
+[data-lg] .lg-row:hover:not(.active) { background: var(--lg-hover); }
+[data-lg] .lg-row.active { background: var(--lg-select-strong); box-shadow: none; }
+
+/* ---- fields: recessed, blue ring on focus ---- */
+[data-lg] .lg-field { border: 1px solid transparent; border-radius: 9px; background: var(--lg-recess); color: var(--lg-ink); transition: box-shadow 0.15s, background 0.15s; }
+[data-lg] .lg-field::placeholder { color: var(--lg-ink-faint); }
+[data-lg] .lg-field:focus { outline: none; background: rgb(var(--lg-tint) / 0.9); box-shadow: 0 0 0 3px rgb(0 122 255 / 0.32); }
+
+/* ---- browser parts in the same material ---- */
+[data-lg] ::-webkit-scrollbar { width: 11px; height: 11px; }
+[data-lg] ::-webkit-scrollbar-thumb { background: var(--lg-thumb); border: 3px solid transparent; background-clip: padding-box; border-radius: 999px; }
+[data-lg] :focus-visible { outline: 3px solid rgb(0 122 255 / 0.45); outline-offset: 1px; }
+[data-lg] ::selection { background: rgb(0 122 255 / 0.25); }
+[data-lg] input[type='range'] { accent-color: var(--lg-blue); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-lg] .lg-btn { transition: none; }
+  [data-lg] .lg-btn:active { transform: none; }
+}
